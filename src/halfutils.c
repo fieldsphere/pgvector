@@ -4,6 +4,7 @@
 
 #include "halfutils.h"
 #include "halfvec.h"
+#include "rust_ffi.h"
 
 #ifdef HALFVEC_DISPATCH
 #include <immintrin.h>
@@ -25,6 +26,30 @@ float		(*HalfvecL2SquaredDistance) (int dim, half * ax, half * bx);
 float		(*HalfvecInnerProduct) (int dim, half * ax, half * bx);
 double		(*HalfvecCosineSimilarity) (int dim, half * ax, half * bx);
 float		(*HalfvecL1Distance) (int dim, half * ax, half * bx);
+
+static float
+HalfvecL2SquaredDistanceRust(int dim, half *ax, half *bx)
+{
+	return vector_rust_half_l2_squared_distance(dim, ax, bx);
+}
+
+static float
+HalfvecInnerProductRust(int dim, half *ax, half *bx)
+{
+	return vector_rust_half_inner_product(dim, ax, bx);
+}
+
+static double
+HalfvecCosineSimilarityRust(int dim, half *ax, half *bx)
+{
+	return vector_rust_half_cosine_similarity(dim, ax, bx);
+}
+
+static float
+HalfvecL1DistanceRust(int dim, half *ax, half *bx)
+{
+	return vector_rust_half_l1_distance(dim, ax, bx);
+}
 
 static float
 HalfvecL2SquaredDistanceDefault(int dim, half * ax, half * bx)
@@ -286,6 +311,11 @@ HalfvecInit(void)
 	HalfvecInnerProduct = HalfvecInnerProductDefault;
 	HalfvecCosineSimilarity = HalfvecCosineSimilarityDefault;
 	HalfvecL1Distance = HalfvecL1DistanceDefault;
+
+	HalfvecL2SquaredDistance = HalfvecL2SquaredDistanceRust;
+	HalfvecInnerProduct = HalfvecInnerProductRust;
+	HalfvecCosineSimilarity = HalfvecCosineSimilarityRust;
+	HalfvecL1Distance = HalfvecL1DistanceRust;
 
 #ifdef HALFVEC_DISPATCH
 	if (SupportsCpuFeature(CPU_FEATURE_AVX | CPU_FEATURE_F16C | CPU_FEATURE_FMA))

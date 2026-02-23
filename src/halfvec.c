@@ -11,6 +11,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 #include "port.h"				/* for strtof() */
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "utils/array.h"
 #include "utils/float.h"
@@ -677,6 +678,75 @@ halfvec_l1_distance(PG_FUNCTION_ARGS)
 	CheckDims(a, b);
 
 	PG_RETURN_FLOAT8((double) HalfvecL1Distance(a->dim, a->x, b->x));
+}
+
+/*
+ * Get the L2 distance between half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l2_distance);
+Datum
+vector_rust_halfvec_l2_distance(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8(sqrt((double) vector_rust_half_l2_squared_distance(a->dim, a->x, b->x)));
+}
+
+/*
+ * Get the inner product of two half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_inner_product);
+Datum
+vector_rust_halfvec_inner_product(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_half_inner_product(a->dim, a->x, b->x));
+}
+
+/*
+ * Get the cosine distance between two half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_cosine_distance);
+Datum
+vector_rust_halfvec_cosine_distance(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+	double		similarity;
+
+	CheckDims(a, b);
+
+	similarity = vector_rust_half_cosine_similarity(a->dim, a->x, b->x);
+
+	/* Keep in range */
+	if (similarity > 1)
+		similarity = 1;
+	else if (similarity < -1)
+		similarity = -1;
+
+	PG_RETURN_FLOAT8(1 - similarity);
+}
+
+/*
+ * Get the L1 distance between two half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l1_distance);
+Datum
+vector_rust_halfvec_l1_distance(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_half_l1_distance(a->dim, a->x, b->x));
 }
 
 /*
