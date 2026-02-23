@@ -1,0 +1,26 @@
+CREATE FUNCTION rust_l2_distance(vector, vector) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_l2_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_inner_product(vector, vector) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_inner_product'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_cosine_distance(vector, vector) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_cosine_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_l1_distance(vector, vector) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_l1_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+SELECT
+	l2_distance(v1, v2) = rust_l2_distance(v1, v2),
+	inner_product(v1, v2) = rust_inner_product(v1, v2),
+	cosine_distance(v1, v2) = rust_cosine_distance(v1, v2),
+	l1_distance(v1, v2) = rust_l1_distance(v1, v2)
+FROM (VALUES
+	('[1,2,3]'::vector(3), '[3,2,1]'::vector(3)),
+	('[0.5,0.25,0.75]'::vector(3), '[0.1,0.2,0.3]'::vector(3)),
+	('[1,1,1]'::vector(3), '[2,2,2]'::vector(3))
+) AS t(v1, v2);

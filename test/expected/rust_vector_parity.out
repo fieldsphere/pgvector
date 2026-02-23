@@ -1,0 +1,11 @@
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+ ?column? | ?column? | ?column? | ?column? 
+----------+----------+----------+----------
+ t        | t        | t        | t
+ t        | t        | t        | t
+ t        | t        | t        | t
+(3 rows)
+
