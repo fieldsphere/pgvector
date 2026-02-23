@@ -14,6 +14,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 #include "port.h"				/* for strtof() */
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "utils/array.h"
 #include "utils/float.h"
@@ -52,10 +53,21 @@ PGDLLEXPORT void _PG_init(void);
 void
 _PG_init(void)
 {
+	vector_rust_init();
 	BitvecInit();
 	HalfvecInit();
 	HnswInit();
 	IvfflatInit();
+}
+
+/*
+ * Expose Rust bridge version for migration smoke test
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_bridge_version);
+Datum
+vector_rust_bridge_version(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_CSTRING(pstrdup(vector_rust_bridge_version_cstr()));
 }
 
 /*

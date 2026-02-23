@@ -6,6 +6,10 @@ DATA = $(wildcard sql/*--*--*.sql)
 DATA_built = sql/$(EXTENSION)--$(EXTVERSION).sql
 OBJS = src/bitutils.o src/bitvec.o src/halfutils.o src/halfvec.o src/hnsw.o src/hnswbuild.o src/hnswinsert.o src/hnswscan.o src/hnswutils.o src/hnswvacuum.o src/ivfbuild.o src/ivfflat.o src/ivfinsert.o src/ivfkmeans.o src/ivfscan.o src/ivfutils.o src/ivfvacuum.o src/sparsevec.o src/vector.o
 HEADERS = src/halfvec.h src/sparsevec.h src/vector.h
+RUST_LIB = rust/target/release/libvector_rust.a
+RUST_SRC_FILES = $(wildcard rust/src/*.rs) rust/Cargo.toml
+SHLIB_LINK += $(CURDIR)/$(RUST_LIB)
+EXTRA_CLEAN += rust/target
 
 TESTS = $(wildcard test/sql/*.sql)
 REGRESS = $(patsubst test/sql/%.sql,%,$(TESTS))
@@ -44,6 +48,11 @@ PG_CFLAGS += $(OPTFLAGS) -ftree-vectorize -fassociative-math -fno-signed-zeros -
 # PG_CFLAGS += -Rpass=loop-vectorize -Rpass-analysis=loop-vectorize
 
 all: sql/$(EXTENSION)--$(EXTVERSION).sql
+
+$(RUST_LIB): $(RUST_SRC_FILES)
+	cargo build --manifest-path rust/Cargo.toml --release
+
+$(OBJS): $(RUST_LIB)
 
 sql/$(EXTENSION)--$(EXTVERSION).sql: sql/$(EXTENSION).sql
 	cp $< $@
