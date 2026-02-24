@@ -118,6 +118,13 @@ pub extern "C" fn vector_rust_hnsw_should_set_pruned_from_array_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_track_discarded_candidates_kernel(
+    has_discarded_heap: bool,
+) -> bool {
+    has_discarded_heap
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,

@@ -113,6 +113,7 @@ static bool HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNei
 static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust);
 static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust);
 static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
+static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -927,10 +928,12 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				ItemPointer indextid = &unvisited[i].indextid;
 				BlockNumber blkno = ItemPointerGetBlockNumber(indextid);
 				OffsetNumber offno = ItemPointerGetOffsetNumber(indextid);
+				bool		trackDiscarded;
 
 				/* Avoid any allocations if not adding */
 				eElement = NULL;
-				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, alwaysAdd || discarded != NULL ? NULL : &f->distance, &eElement);
+				trackDiscarded = HnswShouldTrackDiscardedCandidates(discarded != NULL, true);
+				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, alwaysAdd || trackDiscarded ? NULL : &f->distance, &eElement);
 
 				if (eElement == NULL)
 					continue;
@@ -938,7 +941,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 
 			if (!HnswShouldAddSearchCandidate(eDistance, f->distance, alwaysAdd, true))
 			{
-				if (discarded != NULL)
+				if (HnswShouldTrackDiscardedCandidates(discarded != NULL, true))
 				{
 					/* Create a new candidate */
 					e = HnswInitSearchCandidate(base, eElement, eDistance);
@@ -971,7 +974,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				{
 					HnswSearchCandidate *d = HnswGetSearchCandidate(w_node, pairingheap_remove_first(W));
 
-					if (discarded != NULL)
+					if (HnswShouldTrackDiscardedCandidates(discarded != NULL, true))
 						pairingheap_add(*discarded, &d->w_node);
 				}
 			}
@@ -1107,6 +1110,15 @@ HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
 		return vector_rust_hnsw_should_set_pruned_from_array_kernel(wdoff, wdlen);
 
 	return wdoff < wdlen;
+}
+
+static bool
+HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_track_discarded_candidates_kernel(hasDiscardedHeap);
+
+	return hasDiscardedHeap;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
@@ -1273,6 +1285,24 @@ vector_rust_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
 	int32		wdlen = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSetPrunedFromArray(wdoff, wdlen, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_discarded_candidates);
+Datum
+vector_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_discarded_candidates);
+Datum
+vector_rust_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
 }
 
 /*
