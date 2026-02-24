@@ -79,6 +79,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_add_search_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_stop_search_layer(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_stop_search_layer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_stop_search_layer(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_search_layer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -163,5 +173,17 @@ my $add_search_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(candidate_distance, frontier_distance, always_add);
 });
 is($add_search_candidate_parity, "t\nt\nt\nt");
+
+my $stop_search_layer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_stop_search_layer(candidate_distance, frontier_distance) =
+		   rust_hnsw_should_stop_search_layer(candidate_distance, frontier_distance)
+	FROM (VALUES
+		(0.1::double precision, 0.2::double precision),
+		(0.2::double precision, 0.2::double precision),
+		(0.3::double precision, 0.2::double precision),
+		(1.0::double precision, 0.5::double precision)
+	) AS t(candidate_distance, frontier_distance);
+});
+is($stop_search_layer_parity, "t\nt\nt\nt");
 
 done_testing();
