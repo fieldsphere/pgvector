@@ -22,6 +22,15 @@ IvfflatShouldSetInsertPage(int ndeletable, BlockNumber insertPage, bool useRust)
 	return !BlockNumberIsValid(insertPage) && ndeletable > 0;
 }
 
+static bool
+IvfflatShouldUpdateVacuumInsertPage(BlockNumber insertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
+
+	return BlockNumberIsValid(insertPage);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_set_insert_page);
 Datum
 vector_ivfflat_should_set_insert_page(PG_FUNCTION_ARGS)
@@ -40,6 +49,24 @@ vector_rust_ivfflat_should_set_insert_page(PG_FUNCTION_ARGS)
 	int32		insertPage = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(IvfflatShouldSetInsertPage(ndeletable, (BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_update_vacuum_insert_page);
+Datum
+vector_ivfflat_should_update_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateVacuumInsertPage((BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_update_vacuum_insert_page);
+Datum
+vector_rust_ivfflat_should_update_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateVacuumInsertPage((BlockNumber) insertPage, true));
 }
 
 /*
@@ -159,7 +186,7 @@ ivfflatbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 			 * We don't add or delete items from lists pages, so offset won't
 			 * change.
 			 */
-			if (BlockNumberIsValid(insertPage))
+			if (IvfflatShouldUpdateVacuumInsertPage(insertPage, true))
 			{
 				listInfo.offno = coffno;
 				IvfflatUpdateList(index, listInfo, insertPage, InvalidBlockNumber, InvalidBlockNumber, MAIN_FORKNUM);
