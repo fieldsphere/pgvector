@@ -41,6 +41,7 @@ bool		vector_rust_hnsw_should_update_previous_distance_kernel(int32 iterative_sc
 bool		vector_rust_hnsw_should_flush_graph_pages_at_end_kernel(bool graph_flushed);
 bool		vector_rust_hnsw_should_begin_parallel_build_kernel(int32 parallel_workers);
 bool		vector_rust_hnsw_should_end_parallel_build_kernel(bool has_leader);
+bool		vector_rust_hnsw_should_scan_heap_for_build_kernel(bool has_heap);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);

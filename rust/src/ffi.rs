@@ -287,6 +287,13 @@ pub extern "C" fn vector_rust_hnsw_should_end_parallel_build_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_scan_heap_for_build_kernel(
+    has_heap: bool,
+) -> bool {
+    has_heap
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,

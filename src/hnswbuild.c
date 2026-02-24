@@ -535,6 +535,33 @@ vector_rust_hnsw_should_end_parallel_build(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldEndParallelBuild(hasLeader != 0, true));
 }
 
+static bool
+HnswShouldScanHeapForBuild(bool hasHeap, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_scan_heap_for_build_kernel(hasHeap);
+
+	return hasHeap;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_scan_heap_for_build);
+Datum
+vector_hnsw_should_scan_heap_for_build(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldScanHeapForBuild(hasHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_scan_heap_for_build);
+Datum
+vector_rust_hnsw_should_scan_heap_for_build(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldScanHeapForBuild(hasHeap != 0, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -1294,7 +1321,7 @@ BuildGraph(HnswBuildState * buildstate)
 	pgstat_progress_update_param(PROGRESS_CREATEIDX_SUBPHASE, PROGRESS_HNSW_PHASE_LOAD);
 
 	/* Calculate parallel workers */
-	if (buildstate->heap != NULL)
+	if (HnswShouldScanHeapForBuild(buildstate->heap != NULL, true))
 		parallel_workers = ComputeParallelWorkers(buildstate->heap, buildstate->index);
 
 	/* Attempt to launch parallel worker scan when required */
@@ -1302,7 +1329,7 @@ BuildGraph(HnswBuildState * buildstate)
 		HnswBeginParallel(buildstate, buildstate->indexInfo->ii_Concurrent, parallel_workers);
 
 	/* Add tuples to graph */
-	if (buildstate->heap != NULL)
+	if (HnswShouldScanHeapForBuild(buildstate->heap != NULL, true))
 	{
 		if (buildstate->hnswleader)
 			buildstate->reltuples = ParallelHeapScan(buildstate);
