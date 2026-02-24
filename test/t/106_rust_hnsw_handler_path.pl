@@ -640,6 +640,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_unselected_ondisk_neighbor(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_unselected_ondisk_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_unselected_ondisk_neighbor(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_unselected_ondisk_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1410,6 +1420,18 @@ my $commit_ondisk_duplicate_with_buffer_dirty_parity = $node->safe_psql("postgre
 	) AS t(building);
 });
 is($commit_ondisk_duplicate_with_buffer_dirty_parity, "t\nt\nt\nt");
+
+my $skip_unselected_ondisk_neighbor_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_unselected_ondisk_neighbor(update_index) =
+		   rust_hnsw_should_skip_unselected_ondisk_neighbor(update_index)
+	FROM (VALUES
+		(-1),
+		(0),
+		(3),
+		(-1)
+	) AS t(update_index);
+});
+is($skip_unselected_ondisk_neighbor_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
