@@ -18,6 +18,7 @@ bool		vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(boo
 bool		vector_rust_hnsw_should_return_after_duplicate_insert_kernel(bool duplicate_inserted);
 bool		vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(bool duplicate_found);
 bool		vector_rust_hnsw_should_skip_null_insert_tuple_kernel(bool is_null);
+bool		vector_rust_hnsw_should_update_ondisk_insert_page_kernel(bool has_new_insert_page);
 bool		vector_rust_hnsw_should_add_search_candidate_kernel(double candidate_distance, double frontier_distance, bool always_add);
 bool		vector_rust_hnsw_should_stop_search_layer_kernel(double candidate_distance, double frontier_distance);
 bool		vector_rust_hnsw_should_append_neighbor_without_prune_kernel(int32 neighbors_length, int32 max_neighbors);

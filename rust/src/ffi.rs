@@ -106,6 +106,13 @@ pub extern "C" fn vector_rust_hnsw_should_skip_null_insert_tuple_kernel(is_null:
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_update_ondisk_insert_page_kernel(
+    has_new_insert_page: bool,
+) -> bool {
+    has_new_insert_page
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
