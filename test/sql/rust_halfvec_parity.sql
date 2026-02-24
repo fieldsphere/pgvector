@@ -22,6 +22,10 @@ CREATE FUNCTION rust_halfvec_l2_normalize(halfvec) RETURNS halfvec
 	AS '$libdir/vector', 'vector_rust_halfvec_l2_normalize'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_halfvec_cmp(halfvec, halfvec) RETURNS int4
+	AS '$libdir/vector', 'vector_rust_halfvec_cmp'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 SELECT
 	halfvec_add(h1, h2) = rust_halfvec_add(h1, h2),
 	halfvec_sub(h1, h2) = rust_halfvec_sub(h1, h2),
@@ -46,3 +50,11 @@ FROM (VALUES
 	('[0,0,0]'::halfvec(3)),
 	('[-1,2,-3,4]'::halfvec(4))
 ) AS t(h);
+
+SELECT
+	halfvec_cmp(h1, h2) = rust_halfvec_cmp(h1, h2)
+FROM (VALUES
+	('[1,2,3]'::halfvec(3), '[1,2,3]'::halfvec(3)),
+	('[1,2,3]'::halfvec(3), '[1,2,4]'::halfvec(3)),
+	('[1,2,3]'::halfvec(3), '[1,2]'::halfvec(2))
+) AS t(h1, h2);
