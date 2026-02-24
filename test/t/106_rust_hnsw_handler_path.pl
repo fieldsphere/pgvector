@@ -720,6 +720,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_update_add_element_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_update_add_element_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_update_add_element_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_update_add_element_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1586,6 +1596,18 @@ my $mark_ondisk_neighbor_buffer_dirty_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($mark_ondisk_neighbor_buffer_dirty_parity, "t\nt\nt\nt");
+
+my $update_add_element_insert_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_update_add_element_insert_page(has_new_insert_page, page_changed) =
+		   rust_hnsw_should_update_add_element_insert_page(has_new_insert_page, page_changed)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(0, 1),
+		(1, 1)
+	) AS t(has_new_insert_page, page_changed);
+});
+is($update_add_element_insert_page_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
