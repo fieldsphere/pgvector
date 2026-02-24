@@ -49,6 +49,8 @@ void		vector_rust_ivfflat_halfvec_update_center_kernel(int dimensions, const flo
 void		vector_rust_ivfflat_halfvec_sum_center_kernel(int dimensions, const void *halfvec, float *agg);
 void		vector_rust_ivfflat_adjust_lower_bounds_kernel(int sample_count, int center_count, float *lower_bounds, const float *center_distances);
 void		vector_rust_ivfflat_adjust_upper_bounds_kernel(int sample_count, float *upper_bounds, const int32 *closest_centers, const float *center_distances);
+void		vector_rust_ivfflat_init_bounds_kernel(int sample_count, int center_count, const float *lower_bounds, float *upper_bounds, int32 *closest_centers);
+void		vector_rust_ivfflat_compute_s_kernel(int center_count, const float *halfcdist, float *s);
 void		vector_rust_halfvec_add_kernel(int dim, const void *ax, const void *bx, float *rx);
 void		vector_rust_halfvec_sub_kernel(int dim, const void *ax, const void *bx, float *rx);
 void		vector_rust_halfvec_mul_kernel(int dim, const void *ax, const void *bx, float *rx);

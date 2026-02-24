@@ -729,6 +729,55 @@ pub unsafe extern "C" fn vector_rust_ivfflat_adjust_upper_bounds_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_init_bounds_kernel(
+    sample_count: i32,
+    center_count: i32,
+    lower_bounds: *const f32,
+    upper_bounds: *mut f32,
+    closest_centers: *mut i32,
+) {
+    let samples = sample_count as usize;
+    let centers = center_count as usize;
+    for sample in 0..samples {
+        let row = lower_bounds.add(sample * centers);
+        let mut min_distance = f32::MAX;
+        let mut closest_center = 0i32;
+        for center in 0..centers {
+            let distance = *row.add(center);
+            if distance < min_distance {
+                min_distance = distance;
+                closest_center = center as i32;
+            }
+        }
+        *upper_bounds.add(sample) = min_distance;
+        *closest_centers.add(sample) = closest_center;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_compute_s_kernel(
+    center_count: i32,
+    halfcdist: *const f32,
+    s: *mut f32,
+) {
+    let centers = center_count as usize;
+    for center in 0..centers {
+        let mut min_distance = f32::MAX;
+        let row = halfcdist.add(center * centers);
+        for other in 0..centers {
+            if center == other {
+                continue;
+            }
+            let distance = *row.add(other);
+            if distance < min_distance {
+                min_distance = distance;
+            }
+        }
+        *s.add(center) = min_distance;
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,
