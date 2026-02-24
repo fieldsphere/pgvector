@@ -269,6 +269,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_insert_page_is_valid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_vacuum_page_is_valid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_vacuum_page_is_valid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_vacuum_page_is_valid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_vacuum_page_is_valid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -574,5 +584,17 @@ my $insert_page_is_valid_parity = $node->safe_psql("postgres", q{
 	) AS t(page_no);
 });
 is($insert_page_is_valid_parity, "t\nt\nt\nt");
+
+my $vacuum_page_is_valid_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_vacuum_page_is_valid(page_no) =
+		   rust_ivfflat_vacuum_page_is_valid(page_no)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1),
+		(42)
+	) AS t(page_no);
+});
+is($vacuum_page_is_valid_parity, "t\nt\nt\nt");
 
 done_testing();
