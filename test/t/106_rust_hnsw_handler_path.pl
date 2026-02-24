@@ -159,6 +159,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_begin_parallel_build'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_end_parallel_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_end_parallel_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_end_parallel_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_end_parallel_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -332,5 +342,17 @@ my $begin_parallel_build_parity = $node->safe_psql("postgres", q{
 	) AS t(parallel_workers);
 });
 is($begin_parallel_build_parity, "t\nt\nt\nt");
+
+my $end_parallel_build_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_end_parallel_build(has_leader) =
+		   rust_hnsw_should_end_parallel_build(has_leader)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_leader);
+});
+is($end_parallel_build_parity, "t\nt\nt\nt");
 
 done_testing();
