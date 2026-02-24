@@ -49,6 +49,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_choose_scan_list_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_scan_next_list(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_scan_next_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_scan_next_list(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_scan_next_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -90,5 +100,17 @@ my $scan_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(distance, list_count, max_probes, max_distance);
 });
 is($scan_candidate_parity, "t\nt\nt\nt");
+
+my $should_scan_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_scan_next_list(list_index, max_probes, batch_probes, probes) =
+		   rust_ivfflat_should_scan_next_list(list_index, max_probes, batch_probes, probes)
+	FROM (VALUES
+		(0, 10, 0, 2),
+		(5, 10, 1, 2),
+		(10, 10, 0, 2),
+		(2, 10, 2, 2)
+	) AS t(list_index, max_probes, batch_probes, probes);
+});
+is($should_scan_parity, "t\nt\nt\nt");
 
 done_testing();
