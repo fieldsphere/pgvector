@@ -309,6 +309,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_fallback_without_workers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_leader_participate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_leader_participate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_leader_participate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_leader_participate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -662,5 +672,17 @@ my $fallback_without_workers_parity = $node->safe_psql("postgres", q{
 	) AS t(workers_launched);
 });
 is($fallback_without_workers_parity, "t\nt\nt\nt");
+
+my $leader_participate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_leader_participate(leader_participates) =
+		   rust_hnsw_should_leader_participate(leader_participates)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(leader_participates);
+});
+is($leader_participate_parity, "t\nt\nt\nt");
 
 done_testing();
