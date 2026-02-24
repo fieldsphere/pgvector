@@ -513,6 +513,16 @@ pub extern "C" fn vector_rust_hnsw_should_append_neighbor_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_append_element_page_kernel(
+    free_space: i64,
+    element_tuple_size: i64,
+    combined_size: i64,
+    max_size: i64,
+) -> bool {
+    free_space < element_tuple_size || (combined_size <= max_size && free_space < combined_size)
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

@@ -96,6 +96,7 @@ static bool HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust
 static bool HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust);
 static bool HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust);
 static bool HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust);
+static bool HnswShouldAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -219,7 +220,7 @@ CreateGraphPages(HnswBuildState * buildstate)
 		HnswSetElementTuple(base, etup, element);
 
 		/* Keep element and neighbors on the same page if possible */
-		if (PageGetFreeSpace(page) < etupSize || (HnswShouldStoreNeighborsOnSamePage((int64) combinedSize, (int64) maxSize, true) && PageGetFreeSpace(page) < combinedSize))
+		if (HnswShouldAppendElementPage((int64) PageGetFreeSpace(page), (int64) etupSize, (int64) combinedSize, (int64) maxSize, true))
 			HnswBuildAppendPage(index, &buf, &page, forkNum);
 
 		/* Calculate offsets */
@@ -1847,6 +1848,39 @@ vector_rust_hnsw_should_append_neighbor_page(PG_FUNCTION_ARGS)
 	int64		neighborTupleSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldAppendNeighborPage(freeSpace, neighborTupleSize, true));
+}
+
+static bool
+HnswShouldAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_element_page_kernel(freeSpace, elementTupleSize, combinedSize, maxSize);
+
+	return freeSpace < elementTupleSize || (combinedSize <= maxSize && freeSpace < combinedSize);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_element_page);
+Datum
+vector_hnsw_should_append_element_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		elementTupleSize = PG_GETARG_INT64(1);
+	int64		combinedSize = PG_GETARG_INT64(2);
+	int64		maxSize = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_element_page);
+Datum
+vector_rust_hnsw_should_append_element_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		elementTupleSize = PG_GETARG_INT64(1);
+	int64		combinedSize = PG_GETARG_INT64(2);
+	int64		maxSize = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, true));
 }
 
 static bool
