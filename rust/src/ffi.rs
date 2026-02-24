@@ -467,6 +467,76 @@ pub unsafe extern "C" fn vector_rust_sparse_to_dense(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_to_sparse_count_kernel(dim: i32, ax: *const f32) -> i32 {
+    let mut nnz = 0i32;
+
+    for i in 0..(dim as usize) {
+        if *ax.add(i) != 0.0 {
+            nnz += 1;
+        }
+    }
+
+    nnz
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_to_sparse_fill_kernel(
+    dim: i32,
+    ax: *const f32,
+    indices: *mut i32,
+    values: *mut f32,
+) -> i32 {
+    let mut j = 0i32;
+
+    for i in 0..(dim as usize) {
+        let value = *ax.add(i);
+
+        if value != 0.0 {
+            *indices.add(j as usize) = i as i32;
+            *values.add(j as usize) = value;
+            j += 1;
+        }
+    }
+
+    j
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_to_sparse_count_kernel(dim: i32, ax: *const c_void) -> i32 {
+    let mut nnz = 0i32;
+
+    for i in 0..(dim as usize) {
+        if (read_half_bits(ax, i) & 0x7fff) != 0 {
+            nnz += 1;
+        }
+    }
+
+    nnz
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_to_sparse_fill_kernel(
+    dim: i32,
+    ax: *const c_void,
+    indices: *mut i32,
+    values: *mut f32,
+) -> i32 {
+    let mut j = 0i32;
+
+    for i in 0..(dim as usize) {
+        let bits = read_half_bits(ax, i);
+
+        if (bits & 0x7fff) != 0 {
+            *indices.add(j as usize) = i as i32;
+            *values.add(j as usize) = half_bits_to_f32(bits);
+            j += 1;
+        }
+    }
+
+    j
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,

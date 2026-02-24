@@ -602,36 +602,32 @@ vector_to_sparsevec(PG_FUNCTION_ARGS)
 	int32		typmod = PG_GETARG_INT32(1);
 	SparseVector *result;
 	int			dim = vec->dim;
-	int			nnz = 0;
+	int			nnz;
 	float	   *values;
-	int			j = 0;
+	int			j;
 
 	CheckDim(dim);
 	CheckExpectedDim(typmod, dim);
 
-	for (int i = 0; i < dim; i++)
-	{
-		if (vec->x[i] != 0)
-			nnz++;
-	}
-
+	nnz = vector_rust_vector_to_sparse_count_kernel(dim, vec->x);
 	result = InitSparseVector(dim, nnz);
 	values = SPARSEVEC_VALUES(result);
-	for (int i = 0; i < dim; i++)
-	{
-		if (vec->x[i] != 0)
-		{
-			/* Safety check */
-			if (j >= result->nnz)
-				elog(ERROR, "safety check failed");
+	j = vector_rust_vector_to_sparse_fill_kernel(dim, vec->x, result->indices, values);
 
-			result->indices[j] = i;
-			values[j] = vec->x[i];
-			j++;
-		}
-	}
+	if (j != result->nnz)
+		elog(ERROR, "safety check failed");
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: vector to sparse vector cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_vector_to_sparsevec);
+Datum
+vector_rust_vector_to_sparsevec(PG_FUNCTION_ARGS)
+{
+	return vector_to_sparsevec(fcinfo);
 }
 
 /*
@@ -645,36 +641,32 @@ halfvec_to_sparsevec(PG_FUNCTION_ARGS)
 	int32		typmod = PG_GETARG_INT32(1);
 	SparseVector *result;
 	int			dim = vec->dim;
-	int			nnz = 0;
+	int			nnz;
 	float	   *values;
-	int			j = 0;
+	int			j;
 
 	CheckDim(dim);
 	CheckExpectedDim(typmod, dim);
 
-	for (int i = 0; i < dim; i++)
-	{
-		if (!HalfIsZero(vec->x[i]))
-			nnz++;
-	}
-
+	nnz = vector_rust_halfvec_to_sparse_count_kernel(dim, vec->x);
 	result = InitSparseVector(dim, nnz);
 	values = SPARSEVEC_VALUES(result);
-	for (int i = 0; i < dim; i++)
-	{
-		if (!HalfIsZero(vec->x[i]))
-		{
-			/* Safety check */
-			if (j >= result->nnz)
-				elog(ERROR, "safety check failed");
+	j = vector_rust_halfvec_to_sparse_fill_kernel(dim, vec->x, result->indices, values);
 
-			result->indices[j] = i;
-			values[j] = HalfToFloat4(vec->x[i]);
-			j++;
-		}
-	}
+	if (j != result->nnz)
+		elog(ERROR, "safety check failed");
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec to sparse vector cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_to_sparsevec);
+Datum
+vector_rust_halfvec_to_sparsevec(PG_FUNCTION_ARGS)
+{
+	return halfvec_to_sparsevec(fcinfo);
 }
 
 /*
