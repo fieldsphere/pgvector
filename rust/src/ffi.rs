@@ -393,6 +393,13 @@ pub extern "C" fn vector_rust_hnsw_should_leader_participate_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_use_debug_query_string_kernel(
+    has_debug_query_string: bool,
+) -> bool {
+    has_debug_query_string
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
