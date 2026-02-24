@@ -5,12 +5,42 @@
 #include "access/itup.h"
 #include "commands/vacuum.h"
 #include "ivfflat.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "utils/relcache.h"
 
 #if PG_VERSION_NUM >= 180000
 #define vacuum_delay_point() vacuum_delay_point(false)
 #endif
+
+static bool
+IvfflatShouldSetInsertPage(int ndeletable, BlockNumber insertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_set_insert_page_kernel(ndeletable, BlockNumberIsValid(insertPage));
+
+	return !BlockNumberIsValid(insertPage) && ndeletable > 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_set_insert_page);
+Datum
+vector_ivfflat_should_set_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		ndeletable = PG_GETARG_INT32(0);
+	int32		insertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldSetInsertPage(ndeletable, (BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_set_insert_page);
+Datum
+vector_rust_ivfflat_should_set_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		ndeletable = PG_GETARG_INT32(0);
+	int32		insertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldSetInsertPage(ndeletable, (BlockNumber) insertPage, true));
+}
 
 /*
  * Bulk delete tuples from the index
@@ -106,7 +136,7 @@ ivfflatbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 
 				/* Set to first free page */
 				/* Must be set before searchPage is updated */
-				if (!BlockNumberIsValid(insertPage) && ndeletable > 0)
+				if (IvfflatShouldSetInsertPage(ndeletable, insertPage, true))
 					insertPage = searchPage;
 
 				searchPage = IvfflatPageGetOpaque(page)->nextblkno;
