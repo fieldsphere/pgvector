@@ -219,6 +219,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_visit_vacuum_list_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_visit_vacuum_entry_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_visit_vacuum_entry_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_visit_vacuum_entry_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_visit_vacuum_entry_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -464,5 +474,17 @@ my $visit_vacuum_list_page_parity = $node->safe_psql("postgres", q{
 	) AS t(page_no);
 });
 is($visit_vacuum_list_page_parity, "t\nt\nt\nt");
+
+my $visit_vacuum_entry_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_visit_vacuum_entry_page(page_no) =
+		   rust_ivfflat_should_visit_vacuum_entry_page(page_no)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1),
+		(42)
+	) AS t(page_no);
+});
+is($visit_vacuum_entry_page_parity, "t\nt\nt\nt");
 
 done_testing();
