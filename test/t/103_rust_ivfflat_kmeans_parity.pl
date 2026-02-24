@@ -49,6 +49,26 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_all_finite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_vector_sum_center(real[], real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_vector_sum_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_vector_sum_center(real[], real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_vector_sum_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_bit_sum_center(bit) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_bit_sum_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_bit_sum_center(bit) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_bit_sum_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_center_counts(assignments, centers) = rust_ivfflat_center_counts(assignments, centers)
@@ -89,5 +109,25 @@ my $finite_parity = $node->safe_psql("postgres", q{
 	) AS t(v);
 });
 is($finite_parity, "t\nt\nt");
+
+my $vector_sum_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_vector_sum_center(a, b) = rust_ivfflat_vector_sum_center(a, b)
+	FROM (VALUES
+		(ARRAY[1.0, 2.0, 3.0]::real[], ARRAY[0.5, 1.5, 2.5]::real[]),
+		(ARRAY[0.0, 0.0, 0.0]::real[], ARRAY[1.0, 1.0, 1.0]::real[]),
+		(ARRAY[-1.0, 1.0, -1.0]::real[], ARRAY[2.0, -2.0, 2.0]::real[])
+	) AS t(a, b);
+});
+is($vector_sum_parity, "t\nt\nt");
+
+my $bit_sum_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_bit_sum_center(bv) = rust_ivfflat_bit_sum_center(bv)
+	FROM (VALUES
+		(B'1010'::bit(4)),
+		(B'11110000'::bit(8)),
+		(B'00000000'::bit(8))
+	) AS t(bv);
+});
+is($bit_sum_parity, "t\nt\nt");
 
 done_testing();
