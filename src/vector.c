@@ -566,17 +566,7 @@ halfvec_to_vector(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static float
 VectorL2SquaredDistance(int dim, float *ax, float *bx)
 {
-	float		distance = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-	{
-		float		diff = ax[i] - bx[i];
-
-		distance += diff * diff;
-	}
-
-	return distance;
+	return vector_rust_vector_l2_squared_distance(dim, ax, bx);
 }
 
 /*
@@ -613,13 +603,7 @@ vector_l2_squared_distance(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static float
 VectorInnerProduct(int dim, float *ax, float *bx)
 {
-	float		distance = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-		distance += ax[i] * bx[i];
-
-	return distance;
+	return vector_rust_vector_inner_product(dim, ax, bx);
 }
 
 /*
@@ -655,20 +639,7 @@ vector_negative_inner_product(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static double
 VectorCosineSimilarity(int dim, float *ax, float *bx)
 {
-	float		similarity = 0.0;
-	float		norma = 0.0;
-	float		normb = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-	{
-		similarity += ax[i] * bx[i];
-		norma += ax[i] * ax[i];
-		normb += bx[i] * bx[i];
-	}
-
-	/* Use sqrt(a * b) over sqrt(a) * sqrt(b) */
-	return (double) similarity / sqrt((double) norma * (double) normb);
+	return vector_rust_vector_cosine_similarity(dim, ax, bx);
 }
 
 /*
@@ -731,13 +702,7 @@ vector_spherical_distance(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static float
 VectorL1Distance(int dim, float *ax, float *bx)
 {
-	float		distance = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-		distance += fabsf(ax[i] - bx[i]);
-
-	return distance;
+	return vector_rust_vector_l1_distance(dim, ax, bx);
 }
 
 /*
@@ -753,6 +718,75 @@ l1_distance(PG_FUNCTION_ARGS)
 	CheckDims(a, b);
 
 	PG_RETURN_FLOAT8((double) VectorL1Distance(a->dim, a->x, b->x));
+}
+
+/*
+ * Rust parity wrapper: L2 distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_l2_distance);
+Datum
+vector_rust_l2_distance(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8(sqrt((double) vector_rust_vector_l2_squared_distance(a->dim, a->x, b->x)));
+}
+
+/*
+ * Rust parity wrapper: inner product
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_inner_product);
+Datum
+vector_rust_inner_product(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_vector_inner_product(a->dim, a->x, b->x));
+}
+
+/*
+ * Rust parity wrapper: cosine distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_cosine_distance);
+Datum
+vector_rust_cosine_distance(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+	double		similarity;
+
+	CheckDims(a, b);
+
+	similarity = vector_rust_vector_cosine_similarity(a->dim, a->x, b->x);
+
+	/* Keep in range */
+	if (similarity > 1.0)
+		similarity = 1.0;
+	else if (similarity < -1.0)
+		similarity = -1.0;
+
+	PG_RETURN_FLOAT8(1.0 - similarity);
+}
+
+/*
+ * Rust parity wrapper: L1 distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_l1_distance);
+Datum
+vector_rust_l1_distance(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_vector_l1_distance(a->dim, a->x, b->x));
 }
 
 /*

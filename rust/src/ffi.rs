@@ -135,20 +135,20 @@ pub unsafe extern "C" fn vector_rust_half_cosine_similarity(
     ax: *const c_void,
     bx: *const c_void,
 ) -> f64 {
-    let mut similarity = 0.0f64;
-    let mut norm_a = 0.0f64;
-    let mut norm_b = 0.0f64;
+    let mut similarity = 0.0f32;
+    let mut norm_a = 0.0f32;
+    let mut norm_b = 0.0f32;
 
     for i in 0..(dim as usize) {
-        let a = half_bits_to_f32(read_half_bits(ax, i)) as f64;
-        let b = half_bits_to_f32(read_half_bits(bx, i)) as f64;
+        let a = half_bits_to_f32(read_half_bits(ax, i));
+        let b = half_bits_to_f32(read_half_bits(bx, i));
 
         similarity += a * b;
         norm_a += a * a;
         norm_b += b * b;
     }
 
-    similarity / (norm_a * norm_b).sqrt()
+    similarity as f64 / ((norm_a as f64) * (norm_b as f64)).sqrt()
 }
 
 #[no_mangle]
@@ -162,6 +162,80 @@ pub unsafe extern "C" fn vector_rust_half_l1_distance(
     for i in 0..(dim as usize) {
         let a = half_bits_to_f32(read_half_bits(ax, i));
         let b = half_bits_to_f32(read_half_bits(bx, i));
+        distance += (a - b).abs();
+    }
+
+    distance
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_l2_squared_distance(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+) -> f32 {
+    let mut distance = 0.0f32;
+
+    for i in 0..(dim as usize) {
+        let a = *ax.add(i);
+        let b = *bx.add(i);
+        let diff = a - b;
+        distance += diff * diff;
+    }
+
+    distance
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_inner_product(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+) -> f32 {
+    let mut distance = 0.0f32;
+
+    for i in 0..(dim as usize) {
+        let a = *ax.add(i);
+        let b = *bx.add(i);
+        distance += a * b;
+    }
+
+    distance
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_cosine_similarity(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+) -> f64 {
+    let mut similarity = 0.0f32;
+    let mut norm_a = 0.0f32;
+    let mut norm_b = 0.0f32;
+
+    for i in 0..(dim as usize) {
+        let a = *ax.add(i);
+        let b = *bx.add(i);
+
+        similarity += a * b;
+        norm_a += a * a;
+        norm_b += b * b;
+    }
+
+    similarity as f64 / ((norm_a as f64) * (norm_b as f64)).sqrt()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_l1_distance(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+) -> f32 {
+    let mut distance = 0.0f32;
+
+    for i in 0..(dim as usize) {
+        let a = *ax.add(i);
+        let b = *bx.add(i);
         distance += (a - b).abs();
     }
 

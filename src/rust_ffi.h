@@ -11,5 +11,9 @@ float		vector_rust_half_l2_squared_distance(int dim, const void *ax, const void 
 float		vector_rust_half_inner_product(int dim, const void *ax, const void *bx);
 double		vector_rust_half_cosine_similarity(int dim, const void *ax, const void *bx);
 float		vector_rust_half_l1_distance(int dim, const void *ax, const void *bx);
+float		vector_rust_vector_l2_squared_distance(int dim, const float *ax, const float *bx);
+float		vector_rust_vector_inner_product(int dim, const float *ax, const float *bx);
+double		vector_rust_vector_cosine_similarity(int dim, const float *ax, const float *bx);
+float		vector_rust_vector_l1_distance(int dim, const float *ax, const float *bx);
 
 #endif
