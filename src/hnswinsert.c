@@ -36,6 +36,7 @@ static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
 static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
+static bool HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust);
 
 /*
  * Get the insert page
@@ -224,7 +225,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		/* First, try the fastest path */
 		/* Space for both tuples on the current page */
 		/* This can split existing tuples in rare cases */
-		if (PageGetFreeSpace(page) >= combinedSize)
+		if (HnswShouldFitOnDiskCombinedTuple((int64) PageGetFreeSpace(page), (int64) combinedSize, true))
 		{
 			nbuf = buf;
 			npage = page;
@@ -1335,6 +1336,35 @@ vector_rust_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
 	int32		freeOffsetValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskOffsets(freeOffsetValid != 0, true));
+}
+
+static bool
+HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust)
+{
+	if (useRust)
+		return !vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, combinedSize);
+
+	return freeSpace >= combinedSize;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fit_ondisk_combined_tuple);
+Datum
+vector_hnsw_should_fit_ondisk_combined_tuple(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		combinedSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldFitOnDiskCombinedTuple(freeSpace, combinedSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_fit_ondisk_combined_tuple);
+Datum
+vector_rust_hnsw_should_fit_ondisk_combined_tuple(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		combinedSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldFitOnDiskCombinedTuple(freeSpace, combinedSize, true));
 }
 
 static bool
