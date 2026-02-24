@@ -32,6 +32,15 @@ IvfflatShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
 	return freeSpace < itemSize;
 }
 
+static bool
+IvfflatShouldUpdateInsertPage(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) originalInsertPage);
+
+	return insertPage != originalInsertPage;
+}
+
 /*
  * Find the list that minimizes the distance function
  */
@@ -125,6 +134,26 @@ vector_rust_ivfflat_should_append_page(PG_FUNCTION_ARGS)
 	int32		itemSize = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(IvfflatShouldAppendPage(freeSpace, itemSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_update_insert_page);
+Datum
+vector_ivfflat_should_update_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		originalInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateInsertPage((BlockNumber) insertPage, (BlockNumber) originalInsertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_update_insert_page);
+Datum
+vector_rust_ivfflat_should_update_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		originalInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateInsertPage((BlockNumber) insertPage, (BlockNumber) originalInsertPage, true));
 }
 
 /*
@@ -237,7 +266,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heap_tid)
 	IvfflatCommitBuffer(buf, state);
 
 	/* Update the insert page */
-	if (insertPage != originalInsertPage)
+	if (IvfflatShouldUpdateInsertPage(insertPage, originalInsertPage, true))
 		IvfflatUpdateList(index, listInfo, insertPage, originalInsertPage, InvalidBlockNumber, MAIN_FORKNUM);
 }
 

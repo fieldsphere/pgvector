@@ -13,6 +13,7 @@ bool		vector_rust_ivfflat_should_scan_next_list_kernel(int32 list_index, int32 m
 bool		vector_rust_ivfflat_choose_build_center_candidate_kernel(double distance, double min_distance);
 bool		vector_rust_ivfflat_should_append_page_kernel(int32 free_space, int32 item_size);
 bool		vector_rust_ivfflat_should_set_insert_page_kernel(int32 ndeletable, bool insert_page_is_valid);
+bool		vector_rust_ivfflat_should_update_insert_page_kernel(int32 insert_page, int32 original_insert_page);
 uint64		vector_rust_bit_hamming_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 distance);
 double		vector_rust_bit_jaccard_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 ab, uint64 aa, uint64 bb);
 float		vector_rust_half_l2_squared_distance(int dim, const void *ax, const void *bx);

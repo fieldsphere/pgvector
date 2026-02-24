@@ -98,6 +98,14 @@ pub extern "C" fn vector_rust_ivfflat_should_set_insert_page_kernel(
     !insert_page_is_valid && ndeletable > 0
 }
 
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_update_insert_page_kernel(
+    insert_page: i32,
+    original_insert_page: i32,
+) -> bool {
+    insert_page != original_insert_page
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;
