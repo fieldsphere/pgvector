@@ -159,6 +159,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_build_should_append_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_follow_insert_page_link(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_follow_insert_page_link'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_follow_insert_page_link(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_follow_insert_page_link'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -332,5 +342,17 @@ my $build_append_page_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, item_size);
 });
 is($build_append_page_parity, "t\nt\nt\nt");
+
+my $follow_insert_page_link_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_follow_insert_page_link(insert_page) =
+		   rust_ivfflat_should_follow_insert_page_link(insert_page)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1),
+		(42)
+	) AS t(insert_page);
+});
+is($follow_insert_page_link_parity, "t\nt\nt\nt");
 
 done_testing();
