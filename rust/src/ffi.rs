@@ -92,6 +92,14 @@ pub extern "C" fn vector_rust_hnsw_should_append_neighbor_without_prune_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_skip_lower_level_candidate_kernel(
+    candidate_level: i32,
+    search_level: i32,
+) -> bool {
+    candidate_level < search_level
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,

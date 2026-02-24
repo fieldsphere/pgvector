@@ -110,6 +110,7 @@ hash_offset(Size offset)
 static bool HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust);
 static bool HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust);
 static bool HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust);
+static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -946,7 +947,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			}
 
 			/* Make robust to issues */
-			if (eElement->level < lc)
+			if (HnswShouldSkipLowerLevelCandidate(eElement->level, lc, true))
 				continue;
 
 			/* Create a new candidate */
@@ -1079,6 +1080,15 @@ HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool
 	return neighborsLength < maxNeighbors;
 }
 
+static bool
+HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_lower_level_candidate_kernel(candidateLevel, searchLevel);
+
+	return candidateLevel < searchLevel;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1179,6 +1189,26 @@ vector_rust_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
 	int32		maxNeighbors = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_lower_level_candidate);
+Datum
+vector_hnsw_should_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSkipLowerLevelCandidate(candidateLevel, searchLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_lower_level_candidate);
+Datum
+vector_rust_hnsw_should_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSkipLowerLevelCandidate(candidateLevel, searchLevel, true));
 }
 
 /*
