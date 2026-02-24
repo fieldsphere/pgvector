@@ -351,6 +351,13 @@ pub extern "C" fn vector_rust_hnsw_should_normalize_scan_value_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_initialize_scan_state_kernel(
+    is_first_scan: bool,
+) -> bool {
+    is_first_scan
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
