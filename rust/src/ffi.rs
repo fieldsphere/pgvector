@@ -277,3 +277,20 @@ pub unsafe extern "C" fn vector_rust_vector_mul(
         *rx.add(i) = *ax.add(i) * *bx.add(i);
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_concat(
+    adim: i32,
+    ax: *const f32,
+    bdim: i32,
+    bx: *const f32,
+    rx: *mut f32,
+) {
+    for i in 0..(adim as usize) {
+        *rx.add(i) = *ax.add(i);
+    }
+
+    for i in 0..(bdim as usize) {
+        *rx.add((adim as usize) + i) = *bx.add(i);
+    }
+}

@@ -969,13 +969,7 @@ vector_concat(PG_FUNCTION_ARGS)
 	CheckDim(dim);
 	result = InitVector(dim);
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		result->x[i] = a->x[i];
-
-	/* Auto-vectorized */
-	for (int i = 0, imax = b->dim, start = a->dim; i < imax; i++)
-		result->x[i + start] = b->x[i];
+	vector_rust_vector_concat(a->dim, a->x, b->dim, b->x, result->x);
 
 	PG_RETURN_POINTER(result);
 }

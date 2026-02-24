@@ -18,5 +18,6 @@ float		vector_rust_vector_l1_distance(int dim, const float *ax, const float *bx)
 void		vector_rust_vector_add(int dim, const float *ax, const float *bx, float *rx);
 void		vector_rust_vector_sub(int dim, const float *ax, const float *bx, float *rx);
 void		vector_rust_vector_mul(int dim, const float *ax, const float *bx, float *rx);
+void		vector_rust_vector_concat(int adim, const float *ax, int bdim, const float *bx, float *rx);
 
 #endif
