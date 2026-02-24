@@ -467,6 +467,14 @@ pub extern "C" fn vector_rust_hnsw_should_reject_low_ef_construction_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_write_wal_page_kernel(
+    needs_wal: bool,
+    is_init_fork: bool,
+) -> bool {
+    needs_wal || is_init_fork
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

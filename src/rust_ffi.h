@@ -66,6 +66,7 @@ bool		vector_rust_hnsw_should_reject_varbit_type_kernel(int32 type_oid, int32 va
 bool		vector_rust_hnsw_should_reject_missing_dimensions_kernel(int32 dimensions);
 bool		vector_rust_hnsw_should_reject_excess_dimensions_kernel(int32 dimensions, int32 max_dimensions);
 bool		vector_rust_hnsw_should_reject_low_ef_construction_kernel(int32 ef_construction, int32 m);
+bool		vector_rust_hnsw_should_write_wal_page_kernel(bool needs_wal, bool is_init_fork);
 bool		vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(bool snapshot_is_mvcc);
 bool		vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(int32 participants_done, int32 participant_count);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);

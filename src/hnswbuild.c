@@ -90,6 +90,7 @@ static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
 static bool HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust);
 static bool HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust);
 static bool HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust);
+static bool HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -1703,6 +1704,35 @@ vector_rust_hnsw_should_reject_low_ef_construction(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_write_wal_page_kernel(needsWal, isInitFork);
+
+	return needsWal || isInitFork;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_wal_page);
+Datum
+vector_hnsw_should_write_wal_page(PG_FUNCTION_ARGS)
+{
+	int32		needsWal = PG_GETARG_INT32(0);
+	int32		isInitFork = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldWriteWalPage(needsWal != 0, isInitFork != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_write_wal_page);
+Datum
+vector_rust_hnsw_should_write_wal_page(PG_FUNCTION_ARGS)
+{
+	int32		needsWal = PG_GETARG_INT32(0);
+	int32		isInitFork = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldWriteWalPage(needsWal != 0, isInitFork != 0, true));
+}
+
+static bool
 HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust)
 {
 	if (useRust)
@@ -1846,7 +1876,7 @@ BuildIndex(Relation heap, Relation index, IndexInfo *indexInfo,
 
 	BuildGraph(buildstate);
 
-	if (RelationNeedsWAL(index) || forkNum == INIT_FORKNUM)
+	if (HnswShouldWriteWalPage(RelationNeedsWAL(index), forkNum == INIT_FORKNUM, true))
 		log_newpage_range(index, forkNum, 0, RelationGetNumberOfBlocksInFork(index, forkNum), true);
 
 	FreeBuildState(buildstate);
