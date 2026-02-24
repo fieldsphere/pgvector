@@ -87,6 +87,7 @@ static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust
 static bool HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust);
 static bool HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust);
 static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
+static bool HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -972,7 +973,7 @@ InitBuildState(HnswBuildState * buildstate, Relation heap, Relation index, Index
 				 errmsg("type not supported for hnsw index")));
 
 	/* Require column to have dimensions to be indexed */
-	if (buildstate->dimensions < 0)
+	if (HnswShouldRejectMissingDimensions(buildstate->dimensions, true))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("column does not have dimensions")));
@@ -1612,6 +1613,33 @@ vector_rust_hnsw_should_reject_varbit_type(PG_FUNCTION_ARGS)
 	int32		typeOid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectVarbitType((Oid) typeOid, true));
+}
+
+static bool
+HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_missing_dimensions_kernel(dimensions);
+
+	return dimensions < 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_missing_dimensions);
+Datum
+vector_hnsw_should_reject_missing_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectMissingDimensions(dimensions, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_missing_dimensions);
+Datum
+vector_rust_hnsw_should_reject_missing_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectMissingDimensions(dimensions, true));
 }
 
 static bool

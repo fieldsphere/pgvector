@@ -444,6 +444,13 @@ pub extern "C" fn vector_rust_hnsw_should_reject_varbit_type_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_missing_dimensions_kernel(
+    dimensions: i32,
+) -> bool {
+    dimensions < 0
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {
