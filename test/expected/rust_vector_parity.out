@@ -31,6 +31,23 @@ CREATE FUNCTION rust_halfvec_to_vector(halfvec) RETURNS vector
 CREATE FUNCTION rust_sparsevec_to_vector(sparsevec) RETURNS vector
 	AS '$libdir/vector', 'vector_rust_sparsevec_to_vector'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_vector_accum(double precision[], vector) RETURNS double precision[]
+	AS '$libdir/vector', 'vector_rust_accum'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_vector_avg(double precision[]) RETURNS vector
+	AS '$libdir/vector', 'vector_rust_avg'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_vector_combine(double precision[], double precision[]) RETURNS double precision[]
+	AS '$libdir/vector', 'vector_rust_combine'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE AGGREGATE rust_avg(vector) (
+	SFUNC = rust_vector_accum,
+	STYPE = double precision[],
+	FINALFUNC = rust_vector_avg,
+	COMBINEFUNC = rust_vector_combine,
+	INITCOND = '{0}',
+	PARALLEL = SAFE
+);
 SELECT
 	l2_distance(v1, v2) = rust_l2_distance(v1, v2),
 	inner_product(v1, v2) = rust_inner_product(v1, v2),
@@ -119,4 +136,16 @@ FROM (VALUES
  t
  t
 (3 rows)
+
+SELECT
+	avg(v) = rust_avg(v)
+FROM (VALUES
+	('[1,2,3]'::vector(3)),
+	('[4,5,6]'::vector(3)),
+	('[7,8,9]'::vector(3))
+) AS t(v);
+ ?column? 
+----------
+ t
+(1 row)
 

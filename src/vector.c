@@ -1394,6 +1394,36 @@ vector_avg(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Rust parity wrapper: vector aggregate transition
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_accum);
+Datum
+vector_rust_accum(PG_FUNCTION_ARGS)
+{
+	return vector_accum(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: vector aggregate combine
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_combine);
+Datum
+vector_rust_combine(PG_FUNCTION_ARGS)
+{
+	return vector_combine(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: vector aggregate final
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_avg);
+Datum
+vector_rust_avg(PG_FUNCTION_ARGS)
+{
+	return vector_avg(fcinfo);
+}
+
+/*
  * Convert sparse vector to dense vector
  */
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(sparsevec_to_vector);
