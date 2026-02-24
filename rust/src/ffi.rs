@@ -487,6 +487,61 @@ pub unsafe extern "C" fn vector_rust_sparsevec_l2_normalize_values_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_cmp_kernel(
+    adim: i32,
+    annz: i32,
+    aindices: *const i32,
+    ax: *const f32,
+    bdim: i32,
+    bnnz: i32,
+    bindices: *const i32,
+    bx: *const f32,
+) -> i32 {
+    let nnz = usize::min(annz as usize, bnnz as usize);
+
+    for i in 0..nnz {
+        let aidx = *aindices.add(i);
+        let bidx = *bindices.add(i);
+        let av = *ax.add(i);
+        let bv = *bx.add(i);
+
+        if aidx < bidx {
+            return if av < 0.0 { -1 } else { 1 };
+        }
+
+        if aidx > bidx {
+            return if bv < 0.0 { 1 } else { -1 };
+        }
+
+        if av < bv {
+            return -1;
+        }
+
+        if av > bv {
+            return 1;
+        }
+    }
+
+    if annz < bnnz && *bindices.add(nnz) < adim {
+        let bv = *bx.add(nnz);
+        return if bv < 0.0 { 1 } else { -1 };
+    }
+
+    if annz > bnnz && *aindices.add(nnz) < bdim {
+        let av = *ax.add(nnz);
+        return if av < 0.0 { -1 } else { 1 };
+    }
+
+    if adim < bdim {
+        -1
+    } else if adim > bdim {
+        1
+    } else {
+        0
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_halfvec_add_kernel(
     dim: i32,
     ax: *const c_void,

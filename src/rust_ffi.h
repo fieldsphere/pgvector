@@ -39,5 +39,6 @@ double		vector_rust_halfvec_l2_norm_kernel(int dim, const void *ax);
 void		vector_rust_halfvec_l2_normalize_kernel(int dim, const void *ax, float *rx);
 double		vector_rust_sparsevec_l2_norm_kernel(int nnz, const float *ax);
 void		vector_rust_sparsevec_l2_normalize_values_kernel(int nnz, const float *ax, double norm, float *rx);
+int32		vector_rust_sparsevec_cmp_kernel(int adim, int annz, const int32 *aindices, const float *ax, int bdim, int bnnz, const int32 *bindices, const float *bx);
 
 #endif

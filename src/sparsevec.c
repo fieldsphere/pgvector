@@ -1151,39 +1151,8 @@ vector_rust_sparsevec_l2_normalize(PG_FUNCTION_ARGS)
 static int
 sparsevec_cmp_internal(SparseVector * a, SparseVector * b)
 {
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	int			nnz = Min(a->nnz, b->nnz);
-
-	/* Check values before dimensions to be consistent with Postgres arrays */
-	for (int i = 0; i < nnz; i++)
-	{
-		if (a->indices[i] < b->indices[i])
-			return ax[i] < 0 ? -1 : 1;
-
-		if (a->indices[i] > b->indices[i])
-			return bx[i] < 0 ? 1 : -1;
-
-		if (ax[i] < bx[i])
-			return -1;
-
-		if (ax[i] > bx[i])
-			return 1;
-	}
-
-	if (a->nnz < b->nnz && b->indices[nnz] < a->dim)
-		return bx[nnz] < 0 ? 1 : -1;
-
-	if (a->nnz > b->nnz && a->indices[nnz] < b->dim)
-		return ax[nnz] < 0 ? -1 : 1;
-
-	if (a->dim < b->dim)
-		return -1;
-
-	if (a->dim > b->dim)
-		return 1;
-
-	return 0;
+	return vector_rust_sparsevec_cmp_kernel(a->dim, a->nnz, a->indices, SPARSEVEC_VALUES(a),
+											b->dim, b->nnz, b->indices, SPARSEVEC_VALUES(b));
 }
 
 /*
@@ -1275,4 +1244,14 @@ sparsevec_cmp(PG_FUNCTION_ARGS)
 	SparseVector *b = PG_GETARG_SPARSEVEC_P(1);
 
 	PG_RETURN_INT32(sparsevec_cmp_internal(a, b));
+}
+
+/*
+ * Rust parity wrapper: compare sparse vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_cmp);
+Datum
+vector_rust_sparsevec_cmp(PG_FUNCTION_ARGS)
+{
+	return sparsevec_cmp(fcinfo);
 }

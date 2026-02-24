@@ -6,6 +6,10 @@ CREATE FUNCTION rust_sparsevec_l2_normalize(sparsevec) RETURNS sparsevec
 	AS '$libdir/vector', 'vector_rust_sparsevec_l2_normalize'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_sparsevec_cmp(sparsevec, sparsevec) RETURNS int4
+	AS '$libdir/vector', 'vector_rust_sparsevec_cmp'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 SELECT
 	l2_norm(sv) = rust_sparsevec_l2_norm(sv)
 FROM (VALUES
@@ -21,3 +25,11 @@ FROM (VALUES
 	('{2:-2}/4'::sparsevec(4)),
 	('{}/5'::sparsevec(5))
 ) AS t(sv);
+
+SELECT
+	sparsevec_cmp(s1, s2) = rust_sparsevec_cmp(s1, s2)
+FROM (VALUES
+	('{1:1}/3'::sparsevec(3), '{1:1}/3'::sparsevec(3)),
+	('{1:1}/3'::sparsevec(3), '{2:1}/3'::sparsevec(3)),
+	('{1:-1}/3'::sparsevec(3), '{2:1}/3'::sparsevec(3))
+) AS t(s1, s2);
