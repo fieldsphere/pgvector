@@ -22,6 +22,7 @@ bool		vector_rust_hnsw_should_track_discarded_candidates_kernel(bool has_discard
 bool		vector_rust_hnsw_should_track_update_index_kernel(bool has_update_index_pointer);
 bool		vector_rust_hnsw_should_process_pruned_candidate_kernel(bool has_pruned_candidate);
 bool		vector_rust_hnsw_should_trim_candidate_list_kernel(int32 candidate_count, int32 ef);
+bool		vector_rust_hnsw_should_always_add_candidate_kernel(int32 candidate_count, int32 ef);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);

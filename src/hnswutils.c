@@ -117,6 +117,7 @@ static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRu
 static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
 static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
+static bool HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -917,7 +918,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			HnswElement eElement;
 			HnswSearchCandidate *e;
 			double		eDistance;
-			bool		alwaysAdd = wlen < ef;
+			bool		alwaysAdd = HnswShouldAlwaysAddCandidate(wlen, ef, true);
 
 			f = HnswGetSearchCandidate(w_node, pairingheap_first(W));
 
@@ -1149,6 +1150,15 @@ HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
 		return vector_rust_hnsw_should_trim_candidate_list_kernel(candidateCount, ef);
 
 	return candidateCount > ef;
+}
+
+static bool
+HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_always_add_candidate_kernel(candidateCount, ef);
+
+	return candidateCount < ef;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
@@ -1389,6 +1399,26 @@ vector_rust_hnsw_should_trim_candidate_list(PG_FUNCTION_ARGS)
 	int32		ef = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldTrimCandidateList(candidateCount, ef, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_always_add_candidate);
+Datum
+vector_hnsw_should_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAlwaysAddCandidate(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_always_add_candidate);
+Datum
+vector_rust_hnsw_should_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAlwaysAddCandidate(candidateCount, ef, true));
 }
 
 /*
