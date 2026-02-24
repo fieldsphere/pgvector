@@ -192,6 +192,41 @@ IvfflatGetMetaPageInfo(Relation index, int *lists, int *dimensions)
 	UnlockReleaseBuffer(buf);
 }
 
+static bool
+IvfflatShouldWriteListInsertPage(BlockNumber insertPage, BlockNumber currentInsertPage, bool useRust)
+{
+	if (useRust)
+	{
+		bool		isValid;
+
+		isValid = vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
+		return isValid &&
+			vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) currentInsertPage);
+	}
+
+	return BlockNumberIsValid(insertPage) && insertPage != currentInsertPage;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_write_list_insert_page);
+Datum
+vector_ivfflat_should_write_list_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		currentInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldWriteListInsertPage((BlockNumber) insertPage, (BlockNumber) currentInsertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_write_list_insert_page);
+Datum
+vector_rust_ivfflat_should_write_list_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		currentInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldWriteListInsertPage((BlockNumber) insertPage, (BlockNumber) currentInsertPage, true));
+}
+
 /*
  * Update the start or insert page of a list
  */
@@ -212,7 +247,7 @@ IvfflatUpdateList(Relation index, ListInfo listInfo,
 	page = GenericXLogRegisterBuffer(state, buf, 0);
 	list = (IvfflatList) PageGetItem(page, PageGetItemId(page, listInfo.offno));
 
-	if (BlockNumberIsValid(insertPage) && insertPage != list->insertPage)
+	if (IvfflatShouldWriteListInsertPage(insertPage, list->insertPage, true))
 	{
 		/* Skip update if insert page is lower than original insert page  */
 		/* This is needed to prevent insert from overwriting vacuum */
