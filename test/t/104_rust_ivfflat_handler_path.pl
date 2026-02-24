@@ -89,6 +89,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_set_insert_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_update_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_update_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_update_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_update_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -178,5 +188,17 @@ my $set_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(ndeletable, insert_page);
 });
 is($set_insert_page_parity, "t\nt\nt\nt");
+
+my $update_insert_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_update_insert_page(insert_page, original_page) =
+		   rust_ivfflat_should_update_insert_page(insert_page, original_page)
+	FROM (VALUES
+		(5, 5),
+		(6, 5),
+		(0, -1),
+		(42, 41)
+	) AS t(insert_page, original_page);
+});
+is($update_insert_page_parity, "t\nt\nt\nt");
 
 done_testing();
