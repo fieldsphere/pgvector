@@ -109,6 +109,7 @@ hash_offset(Size offset)
 
 static bool HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust);
 static bool HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust);
+static bool HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1069,6 +1070,15 @@ HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, boo
 	return candidateDistance > frontierDistance;
 }
 
+static bool
+HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_neighbor_without_prune_kernel(neighborsLength, maxNeighbors);
+
+	return neighborsLength < maxNeighbors;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1149,6 +1159,26 @@ vector_rust_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
 	float8		frontierDistance = PG_GETARG_FLOAT8(1);
 
 	PG_RETURN_BOOL(HnswShouldStopSearchLayer(candidateDistance, frontierDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_neighbor_without_prune);
+Datum
+vector_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_neighbor_without_prune);
+Datum
+vector_rust_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, true));
 }
 
 /*
@@ -1305,7 +1335,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 	HnswPtrStore(base, newHc.element, newElement);
 	newHc.distance = distance;
 
-	if (neighbors->length < lm)
+	if (HnswShouldAppendNeighborWithoutPrune(neighbors->length, lm, true))
 	{
 		neighbors->items[neighbors->length++] = newHc;
 

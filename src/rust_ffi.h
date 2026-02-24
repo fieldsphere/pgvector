@@ -14,6 +14,7 @@ bool		vector_rust_hnsw_should_flush_graph_kernel(int64 memory_used, int64 memory
 bool		vector_rust_hnsw_should_use_ondisk_phase_kernel(bool graph_flushed);
 bool		vector_rust_hnsw_should_add_search_candidate_kernel(double candidate_distance, double frontier_distance, bool always_add);
 bool		vector_rust_hnsw_should_stop_search_layer_kernel(double candidate_distance, double frontier_distance);
+bool		vector_rust_hnsw_should_append_neighbor_without_prune_kernel(int32 neighbors_length, int32 max_neighbors);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);
