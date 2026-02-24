@@ -699,6 +699,36 @@ pub unsafe extern "C" fn vector_rust_ivfflat_halfvec_sum_center_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_adjust_lower_bounds_kernel(
+    sample_count: i32,
+    center_count: i32,
+    lower_bounds: *mut f32,
+    center_distances: *const f32,
+) {
+    let samples = sample_count as usize;
+    let centers = center_count as usize;
+    for sample in 0..samples {
+        let row = lower_bounds.add(sample * centers);
+        for center in 0..centers {
+            let updated = *row.add(center) - *center_distances.add(center);
+            *row.add(center) = if updated < 0.0 { 0.0 } else { updated };
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_adjust_upper_bounds_kernel(
+    sample_count: i32,
+    upper_bounds: *mut f32,
+    closest_centers: *const i32,
+    center_distances: *const f32,
+) {
+    for sample in 0..(sample_count as usize) {
+        *upper_bounds.add(sample) += *center_distances.add(*closest_centers.add(sample) as usize);
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,
