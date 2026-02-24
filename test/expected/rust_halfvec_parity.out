@@ -1,0 +1,12 @@
+CREATE FUNCTION rust_halfvec_add(halfvec, halfvec) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_add'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+SELECT
+	halfvec_add(h1, h2) = rust_halfvec_add(h1, h2)
+FROM (VALUES
+	('[1,2,3]'::halfvec(3), '[3,2,1]'::halfvec(3))
+) AS t(h1, h2);
+ ?column? 
+----------
+ t
+(1 row)
