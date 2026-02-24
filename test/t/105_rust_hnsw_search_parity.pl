@@ -129,6 +129,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_set_pruned_from_array'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_track_discarded_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_track_discarded_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_track_discarded_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_track_discarded_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -273,5 +283,17 @@ my $set_pruned_from_array_parity = $node->safe_psql("postgres", q{
 	) AS t(wdoff, wdlen);
 });
 is($set_pruned_from_array_parity, "t\nt\nt\nt");
+
+my $track_discarded_candidates_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_track_discarded_candidates(has_discarded_heap) =
+		   rust_hnsw_should_track_discarded_candidates(has_discarded_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_discarded_heap);
+});
+is($track_discarded_candidates_parity, "t\nt\nt\nt");
 
 done_testing();
