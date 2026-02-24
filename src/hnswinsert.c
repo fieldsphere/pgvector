@@ -27,6 +27,7 @@ static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRu
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
+static bool HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust);
 
 /*
  * Get the insert page
@@ -242,7 +243,12 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 
 		/* Finally, try space for element only if last page */
 		/* Skip if both tuples can fit on the same page */
-		if (combinedSize > maxSize && PageGetFreeSpace(page) >= etupSize && !BlockNumberIsValid(HnswPageGetOpaque(page)->nextblkno))
+		if (HnswShouldAppendOnDiskElementPage((int64) combinedSize,
+											  (int64) maxSize,
+											  (int64) PageGetFreeSpace(page),
+											  (int64) etupSize,
+											  BlockNumberIsValid(HnswPageGetOpaque(page)->nextblkno),
+											  true))
 		{
 			HnswInsertAppendPage(index, &nbuf, &npage, state, page, building);
 			break;
@@ -1077,6 +1083,55 @@ vector_rust_hnsw_should_append_ondisk_neighbor_page(PG_FUNCTION_ARGS)
 	int64		tupleSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldAppendOnDiskNeighborPage(freeSpace, tupleSize, true));
+}
+
+static bool
+HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_ondisk_element_page_kernel(combinedSize,
+																		 maxSize,
+																		 freeSpace,
+																		 elementTupleSize,
+																		 hasNextPage);
+
+	return combinedSize > maxSize && freeSpace >= elementTupleSize && !hasNextPage;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_ondisk_element_page);
+Datum
+vector_hnsw_should_append_ondisk_element_page(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+	int64		freeSpace = PG_GETARG_INT64(2);
+	int64		elementTupleSize = PG_GETARG_INT64(3);
+	int32		hasNextPage = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldAppendOnDiskElementPage(combinedSize,
+													 maxSize,
+													 freeSpace,
+													 elementTupleSize,
+													 hasNextPage != 0,
+													 false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_ondisk_element_page);
+Datum
+vector_rust_hnsw_should_append_ondisk_element_page(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+	int64		freeSpace = PG_GETARG_INT64(2);
+	int64		elementTupleSize = PG_GETARG_INT64(3);
+	int32		hasNextPage = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldAppendOnDiskElementPage(combinedSize,
+													 maxSize,
+													 freeSpace,
+													 elementTupleSize,
+													 hasNextPage != 0,
+													 true));
 }
 
 static bool

@@ -135,6 +135,17 @@ pub extern "C" fn vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_append_ondisk_element_page_kernel(
+    combined_size: i64,
+    max_size: i64,
+    free_space: i64,
+    element_tuple_size: i64,
+    has_next_page: bool,
+) -> bool {
+    combined_size > max_size && free_space >= element_tuple_size && !has_next_page
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
