@@ -33,6 +33,7 @@ static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool 
 static bool HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRust);
 static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust);
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
+static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 
 /*
  * Get the insert page
@@ -315,7 +316,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 
 	/* Added tuple to new page if newInsertPage is not set */
 	/* So can set to neighbor page instead of element page */
-	if (!BlockNumberIsValid(newInsertPage))
+	if (HnswShouldUseNeighborPageAsInsertPage(BlockNumberIsValid(newInsertPage), true))
 		newInsertPage = e->neighborPage;
 
 	if (OffsetNumberIsValid(freeOffno))
@@ -1251,6 +1252,33 @@ vector_rust_hnsw_should_update_add_element_insert_page(PG_FUNCTION_ARGS)
 	int32		pageChanged = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldUpdateAddElementInsertPage(hasNewInsertPage != 0, pageChanged != 0, true));
+}
+
+static bool
+HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust)
+{
+	if (useRust)
+		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasNewInsertPage);
+
+	return !hasNewInsertPage;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_neighbor_page_as_insert_page);
+Datum
+vector_hnsw_should_use_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNewInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNeighborPageAsInsertPage(hasNewInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_neighbor_page_as_insert_page);
+Datum
+vector_rust_hnsw_should_use_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNewInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNeighborPageAsInsertPage(hasNewInsertPage != 0, true));
 }
 
 static bool
