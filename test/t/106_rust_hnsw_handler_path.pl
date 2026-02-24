@@ -630,6 +630,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1388,6 +1398,18 @@ my $reject_ondisk_duplicate_insert_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(free_slot_index, max_heaptids);
 });
 is($reject_ondisk_duplicate_insert_slot_parity, "t\nt\nt\nt");
+
+my $commit_ondisk_duplicate_with_buffer_dirty_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(building) =
+		   rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(building)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(building);
+});
+is($commit_ondisk_duplicate_with_buffer_dirty_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
