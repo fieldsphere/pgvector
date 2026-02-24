@@ -119,6 +119,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_keep_pruned_connection'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_set_pruned_from_array(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_set_pruned_from_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_set_pruned_from_array(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_set_pruned_from_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -251,5 +261,17 @@ my $keep_pruned_connection_parity = $node->safe_psql("postgres", q{
 	) AS t(wdoff, wdlen, result_length, max_neighbors);
 });
 is($keep_pruned_connection_parity, "t\nt\nt\nt");
+
+my $set_pruned_from_array_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_set_pruned_from_array(wdoff, wdlen) =
+		   rust_hnsw_should_set_pruned_from_array(wdoff, wdlen)
+	FROM (VALUES
+		(0, 2),
+		(1, 2),
+		(2, 2),
+		(3, 2)
+	) AS t(wdoff, wdlen);
+});
+is($set_pruned_from_array_parity, "t\nt\nt\nt");
 
 done_testing();
