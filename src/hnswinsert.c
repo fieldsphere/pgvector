@@ -16,6 +16,7 @@
 #endif
 
 static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust);
+static bool HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust);
 
 /*
  * Get the insert page
@@ -757,7 +758,7 @@ HnswInsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid
 	HnswInitSupport(&support, index);
 
 	/* Form index value */
-	if (!HnswFormIndexValue(&value, values, isnull, typeInfo, &support))
+	if (HnswShouldSkipInvalidInsertValue(HnswFormIndexValue(&value, values, isnull, typeInfo, &support), true))
 		return;
 
 	HnswInsertTupleOnDisk(index, &support, value, heaptid, false);
@@ -792,6 +793,33 @@ vector_rust_hnsw_should_update_entrypoint_ondisk(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPointOnDisk(entryPointIsNull != 0, elementLevel, entryLevel, true));
+}
+
+static bool
+HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(indexValueFormed);
+
+	return !indexValueFormed;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_invalid_insert_value);
+Datum
+vector_hnsw_should_skip_invalid_insert_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipInvalidInsertValue(indexValueFormed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_invalid_insert_value);
+Datum
+vector_rust_hnsw_should_skip_invalid_insert_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipInvalidInsertValue(indexValueFormed != 0, true));
 }
 
 static bool
