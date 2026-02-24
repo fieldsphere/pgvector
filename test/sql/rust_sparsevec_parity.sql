@@ -10,6 +10,10 @@ CREATE FUNCTION rust_sparsevec_cmp(sparsevec, sparsevec) RETURNS int4
 	AS '$libdir/vector', 'vector_rust_sparsevec_cmp'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_sparsevec_l1_distance(sparsevec, sparsevec) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_sparsevec_l1_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 SELECT
 	l2_norm(sv) = rust_sparsevec_l2_norm(sv)
 FROM (VALUES
@@ -32,4 +36,12 @@ FROM (VALUES
 	('{1:1}/3'::sparsevec(3), '{1:1}/3'::sparsevec(3)),
 	('{1:1}/3'::sparsevec(3), '{2:1}/3'::sparsevec(3)),
 	('{1:-1}/3'::sparsevec(3), '{2:1}/3'::sparsevec(3))
+) AS t(s1, s2);
+
+SELECT
+	l1_distance(s1, s2) = rust_sparsevec_l1_distance(s1, s2)
+FROM (VALUES
+	('{1:1,3:2}/3'::sparsevec(3), '{1:1,2:2}/3'::sparsevec(3)),
+	('{1:-1,2:3}/3'::sparsevec(3), '{2:1,3:-4}/3'::sparsevec(3)),
+	('{}/3'::sparsevec(3), '{1:1}/3'::sparsevec(3))
 ) AS t(s1, s2);

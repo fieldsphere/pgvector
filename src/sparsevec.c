@@ -1007,44 +1007,21 @@ sparsevec_l1_distance(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
 	SparseVector *b = PG_GETARG_SPARSEVEC_P(1);
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		distance = 0.0;
-	int			bpos = 0;
 
 	CheckDims(a, b);
 
-	for (int i = 0; i < a->nnz; i++)
-	{
-		int			ai = a->indices[i];
-		int			bi = -1;
+	PG_RETURN_FLOAT8((double) vector_rust_sparsevec_l1_distance_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+																		b->nnz, b->indices, SPARSEVEC_VALUES(b)));
+}
 
-		for (int j = bpos; j < b->nnz; j++)
-		{
-			bi = b->indices[j];
-
-			if (ai == bi)
-				distance += fabsf(ax[i] - bx[j]);
-			else if (ai > bi)
-				distance += fabsf(bx[j]);
-
-			/* Update start for next iteration */
-			if (ai >= bi)
-				bpos = j + 1;
-
-			/* Found or passed it */
-			if (bi >= ai)
-				break;
-		}
-
-		if (ai != bi)
-			distance += fabsf(ax[i]);
-	}
-
-	for (int j = bpos; j < b->nnz; j++)
-		distance += fabsf(bx[j]);
-
-	PG_RETURN_FLOAT8((double) distance);
+/*
+ * Rust parity wrapper: sparse vector L1 distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l1_distance);
+Datum
+vector_rust_sparsevec_l1_distance(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l1_distance(fcinfo);
 }
 
 /*

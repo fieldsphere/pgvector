@@ -461,6 +461,54 @@ pub unsafe extern "C" fn vector_rust_sparse_to_dense(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
+    annz: i32,
+    aindices: *const i32,
+    ax: *const f32,
+    bnnz: i32,
+    bindices: *const i32,
+    bx: *const f32,
+) -> f32 {
+    let mut distance = 0.0f32;
+    let mut bpos = 0usize;
+    let annz = annz as usize;
+    let bnnz = bnnz as usize;
+
+    for i in 0..annz {
+        let ai = *aindices.add(i);
+        let mut bi = -1i32;
+
+        for j in bpos..bnnz {
+            bi = *bindices.add(j);
+
+            if ai == bi {
+                distance += (*ax.add(i) - *bx.add(j)).abs();
+            } else if ai > bi {
+                distance += (*bx.add(j)).abs();
+            }
+
+            if ai >= bi {
+                bpos = j + 1;
+            }
+
+            if bi >= ai {
+                break;
+            }
+        }
+
+        if ai != bi {
+            distance += (*ax.add(i)).abs();
+        }
+    }
+
+    for j in bpos..bnnz {
+        distance += (*bx.add(j)).abs();
+    }
+
+    distance
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l2_norm_kernel(nnz: i32, ax: *const f32) -> f64 {
     let mut norm = 0.0f64;
 
