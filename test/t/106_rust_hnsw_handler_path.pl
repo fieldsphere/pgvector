@@ -79,6 +79,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_return_remaining_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_strict_out_of_order(integer, double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_strict_out_of_order'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_strict_out_of_order(integer, double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_strict_out_of_order'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -156,5 +166,17 @@ my $return_remaining_discarded_parity = $node->safe_psql("postgres", q{
 	) AS t(discarded_is_empty);
 });
 is($return_remaining_discarded_parity, "t\nt\nt\nt");
+
+my $skip_strict_out_of_order_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_strict_out_of_order(iterative_scan_mode, distance, previous_distance) =
+		   rust_hnsw_should_skip_strict_out_of_order(iterative_scan_mode, distance, previous_distance)
+	FROM (VALUES
+		(2, 0.1::double precision, 0.2::double precision),
+		(2, 0.2::double precision, 0.2::double precision),
+		(1, 0.1::double precision, 0.2::double precision),
+		(0, 0.0::double precision, 1.0::double precision)
+	) AS t(iterative_scan_mode, distance, previous_distance);
+});
+is($skip_strict_out_of_order_parity, "t\nt\nt\nt");
 
 done_testing();
