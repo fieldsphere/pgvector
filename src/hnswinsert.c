@@ -17,6 +17,7 @@
 
 static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust);
 static bool HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust);
+static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust);
 
 /*
  * Get the insert page
@@ -655,7 +656,7 @@ FindDuplicateOnDisk(Relation index, HnswElement element, bool building)
 		Datum		neighborValue = HnswGetValue(base, neighborElement);
 
 		/* Exit early since ordered by distance */
-		if (!datumIsEqual(value, neighborValue, false, -1))
+		if (HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(datumIsEqual(value, neighborValue, false, -1), true))
 			return false;
 
 		if (AddDuplicateOnDisk(index, element, neighborElement, building))
@@ -820,6 +821,33 @@ vector_rust_hnsw_should_skip_invalid_insert_value(PG_FUNCTION_ARGS)
 	int32		indexValueFormed = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipInvalidInsertValue(indexValueFormed != 0, true));
+}
+
+static bool
+HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
+
+	return !valuesEqual;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch);
+Datum
+vector_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(valuesEqual != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch);
+Datum
+vector_rust_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(valuesEqual != 0, true));
 }
 
 static bool
