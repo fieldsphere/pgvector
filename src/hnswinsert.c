@@ -26,6 +26,7 @@ static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool u
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
+static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
 
 /*
  * Get the insert page
@@ -286,7 +287,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 			}
 
 			/* Create new page for neighbors if needed */
-			if (PageGetFreeSpace(page) < combinedSize)
+			if (HnswShouldAppendOnDiskNeighborPage((int64) PageGetFreeSpace(page), (int64) combinedSize, true))
 				HnswInsertAppendPage(index, &nbuf, &npage, state, page, building);
 			else
 			{
@@ -1047,6 +1048,35 @@ vector_rust_hnsw_should_abort_ondisk_neighbor_update(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAbortOnDiskNeighborUpdate(building != 0, true));
+}
+
+static bool
+HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, tupleSize);
+
+	return freeSpace < tupleSize;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_ondisk_neighbor_page);
+Datum
+vector_hnsw_should_append_ondisk_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		tupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendOnDiskNeighborPage(freeSpace, tupleSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_ondisk_neighbor_page);
+Datum
+vector_rust_hnsw_should_append_ondisk_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		tupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendOnDiskNeighborPage(freeSpace, tupleSize, true));
 }
 
 static bool
