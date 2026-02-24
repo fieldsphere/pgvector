@@ -73,6 +73,13 @@ pub extern "C" fn vector_rust_hnsw_should_use_ondisk_phase_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_skip_invalid_index_value_kernel(
+    index_value_formed: bool,
+) -> bool {
+    !index_value_formed
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,

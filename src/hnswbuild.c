@@ -421,6 +421,33 @@ vector_rust_hnsw_should_use_ondisk_phase(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldSkipInvalidIndexValue(bool indexValueFormed, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(indexValueFormed);
+
+	return !indexValueFormed;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_invalid_index_value);
+Datum
+vector_hnsw_should_skip_invalid_index_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipInvalidIndexValue(indexValueFormed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_invalid_index_value);
+Datum
+vector_rust_hnsw_should_skip_invalid_index_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipInvalidIndexValue(indexValueFormed != 0, true));
+}
+
+static bool
 HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust)
 {
 	if (useRust)
@@ -794,7 +821,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid, Hn
 	Datum		value;
 
 	/* Form index value */
-	if (!HnswFormIndexValue(&value, values, isnull, buildstate->typeInfo, support))
+	if (HnswShouldSkipInvalidIndexValue(HnswFormIndexValue(&value, values, isnull, buildstate->typeInfo, support), true))
 		return false;
 
 	/* Get datum size */
