@@ -30,6 +30,18 @@ CREATE FUNCTION rust_halfvec_subvector(halfvec, int4, int4) RETURNS halfvec
 	AS '$libdir/vector', 'vector_rust_halfvec_subvector'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_halfvec_to_float4(halfvec, integer, boolean) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_halfvec_to_float4'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_vector_to_halfvec(vector, integer, boolean) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_vector_to_halfvec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_sparsevec_to_halfvec(sparsevec, integer, boolean) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_sparsevec_to_halfvec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 CREATE FUNCTION rust_halfvec_cmp(halfvec, halfvec) RETURNS int4
 	AS '$libdir/vector', 'vector_rust_halfvec_cmp'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -83,6 +95,16 @@ FROM (VALUES
 	('[0,0,0,0]'::halfvec(4)),
 	('[5,6,7,8]'::halfvec(4))
 ) AS t(h);
+
+SELECT
+	halfvec_to_float4(h, -1, false) = rust_halfvec_to_float4(h, -1, false),
+	vector_to_halfvec(v, -1, false) = rust_vector_to_halfvec(v, -1, false),
+	sparsevec_to_halfvec(s, -1, false) = rust_sparsevec_to_halfvec(s, -1, false)
+FROM (VALUES
+	('[1,2,3]'::halfvec(3), '[1,2,3]'::vector(3), '{1:1,3:3}/3'::sparsevec(3)),
+	('[0,-2,4]'::halfvec(3), '[0,-2,4]'::vector(3), '{2:-2,3:4}/3'::sparsevec(3)),
+	('[0,0,0]'::halfvec(3), '[0,0,0]'::vector(3), '{}/3'::sparsevec(3))
+) AS t(h, v, s);
 
 SELECT
 	halfvec_cmp(h1, h2) = rust_halfvec_cmp(h1, h2)
