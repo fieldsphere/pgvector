@@ -122,6 +122,15 @@ IvfflatProbeRatio(int probes, int lists, bool useRust)
 	return ratio;
 }
 
+static bool
+IvfflatShouldDisableWithoutOrder(int orderByCount, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_disable_without_order_kernel(orderByCount);
+
+	return orderByCount == 0;
+}
+
 static ArrayType *
 IvfflatCostAdjust(float8 indexTotalCost, float8 numIndexPages, float8 randomPageCost, float8 seqPageCost, float8 ratio, float8 relPages, bool useRust)
 {
@@ -157,6 +166,24 @@ vector_rust_ivfflat_probe_ratio(PG_FUNCTION_ARGS)
 	PG_RETURN_FLOAT8(IvfflatProbeRatio(probes, lists, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_disable_without_order);
+Datum
+vector_ivfflat_should_disable_without_order(PG_FUNCTION_ARGS)
+{
+	int32		orderByCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldDisableWithoutOrder(orderByCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_disable_without_order);
+Datum
+vector_rust_ivfflat_should_disable_without_order(PG_FUNCTION_ARGS)
+{
+	int32		orderByCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldDisableWithoutOrder(orderByCount, true));
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -171,10 +198,11 @@ ivfflatcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	double		ratio;
 	double		sequentialRatio = 0.5;
 	double		spc_seq_page_cost;
+	int			orderByCount = list_length(path->indexorderbys);
 	Relation	index;
 
 	/* Never use index without order */
-	if (path->indexorderbys == NIL)
+	if (IvfflatShouldDisableWithoutOrder(orderByCount, true))
 	{
 		*indexStartupCost = get_float8_infinity();
 		*indexTotalCost = get_float8_infinity();

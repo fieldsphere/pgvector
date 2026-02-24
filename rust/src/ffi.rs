@@ -57,6 +57,13 @@ pub extern "C" fn vector_rust_ivfflat_probe_ratio_kernel(probes: i32, lists: i32
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_disable_without_order_kernel(
+    orderby_count: i32,
+) -> bool {
+    orderby_count == 0
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_ivfflat_choose_insert_candidate_kernel(
     distance: c_double,
     min_distance: c_double,
