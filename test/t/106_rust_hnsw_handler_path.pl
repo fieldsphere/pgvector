@@ -119,6 +119,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_limit_scan_by_resources'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_release_iterative_scan_memory(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_release_iterative_scan_memory'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_release_iterative_scan_memory(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_release_iterative_scan_memory'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -244,5 +254,17 @@ my $limit_scan_by_resources_parity = $node->safe_psql("postgres", q{
 	) AS t(tuple_count, max_scan_tuples, memory_used, max_memory);
 });
 is($limit_scan_by_resources_parity, "t\nt\nt\nt");
+
+my $release_iterative_scan_memory_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_release_iterative_scan_memory(iterative_scan_mode) =
+		   rust_hnsw_should_release_iterative_scan_memory(iterative_scan_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(0)
+	) AS t(iterative_scan_mode);
+});
+is($release_iterative_scan_memory_parity, "t\nt\nt\nt");
 
 done_testing();
