@@ -409,6 +409,33 @@ vector_rust_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, true));
 }
 
+static bool
+HnswShouldUseNullScanValue(bool orderByIsNull, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_use_null_scan_value_kernel(orderByIsNull);
+
+	return orderByIsNull;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_null_scan_value);
+Datum
+vector_hnsw_should_use_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNullScanValue(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_null_scan_value);
+Datum
+vector_rust_hnsw_should_use_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNullScanValue(orderByIsNull != 0, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -485,7 +512,7 @@ GetScanValue(IndexScanDesc scan)
 	HnswScanOpaque so = (HnswScanOpaque) scan->opaque;
 	Datum		value;
 
-	if (scan->orderByData->sk_flags & SK_ISNULL)
+	if (HnswShouldUseNullScanValue((scan->orderByData->sk_flags & SK_ISNULL) != 0, true))
 		value = PointerGetDatum(NULL);
 	else
 	{

@@ -48,6 +48,7 @@ bool		vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(int32 heaptid
 bool		vector_rust_hnsw_should_reject_missing_orderby_kernel(bool orderby_is_null);
 bool		vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel(bool snapshot_is_mvcc);
 bool		vector_rust_hnsw_should_copy_rescan_keys_kernel(bool has_keys, int32 key_count);
+bool		vector_rust_hnsw_should_use_null_scan_value_kernel(bool orderby_is_null);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);
