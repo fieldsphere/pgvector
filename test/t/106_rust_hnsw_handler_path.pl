@@ -129,6 +129,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_release_iterative_scan_memory'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_update_previous_distance(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_update_previous_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_update_previous_distance(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_update_previous_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -266,5 +276,17 @@ my $release_iterative_scan_memory_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode);
 });
 is($release_iterative_scan_memory_parity, "t\nt\nt\nt");
+
+my $update_previous_distance_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_update_previous_distance(iterative_scan_mode) =
+		   rust_hnsw_should_update_previous_distance(iterative_scan_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(2)
+	) AS t(iterative_scan_mode);
+});
+is($update_previous_distance_parity, "t\nt\nt\nt");
 
 done_testing();
