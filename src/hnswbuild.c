@@ -454,6 +454,33 @@ vector_rust_hnsw_should_flush_pages_in_build(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFlushPagesInBuild(graphFlushed != 0, true));
 }
 
+static bool
+HnswShouldFlushGraphPagesAtEnd(bool graphFlushed, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_flush_graph_pages_at_end_kernel(graphFlushed);
+
+	return !graphFlushed;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flush_graph_pages_at_end);
+Datum
+vector_hnsw_should_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFlushGraphPagesAtEnd(graphFlushed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_flush_graph_pages_at_end);
+Datum
+vector_rust_hnsw_should_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFlushGraphPagesAtEnd(graphFlushed != 0, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -1233,7 +1260,7 @@ BuildGraph(HnswBuildState * buildstate)
 	}
 
 	/* Flush pages */
-	if (!buildstate->graph->flushed)
+	if (HnswShouldFlushGraphPagesAtEnd(buildstate->graph->flushed, true))
 		FlushPages(buildstate);
 
 	/* End parallel build */
