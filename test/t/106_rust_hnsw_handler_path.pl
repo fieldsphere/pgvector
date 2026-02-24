@@ -510,6 +510,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_invalid_index_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_invalid_index_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_invalid_index_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_invalid_index_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1124,6 +1134,18 @@ my $reject_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
 	) AS t(overwrite_succeeded);
 });
 is($reject_neighbor_overwrite_parity, "t\nt\nt\nt");
+
+my $skip_invalid_index_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_invalid_index_value(index_value_formed) =
+		   rust_hnsw_should_skip_invalid_index_value(index_value_formed)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(index_value_formed);
+});
+is($skip_invalid_index_value_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
