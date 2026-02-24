@@ -482,6 +482,13 @@ pub extern "C" fn vector_rust_hnsw_should_skip_null_build_tuple_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_update_progress_after_insert_kernel(
+    tuple_inserted: bool,
+) -> bool {
+    tuple_inserted
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

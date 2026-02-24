@@ -92,6 +92,7 @@ static bool HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensio
 static bool HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust);
 static bool HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust);
 static bool HnswShouldSkipNullBuildTuple(bool isNull, bool useRust);
+static bool HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -882,7 +883,7 @@ BuildCallback(Relation index, ItemPointer tid, Datum *values,
 	oldCtx = MemoryContextSwitchTo(buildstate->tmpCtx);
 
 	/* Insert tuple */
-	if (InsertTuple(index, values, isnull, tid, buildstate))
+	if (HnswShouldUpdateProgressAfterInsert(InsertTuple(index, values, isnull, tid, buildstate), true))
 	{
 		/* Update progress */
 		SpinLockAcquire(&graph->lock);
@@ -1758,6 +1759,33 @@ vector_rust_hnsw_should_skip_null_build_tuple(PG_FUNCTION_ARGS)
 	int32		isNull = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipNullBuildTuple(isNull != 0, true));
+}
+
+static bool
+HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleInserted);
+
+	return tupleInserted;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_progress_after_insert);
+Datum
+vector_hnsw_should_update_progress_after_insert(PG_FUNCTION_ARGS)
+{
+	int32		tupleInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdateProgressAfterInsert(tupleInserted != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_progress_after_insert);
+Datum
+vector_rust_hnsw_should_update_progress_after_insert(PG_FUNCTION_ARGS)
+{
+	int32		tupleInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdateProgressAfterInsert(tupleInserted != 0, true));
 }
 
 static bool
