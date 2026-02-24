@@ -360,6 +360,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reserve_graph_memory(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reserve_graph_memory'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reserve_graph_memory(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reserve_graph_memory'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -792,6 +802,18 @@ my $fallback_without_dsm_segment_parity = $node->safe_psql("postgres", q{
 	) AS t(has_dsm_segment);
 });
 is($fallback_without_dsm_segment_parity, "t\nt\nt\nt");
+
+my $reserve_graph_memory_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reserve_graph_memory(est_hnsw_area, est_other) =
+		   rust_hnsw_should_reserve_graph_memory(est_hnsw_area, est_other)
+	FROM (VALUES
+		(64::bigint, 3::bigint),
+		(3::bigint, 3::bigint),
+		(2::bigint, 3::bigint),
+		(100::bigint, 25::bigint)
+	) AS t(est_hnsw_area, est_other);
+});
+is($reserve_graph_memory_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
