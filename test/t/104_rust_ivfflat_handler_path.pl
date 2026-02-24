@@ -229,6 +229,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_visit_vacuum_entry_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_write_list_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_write_list_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_write_list_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_write_list_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -486,5 +496,17 @@ my $visit_vacuum_entry_page_parity = $node->safe_psql("postgres", q{
 	) AS t(page_no);
 });
 is($visit_vacuum_entry_page_parity, "t\nt\nt\nt");
+
+my $write_list_insert_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_write_list_insert_page(insert_page, current_page) =
+		   rust_ivfflat_should_write_list_insert_page(insert_page, current_page)
+	FROM (VALUES
+		(-1, -1),
+		(5, -1),
+		(5, 5),
+		(5, 9)
+	) AS t(insert_page, current_page);
+});
+is($write_list_insert_page_parity, "t\nt\nt\nt");
 
 done_testing();
