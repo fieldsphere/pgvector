@@ -124,6 +124,15 @@ IvfflatShouldLoadMoreScanItems(int listIndex, int maxProbes, bool useRust)
 	return listIndex < maxProbes;
 }
 
+static bool
+IvfflatShouldVisitScanPage(BlockNumber page, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+
+	return BlockNumberIsValid(page);
+}
+
 static void
 IvfflatScanProbeLimits(int probes, int maxProbes, int lists, bool useRust, int *adjustedProbes, int *adjustedMaxProbes)
 {
@@ -212,6 +221,24 @@ vector_rust_ivfflat_should_load_more_scan_items(PG_FUNCTION_ARGS)
 	int32		maxProbes = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(IvfflatShouldLoadMoreScanItems(listIndex, maxProbes, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_scan_page);
+Datum
+vector_ivfflat_should_visit_scan_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitScanPage((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_visit_scan_page);
+Datum
+vector_rust_ivfflat_should_visit_scan_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitScanPage((BlockNumber) page, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_scan_probe_limits);
@@ -304,7 +331,7 @@ GetScanLists(IndexScanDesc scan, Datum value)
 	double		maxDistance = DBL_MAX;
 
 	/* Search all list pages */
-	while (BlockNumberIsValid(nextblkno))
+	while (IvfflatShouldVisitScanPage(nextblkno, true))
 	{
 		Buffer		cbuf;
 		Page		cpage;
@@ -382,7 +409,7 @@ GetScanItems(IndexScanDesc scan, Datum value)
 		searchPage = so->listPages[so->listIndex++];
 
 		/* Search all entry pages for list */
-		while (BlockNumberIsValid(searchPage))
+		while (IvfflatShouldVisitScanPage(searchPage, true))
 		{
 			Buffer		buf;
 			Page		page;
