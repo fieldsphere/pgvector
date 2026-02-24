@@ -20,6 +20,31 @@ pub extern "C" fn vector_rust_ivfflat_handler_probe_cstr() -> *const c_char {
     IVFFLAT_HANDLER_PROBE_VERSION.as_ptr().cast()
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
+    index_total_cost: c_double,
+    num_index_pages: c_double,
+    random_page_cost: c_double,
+    seq_page_cost: c_double,
+    ratio: c_double,
+    rel_pages: c_double,
+    sequential_ratio: c_double,
+    adjusted_total_cost: *mut c_double,
+    adjusted_startup_cost: *mut c_double,
+) {
+    let total = index_total_cost - sequential_ratio * num_index_pages * (random_page_cost - seq_page_cost);
+    let mut startup = total * ratio;
+    let startup_pages = num_index_pages * ratio;
+
+    if startup_pages > rel_pages && ratio < 0.5 {
+        startup -= (1.0 - sequential_ratio) * startup_pages * (random_page_cost - seq_page_cost);
+        startup -= (startup_pages - rel_pages) * seq_page_cost;
+    }
+
+    *adjusted_total_cost = total;
+    *adjusted_startup_cost = startup;
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;

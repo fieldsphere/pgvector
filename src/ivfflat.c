@@ -5,6 +5,7 @@
 #include "access/amapi.h"
 #include "access/genam.h"
 #include "access/reloptions.h"
+#include "catalog/pg_type.h"
 #include "commands/progress.h"
 #include "commands/vacuum.h"
 #include "fmgr.h"
@@ -14,6 +15,7 @@
 #include "utils/builtins.h"
 #include "utils/float.h"
 #include "utils/guc.h"
+#include "utils/array.h"
 #include "utils/relcache.h"
 #include "utils/selfuncs.h"
 #include "utils/spccache.h"
@@ -81,6 +83,45 @@ ivfflatbuildphasename(int64 phasenum)
 	}
 }
 
+static void
+IvfflatAdjustCost(float8 indexTotalCost, float8 numIndexPages, float8 randomPageCost, float8 seqPageCost, float8 ratio, float8 relPages, float8 sequentialRatio, bool useRust, float8 *adjustedTotalCost, float8 *adjustedStartupCost)
+{
+	if (useRust)
+		vector_rust_ivfflat_adjust_cost_kernel(indexTotalCost, numIndexPages, randomPageCost, seqPageCost, ratio, relPages, sequentialRatio, adjustedTotalCost, adjustedStartupCost);
+	else
+	{
+		float8		startupPages;
+
+		*adjustedTotalCost = indexTotalCost - sequentialRatio * numIndexPages * (randomPageCost - seqPageCost);
+		*adjustedStartupCost = *adjustedTotalCost * ratio;
+
+		startupPages = numIndexPages * ratio;
+		if (startupPages > relPages && ratio < 0.5)
+		{
+			/* Change rest of page cost from random to sequential */
+			*adjustedStartupCost -= (1 - sequentialRatio) * startupPages * (randomPageCost - seqPageCost);
+
+			/* Remove cost of extra pages */
+			*adjustedStartupCost -= (startupPages - relPages) * seqPageCost;
+		}
+	}
+}
+
+static ArrayType *
+IvfflatCostAdjust(float8 indexTotalCost, float8 numIndexPages, float8 randomPageCost, float8 seqPageCost, float8 ratio, float8 relPages, bool useRust)
+{
+	float8		adjustedTotalCost;
+	float8		adjustedStartupCost;
+	Datum		resultDatums[2];
+
+	IvfflatAdjustCost(indexTotalCost, numIndexPages, randomPageCost, seqPageCost, ratio, relPages, 0.5, useRust, &adjustedTotalCost, &adjustedStartupCost);
+
+	resultDatums[0] = Float8GetDatum(adjustedStartupCost);
+	resultDatums[1] = Float8GetDatum(adjustedTotalCost);
+
+	return construct_array(resultDatums, 2, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE);
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -94,7 +135,6 @@ ivfflatcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	int			lists;
 	double		ratio;
 	double		sequentialRatio = 0.5;
-	double		startupPages;
 	double		spc_seq_page_cost;
 	Relation	index;
 
@@ -128,22 +168,7 @@ ivfflatcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 
 	get_tablespace_page_costs(path->indexinfo->reltablespace, NULL, &spc_seq_page_cost);
 
-	/* Change some page cost from random to sequential */
-	costs.indexTotalCost -= sequentialRatio * costs.numIndexPages * (costs.spc_random_page_cost - spc_seq_page_cost);
-
-	/* Startup cost is cost before returning the first row */
-	costs.indexStartupCost = costs.indexTotalCost * ratio;
-
-	/* Adjust cost if needed since TOAST not included in seq scan cost */
-	startupPages = costs.numIndexPages * ratio;
-	if (startupPages > path->indexinfo->rel->pages && ratio < 0.5)
-	{
-		/* Change rest of page cost from random to sequential */
-		costs.indexStartupCost -= (1 - sequentialRatio) * startupPages * (costs.spc_random_page_cost - spc_seq_page_cost);
-
-		/* Remove cost of extra pages */
-		costs.indexStartupCost -= (startupPages - path->indexinfo->rel->pages) * spc_seq_page_cost;
-	}
+	IvfflatAdjustCost(costs.indexTotalCost, costs.numIndexPages, costs.spc_random_page_cost, spc_seq_page_cost, ratio, path->indexinfo->rel->pages, sequentialRatio, true, &costs.indexTotalCost, &costs.indexStartupCost);
 
 	*indexStartupCost = costs.indexStartupCost;
 	*indexTotalCost = costs.indexTotalCost;
@@ -175,6 +200,34 @@ static bool
 ivfflatvalidate(Oid opclassoid)
 {
 	return true;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_cost_adjust);
+Datum
+vector_ivfflat_cost_adjust(PG_FUNCTION_ARGS)
+{
+	float8		indexTotalCost = PG_GETARG_FLOAT8(0);
+	float8		numIndexPages = PG_GETARG_FLOAT8(1);
+	float8		randomPageCost = PG_GETARG_FLOAT8(2);
+	float8		seqPageCost = PG_GETARG_FLOAT8(3);
+	float8		ratio = PG_GETARG_FLOAT8(4);
+	float8		relPages = PG_GETARG_FLOAT8(5);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatCostAdjust(indexTotalCost, numIndexPages, randomPageCost, seqPageCost, ratio, relPages, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_cost_adjust);
+Datum
+vector_rust_ivfflat_cost_adjust(PG_FUNCTION_ARGS)
+{
+	float8		indexTotalCost = PG_GETARG_FLOAT8(0);
+	float8		numIndexPages = PG_GETARG_FLOAT8(1);
+	float8		randomPageCost = PG_GETARG_FLOAT8(2);
+	float8		seqPageCost = PG_GETARG_FLOAT8(3);
+	float8		ratio = PG_GETARG_FLOAT8(4);
+	float8		relPages = PG_GETARG_FLOAT8(5);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatCostAdjust(indexTotalCost, numIndexPages, randomPageCost, seqPageCost, ratio, relPages, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_handler_probe);
