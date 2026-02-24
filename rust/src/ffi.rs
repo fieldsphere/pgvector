@@ -436,6 +436,14 @@ pub extern "C" fn vector_rust_hnsw_should_log_leader_progress_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_varbit_type_kernel(
+    type_oid: i32,
+    varbit_oid: i32,
+) -> bool {
+    type_oid == varbit_oid
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

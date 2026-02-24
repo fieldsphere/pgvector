@@ -86,6 +86,7 @@ static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust)
 static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust);
 static bool HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust);
 static bool HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust);
+static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -965,7 +966,7 @@ InitBuildState(HnswBuildState * buildstate, Relation heap, Relation index, Index
 	buildstate->dimensions = TupleDescAttr(index->rd_att, 0)->atttypmod;
 
 	/* Disallow varbit since require fixed dimensions */
-	if (TupleDescAttr(index->rd_att, 0)->atttypid == VARBITOID)
+	if (HnswShouldRejectVarbitType(TupleDescAttr(index->rd_att, 0)->atttypid, true))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("type not supported for hnsw index")));
@@ -1584,6 +1585,33 @@ vector_rust_hnsw_should_log_leader_progress(PG_FUNCTION_ARGS)
 	int32		progressIsLeader = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLogLeaderProgress(progressIsLeader != 0, true));
+}
+
+static bool
+HnswShouldRejectVarbitType(Oid typeOid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_varbit_type_kernel((int32) typeOid, (int32) VARBITOID);
+
+	return typeOid == VARBITOID;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_varbit_type);
+Datum
+vector_hnsw_should_reject_varbit_type(PG_FUNCTION_ARGS)
+{
+	int32		typeOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectVarbitType((Oid) typeOid, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_varbit_type);
+Datum
+vector_rust_hnsw_should_reject_varbit_type(PG_FUNCTION_ARGS)
+{
+	int32		typeOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectVarbitType((Oid) typeOid, true));
 }
 
 static bool
