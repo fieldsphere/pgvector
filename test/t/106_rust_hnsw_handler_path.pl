@@ -390,6 +390,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_missing_dimensions(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_missing_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_missing_dimensions(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_missing_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -860,6 +870,18 @@ my $reject_varbit_type_parity = $node->safe_psql("postgres", q{
 	) AS t;
 });
 is($reject_varbit_type_parity, "t\nt\nt\nt");
+
+my $reject_missing_dimensions_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_missing_dimensions(dimensions) =
+		   rust_hnsw_should_reject_missing_dimensions(dimensions)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1024),
+		(-42)
+	) AS t(dimensions);
+});
+is($reject_missing_dimensions_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
