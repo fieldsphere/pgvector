@@ -329,6 +329,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_debug_query_string'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_finish_parallel_heap_scan(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_finish_parallel_heap_scan'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_finish_parallel_heap_scan(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_finish_parallel_heap_scan'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -706,5 +716,17 @@ my $use_debug_query_string_parity = $node->safe_psql("postgres", q{
 	) AS t(has_debug_query_string);
 });
 is($use_debug_query_string_parity, "t\nt\nt\nt");
+
+my $finish_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_finish_parallel_heap_scan(participants_done, participant_count) =
+		   rust_hnsw_should_finish_parallel_heap_scan(participants_done, participant_count)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 3),
+		(3, 3)
+	) AS t(participants_done, participant_count);
+});
+is($finish_parallel_heap_scan_parity, "t\nt\nt\nt");
 
 done_testing();
