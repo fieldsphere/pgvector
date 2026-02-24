@@ -480,6 +480,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_append_element_page(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_append_element_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_append_element_page(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_append_element_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1058,6 +1068,18 @@ my $append_neighbor_page_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, neighbor_tuple_size);
 });
 is($append_neighbor_page_parity, "t\nt\nt\nt");
+
+my $append_element_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_append_element_page(free_space, element_tuple_size, combined_size, max_size) =
+		   rust_hnsw_should_append_element_page(free_space, element_tuple_size, combined_size, max_size)
+	FROM (VALUES
+		(4::bigint, 8::bigint, 16::bigint, 32::bigint),
+		(12::bigint, 8::bigint, 16::bigint, 32::bigint),
+		(20::bigint, 8::bigint, 16::bigint, 32::bigint),
+		(20::bigint, 8::bigint, 48::bigint, 32::bigint)
+	) AS t(free_space, element_tuple_size, combined_size, max_size);
+});
+is($append_element_page_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
