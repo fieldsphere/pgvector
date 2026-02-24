@@ -131,6 +131,33 @@ vector_rust_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, true));
 }
 
+static bool
+HnswShouldStopWithoutDiscarded(bool discardedIsNull, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_stop_without_discarded_kernel(discardedIsNull);
+
+	return discardedIsNull;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_without_discarded);
+Datum
+vector_hnsw_should_stop_without_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWithoutDiscarded(discardedIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_without_discarded);
+Datum
+vector_rust_hnsw_should_stop_without_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWithoutDiscarded(discardedIsNull != 0, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -364,7 +391,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 				break;
 
 			/* Empty index */
-			if (so->discarded == NULL)
+			if (HnswShouldStopWithoutDiscarded(so->discarded == NULL, true))
 				break;
 
 			/* Reached max number of tuples or memory limit */

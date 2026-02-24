@@ -228,6 +228,13 @@ pub extern "C" fn vector_rust_hnsw_should_skip_strict_out_of_order_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_stop_without_discarded_kernel(
+    discarded_is_null: bool,
+) -> bool {
+    discarded_is_null
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,

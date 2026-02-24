@@ -33,6 +33,7 @@ bool		vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(bool entry_
 bool		vector_rust_hnsw_should_resume_from_discarded_kernel(bool discarded_is_empty);
 bool		vector_rust_hnsw_should_return_remaining_discarded_kernel(bool discarded_is_empty);
 bool		vector_rust_hnsw_should_skip_strict_out_of_order_kernel(int32 iterative_scan_mode, double distance, double previous_distance);
+bool		vector_rust_hnsw_should_stop_without_discarded_kernel(bool discarded_is_null);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);
