@@ -31,6 +31,7 @@ static bool HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize,
 static bool HnswShouldAbortOnDiskElementMoveNext(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRust);
+static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust);
 
 /*
  * Get the insert page
@@ -364,7 +365,9 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		UnlockReleaseBuffer(nbuf);
 
 	/* Update the insert page */
-	if (BlockNumberIsValid(newInsertPage) && newInsertPage != insertPage)
+	if (HnswShouldUpdateAddElementInsertPage(BlockNumberIsValid(newInsertPage),
+											 newInsertPage != insertPage,
+											 true))
 		*updatedInsertPage = newInsertPage;
 }
 
@@ -1216,6 +1219,37 @@ vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty(PG_FUNCTION_ARGS)
 	int32		sameBuffer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldMarkOnDiskNeighborBufferDirty(sameBuffer != 0, true));
+}
+
+static bool
+HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust)
+{
+	bool		shouldUpdate = hasNewInsertPage && pageChanged;
+
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(shouldUpdate);
+
+	return shouldUpdate;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_add_element_insert_page);
+Datum
+vector_hnsw_should_update_add_element_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNewInsertPage = PG_GETARG_INT32(0);
+	int32		pageChanged = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldUpdateAddElementInsertPage(hasNewInsertPage != 0, pageChanged != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_add_element_insert_page);
+Datum
+vector_rust_hnsw_should_update_add_element_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNewInsertPage = PG_GETARG_INT32(0);
+	int32		pageChanged = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldUpdateAddElementInsertPage(hasNewInsertPage != 0, pageChanged != 0, true));
 }
 
 static bool
