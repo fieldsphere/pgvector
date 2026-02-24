@@ -67,6 +67,15 @@ pub extern "C" fn vector_rust_hnsw_should_use_ondisk_phase_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
+    candidate_distance: c_double,
+    frontier_distance: c_double,
+    always_add: bool,
+) -> bool {
+    candidate_distance < frontier_distance || always_add
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
