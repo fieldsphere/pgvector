@@ -205,6 +205,13 @@ pub extern "C" fn vector_rust_hnsw_should_return_empty_without_entrypoint_kernel
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_resume_from_discarded_kernel(
+    discarded_is_empty: bool,
+) -> bool {
+    !discarded_is_empty
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
