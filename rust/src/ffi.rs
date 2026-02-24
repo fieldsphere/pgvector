@@ -242,6 +242,16 @@ pub extern "C" fn vector_rust_hnsw_should_stop_when_iterative_scan_off_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_limit_scan_by_resources_kernel(
+    tuple_count: i64,
+    max_scan_tuples: i64,
+    memory_used: i64,
+    max_memory: i64,
+) -> bool {
+    tuple_count >= max_scan_tuples || memory_used > max_memory
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,

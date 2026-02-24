@@ -185,6 +185,39 @@ vector_rust_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldStopWhenIterativeScanOff(iterativeScanMode, true));
 }
 
+static bool
+HnswShouldLimitScanByResources(int64 tupleCount, int64 maxScanTuples, int64 memoryUsed, int64 maxMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_limit_scan_by_resources_kernel(tupleCount, maxScanTuples, memoryUsed, maxMemory);
+
+	return tupleCount >= maxScanTuples || memoryUsed > maxMemory;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_limit_scan_by_resources);
+Datum
+vector_hnsw_should_limit_scan_by_resources(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+	int64		memoryUsed = PG_GETARG_INT64(2);
+	int64		maxMemory = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldLimitScanByResources(tupleCount, maxScanTuples, memoryUsed, maxMemory, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_limit_scan_by_resources);
+Datum
+vector_rust_hnsw_should_limit_scan_by_resources(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+	int64		memoryUsed = PG_GETARG_INT64(2);
+	int64		maxMemory = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldLimitScanByResources(tupleCount, maxScanTuples, memoryUsed, maxMemory, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -422,7 +455,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 				break;
 
 			/* Reached max number of tuples or memory limit */
-			if (so->tuples >= hnsw_max_scan_tuples || MemoryContextMemAllocated(so->tmpCtx, false) > so->maxMemory)
+			if (HnswShouldLimitScanByResources(so->tuples, (int64) hnsw_max_scan_tuples, (int64) MemoryContextMemAllocated(so->tmpCtx, false), (int64) so->maxMemory, true))
 			{
 				if (!HnswShouldReturnRemainingDiscarded(pairingheap_is_empty(so->discarded), true))
 					break;
