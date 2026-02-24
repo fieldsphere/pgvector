@@ -82,6 +82,14 @@ pub extern "C" fn vector_rust_ivfflat_choose_build_center_candidate_kernel(
     distance < min_distance
 }
 
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_append_page_kernel(
+    free_space: i32,
+    item_size: i32,
+) -> bool {
+    free_space < item_size
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;

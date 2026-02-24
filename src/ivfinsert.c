@@ -23,6 +23,15 @@ IvfflatChooseInsertCandidate(float8 distance, float8 minDistance, BlockNumber in
 	return distance < minDistance || !BlockNumberIsValid(insertPage);
 }
 
+static bool
+IvfflatShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
+
+	return freeSpace < itemSize;
+}
+
 /*
  * Find the list that minimizes the distance function
  */
@@ -98,6 +107,26 @@ vector_rust_ivfflat_choose_insert_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(IvfflatChooseInsertCandidate(distance, minDistance, (BlockNumber) insertPage, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_append_page);
+Datum
+vector_ivfflat_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldAppendPage(freeSpace, itemSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_append_page);
+Datum
+vector_rust_ivfflat_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldAppendPage(freeSpace, itemSize, true));
+}
+
 /*
  * Insert a tuple into the index
  */
@@ -156,7 +185,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heap_tid)
 		state = GenericXLogStart(index);
 		page = GenericXLogRegisterBuffer(state, buf, 0);
 
-		if (PageGetFreeSpace(page) >= itemsz)
+		if (!IvfflatShouldAppendPage(PageGetFreeSpace(page), itemsz, true))
 			break;
 
 		insertPage = IvfflatPageGetOpaque(page)->nextblkno;
