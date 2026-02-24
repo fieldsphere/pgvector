@@ -2,6 +2,10 @@ use std::ffi::{c_char, c_double, c_void};
 
 static RUST_BRIDGE_VERSION: &[u8] = b"rust-bridge-v1\0";
 
+unsafe extern "C" {
+    fn vector_c_float4_to_half_bits(value: f32) -> u16;
+}
+
 #[no_mangle]
 pub extern "C" fn vector_rust_init() {}
 
@@ -450,6 +454,26 @@ pub unsafe extern "C" fn vector_rust_vector_avg(
 pub unsafe extern "C" fn vector_rust_halfvec_to_vector(dim: i32, ax: *const c_void, rx: *mut f32) {
     for i in 0..(dim as usize) {
         *rx.add(i) = half_bits_to_f32(read_half_bits(ax, i));
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_to_halfvec_kernel(dim: i32, ax: *const f32, rx: *mut c_void) {
+    for i in 0..(dim as usize) {
+        write_half_bits(rx, i, vector_c_float4_to_half_bits(*ax.add(i)));
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparse_to_halfvec_kernel(
+    nnz: i32,
+    indices: *const i32,
+    values: *const f32,
+    rx: *mut c_void,
+) {
+    for i in 0..(nnz as usize) {
+        let idx = *indices.add(i) as usize;
+        write_half_bits(rx, idx, vector_c_float4_to_half_bits(*values.add(i)));
     }
 }
 
