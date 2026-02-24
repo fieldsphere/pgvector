@@ -114,6 +114,21 @@ pub extern "C" fn vector_rust_ivfflat_should_reuse_scan_slot_kernel(
     list_count >= max_probes
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_scan_probe_limits_kernel(
+    probes: i32,
+    max_probes: i32,
+    lists: i32,
+    adjusted_probes: *mut i32,
+    adjusted_max_probes: *mut i32,
+) {
+    let clamped_probes = if probes > lists { lists } else { probes };
+    let clamped_max_probes = if max_probes > lists { lists } else { max_probes };
+
+    *adjusted_probes = clamped_probes;
+    *adjusted_max_probes = clamped_max_probes;
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;

@@ -15,6 +15,7 @@ bool		vector_rust_ivfflat_should_append_page_kernel(int32 free_space, int32 item
 bool		vector_rust_ivfflat_should_set_insert_page_kernel(int32 ndeletable, bool insert_page_is_valid);
 bool		vector_rust_ivfflat_should_update_insert_page_kernel(int32 insert_page, int32 original_insert_page);
 bool		vector_rust_ivfflat_should_reuse_scan_slot_kernel(int32 list_count, int32 max_probes);
+void		vector_rust_ivfflat_scan_probe_limits_kernel(int32 probes, int32 max_probes, int32 lists, int32 *adjusted_probes, int32 *adjusted_max_probes);
 uint64		vector_rust_bit_hamming_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 distance);
 double		vector_rust_bit_jaccard_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 ab, uint64 aa, uint64 bb);
 float		vector_rust_half_l2_squared_distance(int dim, const void *ax, const void *bx);
