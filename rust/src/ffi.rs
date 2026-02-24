@@ -421,6 +421,14 @@ pub extern "C" fn vector_rust_hnsw_should_fallback_without_dsm_segment_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reserve_graph_memory_kernel(
+    est_hnsw_area: i64,
+    est_other: i64,
+) -> bool {
+    est_hnsw_area > est_other
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

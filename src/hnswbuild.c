@@ -84,6 +84,7 @@ static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
 static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
 static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust);
+static bool HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -1225,7 +1226,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	/* which happens to be the default value of maintenance_work_mem */
 	esthnswarea = maintenance_work_mem * 1024L;
 	estother = 3 * 1024 * 1024;
-	if (esthnswarea > estother)
+	if (HnswShouldReserveGraphMemory((int64) esthnswarea, (int64) estother, true))
 		esthnswarea -= estother;
 
 	shm_toc_estimate_chunk(&pcxt->estimator, esthnswarea);
@@ -1526,6 +1527,35 @@ vector_rust_hnsw_should_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
 	int32		hasDsmSegment = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFallbackWithoutDsmSegment(hasDsmSegment != 0, true));
+}
+
+static bool
+HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reserve_graph_memory_kernel(estHnswArea, estOther);
+
+	return estHnswArea > estOther;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reserve_graph_memory);
+Datum
+vector_hnsw_should_reserve_graph_memory(PG_FUNCTION_ARGS)
+{
+	int64		estHnswArea = PG_GETARG_INT64(0);
+	int64		estOther = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldReserveGraphMemory(estHnswArea, estOther, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reserve_graph_memory);
+Datum
+vector_rust_hnsw_should_reserve_graph_memory(PG_FUNCTION_ARGS)
+{
+	int64		estHnswArea = PG_GETARG_INT64(0);
+	int64		estOther = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldReserveGraphMemory(estHnswArea, estOther, true));
 }
 
 static bool
