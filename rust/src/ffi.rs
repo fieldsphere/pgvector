@@ -1,6 +1,7 @@
 use std::ffi::{c_char, c_double, c_void};
 
 static RUST_BRIDGE_VERSION: &[u8] = b"rust-bridge-v1\0";
+static IVFFLAT_HANDLER_PROBE_VERSION: &[u8] = b"rust-ivfflat-handler-v1\0";
 
 unsafe extern "C" {
     fn vector_c_float4_to_half_bits(value: f32) -> u16;
@@ -12,6 +13,11 @@ pub extern "C" fn vector_rust_init() {}
 #[no_mangle]
 pub extern "C" fn vector_rust_bridge_version_cstr() -> *const c_char {
     RUST_BRIDGE_VERSION.as_ptr().cast()
+}
+
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_handler_probe_cstr() -> *const c_char {
+    IVFFLAT_HANDLER_PROBE_VERSION.as_ptr().cast()
 }
 
 #[inline]
