@@ -158,6 +158,33 @@ vector_rust_hnsw_should_stop_without_discarded(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldStopWithoutDiscarded(discardedIsNull != 0, true));
 }
 
+static bool
+HnswShouldStopWhenIterativeScanOff(int iterativeScanMode, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_stop_when_iterative_scan_off_kernel(iterativeScanMode);
+
+	return iterativeScanMode == HNSW_ITERATIVE_SCAN_OFF;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_when_iterative_scan_off);
+Datum
+vector_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWhenIterativeScanOff(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_when_iterative_scan_off);
+Datum
+vector_rust_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWhenIterativeScanOff(iterativeScanMode, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -387,7 +414,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 
 		if (list_length(so->w) == 0)
 		{
-			if (hnsw_iterative_scan == HNSW_ITERATIVE_SCAN_OFF)
+			if (HnswShouldStopWhenIterativeScanOff(hnsw_iterative_scan, true))
 				break;
 
 			/* Empty index */
