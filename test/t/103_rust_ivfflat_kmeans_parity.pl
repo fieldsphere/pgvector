@@ -69,6 +69,26 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_bit_sum_center'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_vector_update_center(real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_vector_update_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_vector_update_center(real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_vector_update_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_bit_update_center(real[]) RETURNS bit
+	AS '$libdir/vector', 'vector_ivfflat_bit_update_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_bit_update_center(real[]) RETURNS bit
+	AS '$libdir/vector', 'vector_rust_ivfflat_bit_update_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_center_counts(assignments, centers) = rust_ivfflat_center_counts(assignments, centers)
@@ -129,5 +149,25 @@ my $bit_sum_parity = $node->safe_psql("postgres", q{
 	) AS t(bv);
 });
 is($bit_sum_parity, "t\nt\nt");
+
+my $vector_update_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_vector_update_center(v) = rust_ivfflat_vector_update_center(v)
+	FROM (VALUES
+		(ARRAY[1.0, 2.0, 3.0]::real[]),
+		(ARRAY[0.0, 0.0, 0.0]::real[]),
+		(ARRAY[-1.5, 2.5, -3.5]::real[])
+	) AS t(v);
+});
+is($vector_update_parity, "t\nt\nt");
+
+my $bit_update_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_bit_update_center(v) = rust_ivfflat_bit_update_center(v)
+	FROM (VALUES
+		(ARRAY[0.0, 0.6, 0.4, 0.8]::real[]),
+		(ARRAY[0.51, 0.49, 0.9, 0.1, 0.5, 0.7, 0.2, 0.99]::real[]),
+		(ARRAY[0.0, 0.0, 0.0, 0.0]::real[])
+	) AS t(v);
+});
+is($bit_update_parity, "t\nt\nt");
 
 done_testing();
