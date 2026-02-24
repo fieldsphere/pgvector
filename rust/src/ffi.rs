@@ -509,6 +509,138 @@ pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_l2_squared_distance_kernel(
+    annz: i32,
+    aindices: *const i32,
+    ax: *const f32,
+    bnnz: i32,
+    bindices: *const i32,
+    bx: *const f32,
+) -> f32 {
+    let mut distance = 0.0f32;
+    let mut bpos = 0usize;
+    let annz = annz as usize;
+    let bnnz = bnnz as usize;
+
+    for i in 0..annz {
+        let ai = *aindices.add(i);
+        let mut bi = -1i32;
+
+        for j in bpos..bnnz {
+            bi = *bindices.add(j);
+
+            if ai == bi {
+                let diff = *ax.add(i) - *bx.add(j);
+                distance += diff * diff;
+            } else if ai > bi {
+                let b = *bx.add(j);
+                distance += b * b;
+            }
+
+            if ai >= bi {
+                bpos = j + 1;
+            }
+
+            if bi >= ai {
+                break;
+            }
+        }
+
+        if ai != bi {
+            let a = *ax.add(i);
+            distance += a * a;
+        }
+    }
+
+    for j in bpos..bnnz {
+        let b = *bx.add(j);
+        distance += b * b;
+    }
+
+    distance
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_inner_product_kernel(
+    annz: i32,
+    aindices: *const i32,
+    ax: *const f32,
+    bnnz: i32,
+    bindices: *const i32,
+    bx: *const f32,
+) -> f32 {
+    let mut distance = 0.0f32;
+    let mut bpos = 0usize;
+    let annz = annz as usize;
+    let bnnz = bnnz as usize;
+
+    for i in 0..annz {
+        let ai = *aindices.add(i);
+
+        for j in bpos..bnnz {
+            let bi = *bindices.add(j);
+
+            if ai == bi {
+                distance += *ax.add(i) * *bx.add(j);
+            }
+
+            if ai >= bi {
+                bpos = j + 1;
+            }
+
+            if bi >= ai {
+                break;
+            }
+        }
+    }
+
+    distance
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_cosine_distance_kernel(
+    annz: i32,
+    aindices: *const i32,
+    ax: *const f32,
+    bnnz: i32,
+    bindices: *const i32,
+    bx: *const f32,
+) -> f64 {
+    let annz = annz as usize;
+    let bnnz = bnnz as usize;
+    let mut similarity = vector_rust_sparsevec_inner_product_kernel(
+        annz as i32,
+        aindices,
+        ax,
+        bnnz as i32,
+        bindices,
+        bx,
+    ) as f64;
+    let mut norma = 0.0f32;
+    let mut normb = 0.0f32;
+
+    for i in 0..annz {
+        let a = *ax.add(i);
+        norma += a * a;
+    }
+
+    for i in 0..bnnz {
+        let b = *bx.add(i);
+        normb += b * b;
+    }
+
+    similarity /= ((norma as f64) * (normb as f64)).sqrt();
+
+    if similarity > 1.0 {
+        similarity = 1.0;
+    } else if similarity < -1.0 {
+        similarity = -1.0;
+    }
+
+    1.0 - similarity
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l2_norm_kernel(nnz: i32, ax: *const f32) -> f64 {
     let mut norm = 0.0f64;
 

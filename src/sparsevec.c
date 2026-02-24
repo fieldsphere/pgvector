@@ -814,46 +814,8 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 static float
 SparsevecL2SquaredDistance(SparseVector * a, SparseVector * b)
 {
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		distance = 0.0;
-	int			bpos = 0;
-
-	for (int i = 0; i < a->nnz; i++)
-	{
-		int			ai = a->indices[i];
-		int			bi = -1;
-
-		for (int j = bpos; j < b->nnz; j++)
-		{
-			bi = b->indices[j];
-
-			if (ai == bi)
-			{
-				float		diff = ax[i] - bx[j];
-
-				distance += diff * diff;
-			}
-			else if (ai > bi)
-				distance += bx[j] * bx[j];
-
-			/* Update start for next iteration */
-			if (ai >= bi)
-				bpos = j + 1;
-
-			/* Found or passed it */
-			if (bi >= ai)
-				break;
-		}
-
-		if (ai != bi)
-			distance += ax[i] * ax[i];
-	}
-
-	for (int j = bpos; j < b->nnz; j++)
-		distance += bx[j] * bx[j];
-
-	return distance;
+	return vector_rust_sparsevec_l2_squared_distance_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+															 b->nnz, b->indices, SPARSEVEC_VALUES(b));
 }
 
 /*
@@ -893,34 +855,8 @@ sparsevec_l2_squared_distance(PG_FUNCTION_ARGS)
 static float
 SparsevecInnerProduct(SparseVector * a, SparseVector * b)
 {
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		distance = 0.0;
-	int			bpos = 0;
-
-	for (int i = 0; i < a->nnz; i++)
-	{
-		int			ai = a->indices[i];
-
-		for (int j = bpos; j < b->nnz; j++)
-		{
-			int			bi = b->indices[j];
-
-			/* Only update when the same index */
-			if (ai == bi)
-				distance += ax[i] * bx[j];
-
-			/* Update start for next iteration */
-			if (ai >= bi)
-				bpos = j + 1;
-
-			/* Found or passed it */
-			if (bi >= ai)
-				break;
-		}
-	}
-
-	return distance;
+	return vector_rust_sparsevec_inner_product_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+													   b->nnz, b->indices, SPARSEVEC_VALUES(b));
 }
 
 /*
@@ -962,40 +898,11 @@ sparsevec_cosine_distance(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
 	SparseVector *b = PG_GETARG_SPARSEVEC_P(1);
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		norma = 0.0;
-	float		normb = 0.0;
-	double		similarity;
 
 	CheckDims(a, b);
 
-	similarity = SparsevecInnerProduct(a, b);
-
-	/* Auto-vectorized */
-	for (int i = 0; i < a->nnz; i++)
-		norma += ax[i] * ax[i];
-
-	/* Auto-vectorized */
-	for (int i = 0; i < b->nnz; i++)
-		normb += bx[i] * bx[i];
-
-	/* Use sqrt(a * b) over sqrt(a) * sqrt(b) */
-	similarity /= sqrt((double) norma * (double) normb);
-
-#ifdef _MSC_VER
-	/* /fp:fast may not propagate NaN */
-	if (isnan(similarity))
-		PG_RETURN_FLOAT8(NAN);
-#endif
-
-	/* Keep in range */
-	if (similarity > 1)
-		similarity = 1.0;
-	else if (similarity < -1)
-		similarity = -1.0;
-
-	PG_RETURN_FLOAT8(1.0 - similarity);
+	PG_RETURN_FLOAT8(vector_rust_sparsevec_cosine_distance_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+																   b->nnz, b->indices, SPARSEVEC_VALUES(b)));
 }
 
 /*
@@ -1022,6 +929,36 @@ Datum
 vector_rust_sparsevec_l1_distance(PG_FUNCTION_ARGS)
 {
 	return sparsevec_l1_distance(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: sparse vector L2 squared distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l2_squared_distance);
+Datum
+vector_rust_sparsevec_l2_squared_distance(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l2_squared_distance(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: sparse vector inner product
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_inner_product);
+Datum
+vector_rust_sparsevec_inner_product(PG_FUNCTION_ARGS)
+{
+	return sparsevec_inner_product(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: sparse vector cosine distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_cosine_distance);
+Datum
+vector_rust_sparsevec_cosine_distance(PG_FUNCTION_ARGS)
+{
+	return sparsevec_cosine_distance(fcinfo);
 }
 
 /*
