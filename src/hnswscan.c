@@ -218,6 +218,33 @@ vector_rust_hnsw_should_limit_scan_by_resources(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldLimitScanByResources(tupleCount, maxScanTuples, memoryUsed, maxMemory, true));
 }
 
+static bool
+HnswShouldReleaseIterativeScanMemory(int iterativeScanMode, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
+
+	return iterativeScanMode != HNSW_ITERATIVE_SCAN_OFF;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_iterative_scan_memory);
+Datum
+vector_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseIterativeScanMemory(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_release_iterative_scan_memory);
+Datum
+vector_rust_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseIterativeScanMemory(iterativeScanMode, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -498,7 +525,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 			so->w = list_delete_last(so->w);
 
 			/* Mark memory as free for next iteration */
-			if (hnsw_iterative_scan != HNSW_ITERATIVE_SCAN_OFF)
+			if (HnswShouldReleaseIterativeScanMemory(hnsw_iterative_scan, true))
 			{
 				pfree(element);
 				pfree(sc);

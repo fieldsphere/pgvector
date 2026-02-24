@@ -252,6 +252,13 @@ pub extern "C" fn vector_rust_hnsw_should_limit_scan_by_resources_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_release_iterative_scan_memory_kernel(
+    iterative_scan_mode: i32,
+) -> bool {
+    iterative_scan_mode != 0
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
