@@ -272,6 +272,33 @@ vector_rust_hnsw_should_update_previous_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUpdatePreviousDistance(iterativeScanMode, true));
 }
 
+static bool
+HnswShouldHandleEmptyWorkList(int workListLength, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_handle_empty_work_list_kernel(workListLength);
+
+	return workListLength == 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_handle_empty_work_list);
+Datum
+vector_hnsw_should_handle_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHandleEmptyWorkList(workListLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_handle_empty_work_list);
+Datum
+vector_rust_hnsw_should_handle_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHandleEmptyWorkList(workListLength, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -499,7 +526,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 		HnswElement element;
 		ItemPointer heaptid;
 
-		if (list_length(so->w) == 0)
+		if (HnswShouldHandleEmptyWorkList(list_length(so->w), true))
 		{
 			if (HnswShouldStopWhenIterativeScanOff(hnsw_iterative_scan, true))
 				break;
@@ -539,7 +566,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 #endif
 			}
 
-			if (list_length(so->w) == 0)
+			if (HnswShouldHandleEmptyWorkList(list_length(so->w), true))
 				break;
 		}
 
