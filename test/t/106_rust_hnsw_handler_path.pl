@@ -490,6 +490,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_unexpected_item_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_unexpected_item_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_unexpected_item_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_unexpected_item_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1080,6 +1090,18 @@ my $append_element_page_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, element_tuple_size, combined_size, max_size);
 });
 is($append_element_page_parity, "t\nt\nt\nt");
+
+my $reject_unexpected_item_offset_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_unexpected_item_offset(inserted_offset, expected_offset) =
+		   rust_hnsw_should_reject_unexpected_item_offset(inserted_offset, expected_offset)
+	FROM (VALUES
+		(1, 1),
+		(2, 1),
+		(8, 8),
+		(0, 1)
+	) AS t(inserted_offset, expected_offset);
+});
+is($reject_unexpected_item_offset_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
