@@ -51,6 +51,15 @@ IvfflatChooseScanListCandidate(float8 distance, int listCount, int maxProbes, fl
 	return listCount < maxProbes || distance < maxDistance;
 }
 
+static bool
+IvfflatShouldReuseScanSlot(int listCount, int maxProbes, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_reuse_scan_slot_kernel(listCount, maxProbes);
+
+	return listCount >= maxProbes;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_scan_list_candidate);
 Datum
 vector_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
@@ -73,6 +82,26 @@ vector_rust_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
 	float8		maxDistance = PG_GETARG_FLOAT8(3);
 
 	PG_RETURN_BOOL(IvfflatChooseScanListCandidate(distance, listCount, maxProbes, maxDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_reuse_scan_slot);
+Datum
+vector_ivfflat_should_reuse_scan_slot(PG_FUNCTION_ARGS)
+{
+	int32		listCount = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldReuseScanSlot(listCount, maxProbes, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_reuse_scan_slot);
+Datum
+vector_rust_ivfflat_should_reuse_scan_slot(PG_FUNCTION_ARGS)
+{
+	int32		listCount = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldReuseScanSlot(listCount, maxProbes, true));
 }
 
 static bool
@@ -144,15 +173,15 @@ GetScanLists(IndexScanDesc scan, Datum value)
 			{
 				IvfflatScanList *scanlist;
 
-				if (listCount < so->maxProbes)
-				{
-					scanlist = &so->lists[listCount];
-					listCount++;
-				}
-				else
+				if (IvfflatShouldReuseScanSlot(listCount, so->maxProbes, true))
 				{
 					/* Remove */
 					scanlist = GetScanList(pairingheap_remove_first(so->listQueue));
+				}
+				else
+				{
+					scanlist = &so->lists[listCount];
+					listCount++;
 				}
 
 				/* Reuse */
