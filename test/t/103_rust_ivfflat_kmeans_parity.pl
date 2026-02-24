@@ -109,6 +109,26 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_halfvec_sum_center'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_adjust_lower_bounds(real[], integer, real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_adjust_lower_bounds'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_adjust_lower_bounds(real[], integer, real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_adjust_lower_bounds'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_adjust_upper_bounds(real[], integer[], real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_adjust_upper_bounds'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_adjust_upper_bounds(real[], integer[], real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_adjust_upper_bounds'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_center_counts(assignments, centers) = rust_ivfflat_center_counts(assignments, centers)
@@ -209,5 +229,27 @@ my $halfvec_sum_parity = $node->safe_psql("postgres", q{
 	) AS t(a, b);
 });
 is($halfvec_sum_parity, "t\nt\nt");
+
+my $lower_bounds_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_adjust_lower_bounds(lower_vals, center_count, deltas) =
+		   rust_ivfflat_adjust_lower_bounds(lower_vals, center_count, deltas)
+	FROM (VALUES
+		(ARRAY[2.0, 4.0, 6.0, 8.0, 10.0, 12.0]::real[], 3, ARRAY[1.0, 3.5, 20.0]::real[]),
+		(ARRAY[0.0, 0.1, 0.2, 0.3]::real[], 2, ARRAY[0.5, 0.25]::real[]),
+		(ARRAY[5.0, 1.0, 7.0, 2.0, 9.0, 3.0]::real[], 3, ARRAY[1.5, 0.5, 2.5]::real[])
+	) AS t(lower_vals, center_count, deltas);
+});
+is($lower_bounds_parity, "t\nt\nt");
+
+my $upper_bounds_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_adjust_upper_bounds(upper_vals, closest, deltas) =
+		   rust_ivfflat_adjust_upper_bounds(upper_vals, closest, deltas)
+	FROM (VALUES
+		(ARRAY[1.0, 2.0, 3.0, 4.0]::real[], ARRAY[0, 1, 2, 1]::integer[], ARRAY[0.5, 1.5, 2.5]::real[]),
+		(ARRAY[0.0, 10.0, 20.0]::real[], ARRAY[2, 0, 1]::integer[], ARRAY[3.0, 4.0, 5.0]::real[]),
+		(ARRAY[7.5, 8.5]::real[], ARRAY[1, 1]::integer[], ARRAY[0.25, 0.75]::real[])
+	) AS t(upper_vals, closest, deltas);
+});
+is($upper_bounds_parity, "t\nt\nt");
 
 done_testing();

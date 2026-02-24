@@ -677,6 +677,28 @@ pub unsafe extern "C" fn vector_rust_ivfflat_bit_update_center_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_halfvec_update_center_kernel(
+    dimensions: i32,
+    values: *const f32,
+    output: *mut c_void,
+) {
+    for i in 0..(dimensions as usize) {
+        write_half_bits(output, i, vector_c_float4_to_half_bits(*values.add(i)));
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_halfvec_sum_center_kernel(
+    dimensions: i32,
+    halfvec: *const c_void,
+    agg: *mut f32,
+) {
+    for i in 0..(dimensions as usize) {
+        *agg.add(i) += half_bits_to_f32(read_half_bits(halfvec, i));
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,
