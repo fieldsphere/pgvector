@@ -245,6 +245,33 @@ vector_rust_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldReleaseIterativeScanMemory(iterativeScanMode, true));
 }
 
+static bool
+HnswShouldUpdatePreviousDistance(int iterativeScanMode, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode);
+
+	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_previous_distance);
+Datum
+vector_hnsw_should_update_previous_distance(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdatePreviousDistance(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_previous_distance);
+Datum
+vector_rust_hnsw_should_update_previous_distance(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdatePreviousDistance(iterativeScanMode, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -539,7 +566,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 		if (HnswShouldSkipStrictOutOfOrder(hnsw_iterative_scan, sc->distance, so->previousDistance, true))
 			continue;
 
-		if (hnsw_iterative_scan == HNSW_ITERATIVE_SCAN_STRICT)
+		if (HnswShouldUpdatePreviousDistance(hnsw_iterative_scan, true))
 		{
 			so->previousDistance = sc->distance;
 		}
