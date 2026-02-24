@@ -29,5 +29,7 @@ void		vector_rust_vector_accum_init(int dim, const float *x, double *dst);
 void		vector_rust_vector_accum_add(int dim, const double *state, const float *x, double *dst);
 void		vector_rust_vector_combine_add(int dim, const double *a, const double *b, double *dst);
 void		vector_rust_vector_avg(int dim, const double *state, double n, float *dst);
+void		vector_rust_halfvec_to_vector(int dim, const void *ax, float *rx);
+void		vector_rust_sparse_to_dense(int nnz, const int32 *indices, const float *values, float *rx);
 
 #endif

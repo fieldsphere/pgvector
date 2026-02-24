@@ -557,8 +557,25 @@ halfvec_to_vector(PG_FUNCTION_ARGS)
 
 	result = InitVector(vec->dim);
 
-	for (int i = 0; i < vec->dim; i++)
-		result->x[i] = HalfToFloat4(vec->x[i]);
+	vector_rust_halfvec_to_vector(vec->dim, vec->x, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: convert half vector to vector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_to_vector_cast);
+Datum
+vector_rust_halfvec_to_vector_cast(PG_FUNCTION_ARGS)
+{
+	HalfVector *vec = PG_GETARG_HALFVEC_P(0);
+	Vector	   *result;
+
+	CheckDim(vec->dim);
+
+	result = InitVector(vec->dim);
+	vector_rust_halfvec_to_vector(vec->dim, vec->x, result->x);
 
 	PG_RETURN_POINTER(result);
 }
@@ -1393,8 +1410,27 @@ sparsevec_to_vector(PG_FUNCTION_ARGS)
 	CheckExpectedDim(typmod, dim);
 
 	result = InitVector(dim);
-	for (int i = 0; i < svec->nnz; i++)
-		result->x[svec->indices[i]] = values[i];
+	vector_rust_sparse_to_dense(svec->nnz, svec->indices, values, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: convert sparse vector to dense vector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_to_vector);
+Datum
+vector_rust_sparsevec_to_vector(PG_FUNCTION_ARGS)
+{
+	SparseVector *svec = PG_GETARG_SPARSEVEC_P(0);
+	Vector	   *result;
+	int			dim = svec->dim;
+	float	   *values = SPARSEVEC_VALUES(svec);
+
+	CheckDim(dim);
+
+	result = InitVector(dim);
+	vector_rust_sparse_to_dense(svec->nnz, svec->indices, values, result->x);
 
 	PG_RETURN_POINTER(result);
 }

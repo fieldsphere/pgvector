@@ -439,3 +439,23 @@ pub unsafe extern "C" fn vector_rust_vector_avg(
         *dst.add(i) = (*state.add(i) / n) as f32;
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_to_vector(dim: i32, ax: *const c_void, rx: *mut f32) {
+    for i in 0..(dim as usize) {
+        *rx.add(i) = half_bits_to_f32(read_half_bits(ax, i));
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparse_to_dense(
+    nnz: i32,
+    indices: *const i32,
+    values: *const f32,
+    rx: *mut f32,
+) {
+    for i in 0..(nnz as usize) {
+        let idx = *indices.add(i) as usize;
+        *rx.add(idx) = *values.add(i);
+    }
+}
