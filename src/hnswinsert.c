@@ -35,6 +35,7 @@ static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pag
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
+static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
 
 /*
  * Get the insert page
@@ -320,7 +321,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	if (HnswShouldUseNeighborPageAsInsertPage(BlockNumberIsValid(newInsertPage), true))
 		newInsertPage = e->neighborPage;
 
-	if (OffsetNumberIsValid(freeOffno))
+	if (HnswShouldUseFreeOnDiskOffsets(OffsetNumberIsValid(freeOffno), true))
 	{
 		e->offno = freeOffno;
 		e->neighborOffno = freeNeighborOffno;
@@ -337,7 +338,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	ItemPointerSet(&etup->neighbortid, e->neighborPage, e->neighborOffno);
 
 	/* Add element and neighbors */
-	if (OffsetNumberIsValid(freeOffno))
+	if (HnswShouldUseFreeOnDiskOffsets(OffsetNumberIsValid(freeOffno), true))
 	{
 		if (!PageIndexTupleOverwrite(page, e->offno, (Item) etup, etupSize))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
@@ -1307,6 +1308,33 @@ vector_rust_hnsw_should_use_next_neighbor_offset(PG_FUNCTION_ARGS)
 	int32		sameBuffer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseNextNeighborOffset(sameBuffer != 0, true));
+}
+
+static bool
+HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(freeOffsetValid);
+
+	return freeOffsetValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_free_ondisk_offsets);
+Datum
+vector_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskOffsets(freeOffsetValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_free_ondisk_offsets);
+Datum
+vector_rust_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskOffsets(freeOffsetValid != 0, true));
 }
 
 static bool
