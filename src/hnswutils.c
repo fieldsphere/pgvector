@@ -108,6 +108,7 @@ hash_offset(Size offset)
 #include "lib/simplehash.h"
 
 static bool HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust);
+static bool HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -889,7 +890,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		HnswSearchCandidate *f = HnswGetSearchCandidate(w_node, pairingheap_first(W));
 		HnswElement cElement;
 
-		if (c->distance > f->distance)
+		if (HnswShouldStopSearchLayer(c->distance, f->distance, true))
 			break;
 
 		cElement = HnswPtrAccess(base, c->element);
@@ -1059,6 +1060,15 @@ HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, 
 	return candidateDistance < frontierDistance || alwaysAdd;
 }
 
+static bool
+HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_stop_search_layer_kernel(candidateDistance, frontierDistance);
+
+	return candidateDistance > frontierDistance;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1119,6 +1129,26 @@ vector_rust_hnsw_should_add_search_candidate(PG_FUNCTION_ARGS)
 	int32		alwaysAdd = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_search_layer);
+Datum
+vector_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldStopSearchLayer(candidateDistance, frontierDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_search_layer);
+Datum
+vector_rust_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldStopSearchLayer(candidateDistance, frontierDistance, true));
 }
 
 /*
