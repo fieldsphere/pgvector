@@ -79,6 +79,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_append_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_set_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_set_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_set_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_set_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -156,5 +166,17 @@ my $append_page_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, item_size);
 });
 is($append_page_parity, "t\nt\nt\nt");
+
+my $set_insert_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_set_insert_page(ndeletable, insert_page) =
+		   rust_ivfflat_should_set_insert_page(ndeletable, insert_page)
+	FROM (VALUES
+		(1, -1),
+		(1, 100),
+		(0, -1),
+		(5, -1)
+	) AS t(ndeletable, insert_page);
+});
+is($set_insert_page_parity, "t\nt\nt\nt");
 
 done_testing();
