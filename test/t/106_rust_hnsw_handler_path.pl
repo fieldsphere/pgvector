@@ -39,6 +39,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_clamp_ratio'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_adjust_startup_cost(double precision, double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_adjust_startup_cost'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_adjust_startup_cost(double precision, double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_adjust_startup_cost'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -68,5 +78,17 @@ my $clamp_ratio_parity = $node->safe_psql("postgres", q{
 	) AS t(ratio);
 });
 is($clamp_ratio_parity, "t\nt\nt\nt");
+
+my $adjust_startup_cost_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_adjust_startup_cost(startup_pages, rel_pages, ratio) =
+		   rust_hnsw_should_adjust_startup_cost(startup_pages, rel_pages, ratio)
+	FROM (VALUES
+		(10.0::double precision, 9.0::double precision, 0.4::double precision),
+		(10.0::double precision, 9.0::double precision, 0.5::double precision),
+		(9.0::double precision, 9.0::double precision, 0.4::double precision),
+		(8.0::double precision, 9.0::double precision, 0.1::double precision)
+	) AS t(startup_pages, rel_pages, ratio);
+});
+is($adjust_startup_cost_parity, "t\nt\nt\nt");
 
 done_testing();
