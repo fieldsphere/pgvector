@@ -116,6 +116,7 @@ static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
 static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
 static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
+static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -972,7 +973,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				wlen++;
 
 				/* No need to decrement wlen */
-				if (wlen > ef)
+				if (HnswShouldTrimCandidateList(wlen, ef, true))
 				{
 					HnswSearchCandidate *d = HnswGetSearchCandidate(w_node, pairingheap_remove_first(W));
 
@@ -1139,6 +1140,15 @@ HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 		return vector_rust_hnsw_should_process_pruned_candidate_kernel(hasPrunedCandidate);
 
 	return hasPrunedCandidate;
+}
+
+static bool
+HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_trim_candidate_list_kernel(candidateCount, ef);
+
+	return candidateCount > ef;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
@@ -1359,6 +1369,26 @@ vector_rust_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
 	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldProcessPrunedCandidate(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_trim_candidate_list);
+Datum
+vector_hnsw_should_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldTrimCandidateList(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_trim_candidate_list);
+Datum
+vector_rust_hnsw_should_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldTrimCandidateList(candidateCount, ef, true));
 }
 
 /*
