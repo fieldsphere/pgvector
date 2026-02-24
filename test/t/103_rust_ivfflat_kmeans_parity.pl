@@ -89,6 +89,26 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_bit_update_center'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_halfvec_update_center(real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_halfvec_update_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_halfvec_update_center(real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_halfvec_update_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_halfvec_sum_center(real[], real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_halfvec_sum_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_halfvec_sum_center(real[], real[]) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_halfvec_sum_center'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_center_counts(assignments, centers) = rust_ivfflat_center_counts(assignments, centers)
@@ -169,5 +189,25 @@ my $bit_update_parity = $node->safe_psql("postgres", q{
 	) AS t(v);
 });
 is($bit_update_parity, "t\nt\nt");
+
+my $halfvec_update_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_halfvec_update_center(v) = rust_ivfflat_halfvec_update_center(v)
+	FROM (VALUES
+		(ARRAY[1.0, 2.0, 3.0]::real[]),
+		(ARRAY[0.0, 0.0, 0.0]::real[]),
+		(ARRAY[-1.25, 2.5, -3.75]::real[])
+	) AS t(v);
+});
+is($halfvec_update_parity, "t\nt\nt");
+
+my $halfvec_sum_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_halfvec_sum_center(a, b) = rust_ivfflat_halfvec_sum_center(a, b)
+	FROM (VALUES
+		(ARRAY[1.0, 2.0, 3.0]::real[], ARRAY[0.5, 1.5, 2.5]::real[]),
+		(ARRAY[0.0, 0.0, 0.0]::real[], ARRAY[1.0, 1.0, 1.0]::real[]),
+		(ARRAY[-1.0, 1.0, -1.0]::real[], ARRAY[2.0, -2.0, 2.0]::real[])
+	) AS t(a, b);
+});
+is($halfvec_sum_parity, "t\nt\nt");
 
 done_testing();
