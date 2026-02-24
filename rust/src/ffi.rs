@@ -132,6 +132,14 @@ pub extern "C" fn vector_rust_ivfflat_should_update_insert_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_allow_insert_page_after_original_kernel(
+    insert_page: i32,
+    original_insert_page: i32,
+) -> bool {
+    original_insert_page == -1 || insert_page >= original_insert_page
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_ivfflat_should_reuse_scan_slot_kernel(
     list_count: i32,
     max_probes: i32,

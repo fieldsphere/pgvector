@@ -17,6 +17,7 @@ bool		vector_rust_ivfflat_should_append_page_kernel(int32 free_space, int32 item
 bool		vector_rust_ivfflat_should_follow_insert_page_link_kernel(int32 insert_page);
 bool		vector_rust_ivfflat_should_set_insert_page_kernel(int32 ndeletable, bool insert_page_is_valid);
 bool		vector_rust_ivfflat_should_update_insert_page_kernel(int32 insert_page, int32 original_insert_page);
+bool		vector_rust_ivfflat_should_allow_insert_page_after_original_kernel(int32 insert_page, int32 original_insert_page);
 bool		vector_rust_ivfflat_should_reuse_scan_slot_kernel(int32 list_count, int32 max_probes);
 void		vector_rust_ivfflat_scan_probe_limits_kernel(int32 probes, int32 max_probes, int32 lists, int32 *adjusted_probes, int32 *adjusted_max_probes);
 void		vector_rust_ivfflat_compute_scan_limits_kernel(int32 probes, int32 max_probes, int32 lists, int32 iterative_scan_mode, int32 *adjusted_probes, int32 *adjusted_max_probes);

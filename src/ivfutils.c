@@ -207,6 +207,15 @@ IvfflatShouldWriteListInsertPage(BlockNumber insertPage, BlockNumber currentInse
 	return BlockNumberIsValid(insertPage) && insertPage != currentInsertPage;
 }
 
+static bool
+IvfflatShouldAllowInsertPageAfterOriginal(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_allow_insert_page_after_original_kernel((int32) insertPage, (int32) originalInsertPage);
+
+	return !BlockNumberIsValid(originalInsertPage) || insertPage >= originalInsertPage;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_write_list_insert_page);
 Datum
 vector_ivfflat_should_write_list_insert_page(PG_FUNCTION_ARGS)
@@ -225,6 +234,26 @@ vector_rust_ivfflat_should_write_list_insert_page(PG_FUNCTION_ARGS)
 	int32		currentInsertPage = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(IvfflatShouldWriteListInsertPage((BlockNumber) insertPage, (BlockNumber) currentInsertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_allow_insert_page_after_original);
+Datum
+vector_ivfflat_should_allow_insert_page_after_original(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		originalInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldAllowInsertPageAfterOriginal((BlockNumber) insertPage, (BlockNumber) originalInsertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_allow_insert_page_after_original);
+Datum
+vector_rust_ivfflat_should_allow_insert_page_after_original(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		originalInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldAllowInsertPageAfterOriginal((BlockNumber) insertPage, (BlockNumber) originalInsertPage, true));
 }
 
 /*
@@ -251,7 +280,7 @@ IvfflatUpdateList(Relation index, ListInfo listInfo,
 	{
 		/* Skip update if insert page is lower than original insert page  */
 		/* This is needed to prevent insert from overwriting vacuum */
-		if (!BlockNumberIsValid(originalInsertPage) || insertPage >= originalInsertPage)
+		if (IvfflatShouldAllowInsertPageAfterOriginal(insertPage, originalInsertPage, true))
 		{
 			list->insertPage = insertPage;
 			changed = true;
