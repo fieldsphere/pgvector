@@ -99,6 +99,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_append_neighbor_without_prune'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_lower_level_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_lower_level_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_lower_level_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_lower_level_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -207,5 +217,17 @@ my $append_neighbor_without_prune_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbors_length, max_neighbors);
 });
 is($append_neighbor_without_prune_parity, "t\nt\nt\nt");
+
+my $skip_lower_level_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_lower_level_candidate(candidate_level, search_level) =
+		   rust_hnsw_should_skip_lower_level_candidate(candidate_level, search_level)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(3, 2)
+	) AS t(candidate_level, search_level);
+});
+is($skip_lower_level_candidate_parity, "t\nt\nt\nt");
 
 done_testing();
