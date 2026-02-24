@@ -523,6 +523,14 @@ pub extern "C" fn vector_rust_hnsw_should_append_element_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(
+    inserted_offset: i32,
+    expected_offset: i32,
+) -> bool {
+    inserted_offset != expected_offset
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

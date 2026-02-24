@@ -73,6 +73,7 @@ bool		vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(int64 combined
 bool		vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(int64 tuple_size, int64 alloc_size);
 bool		vector_rust_hnsw_should_append_neighbor_page_kernel(int64 free_space, int64 neighbor_tuple_size);
 bool		vector_rust_hnsw_should_append_element_page_kernel(int64 free_space, int64 element_tuple_size, int64 combined_size, int64 max_size);
+bool		vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(int32 inserted_offset, int32 expected_offset);
 bool		vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(bool snapshot_is_mvcc);
 bool		vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(int32 participants_done, int32 participant_count);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);

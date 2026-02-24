@@ -97,6 +97,7 @@ static bool HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize
 static bool HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust);
 static bool HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust);
 static bool HnswShouldAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust);
+static bool HnswShouldRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -240,7 +241,7 @@ CreateGraphPages(HnswBuildState * buildstate)
 		ItemPointerSet(&etup->neighbortid, element->neighborPage, element->neighborOffno);
 
 		/* Add element */
-		if (PageAddItem(page, (Item) etup, etupSize, InvalidOffsetNumber, false, false) != element->offno)
+		if (HnswShouldRejectUnexpectedItemOffset((int32) PageAddItem(page, (Item) etup, etupSize, InvalidOffsetNumber, false, false), (int32) element->offno, true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 
 		/* Add new page if needed */
@@ -248,7 +249,7 @@ CreateGraphPages(HnswBuildState * buildstate)
 			HnswBuildAppendPage(index, &buf, &page, forkNum);
 
 		/* Add placeholder for neighbors */
-		if (PageAddItem(page, (Item) ntup, ntupSize, InvalidOffsetNumber, false, false) != element->neighborOffno)
+		if (HnswShouldRejectUnexpectedItemOffset((int32) PageAddItem(page, (Item) ntup, ntupSize, InvalidOffsetNumber, false, false), (int32) element->neighborOffno, true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 	}
 
@@ -1881,6 +1882,35 @@ vector_rust_hnsw_should_append_element_page(PG_FUNCTION_ARGS)
 	int64		maxSize = PG_GETARG_INT64(3);
 
 	PG_RETURN_BOOL(HnswShouldAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, true));
+}
+
+static bool
+HnswShouldRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(insertedOffset, expectedOffset);
+
+	return insertedOffset != expectedOffset;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_unexpected_item_offset);
+Datum
+vector_hnsw_should_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
+{
+	int32		insertedOffset = PG_GETARG_INT32(0);
+	int32		expectedOffset = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectUnexpectedItemOffset(insertedOffset, expectedOffset, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_unexpected_item_offset);
+Datum
+vector_rust_hnsw_should_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
+{
+	int32		insertedOffset = PG_GETARG_INT32(0);
+	int32		expectedOffset = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectUnexpectedItemOffset(insertedOffset, expectedOffset, true));
 }
 
 static bool
