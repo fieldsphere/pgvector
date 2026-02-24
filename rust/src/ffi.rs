@@ -146,6 +146,13 @@ pub extern "C" fn vector_rust_hnsw_should_append_ondisk_element_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(
+    same_buffer: bool,
+) -> bool {
+    !same_buffer
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
