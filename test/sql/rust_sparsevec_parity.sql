@@ -34,6 +34,22 @@ CREATE FUNCTION rust_halfvec_to_sparsevec(halfvec, integer, boolean) RETURNS spa
 	AS '$libdir/vector', 'vector_rust_halfvec_to_sparsevec'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_array_int_to_sparsevec(integer[], integer, boolean) RETURNS sparsevec
+	AS '$libdir/vector', 'vector_rust_array_to_sparsevec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_array_real_to_sparsevec(real[], integer, boolean) RETURNS sparsevec
+	AS '$libdir/vector', 'vector_rust_array_to_sparsevec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_array_double_to_sparsevec(double precision[], integer, boolean) RETURNS sparsevec
+	AS '$libdir/vector', 'vector_rust_array_to_sparsevec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_array_numeric_to_sparsevec(numeric[], integer, boolean) RETURNS sparsevec
+	AS '$libdir/vector', 'vector_rust_array_to_sparsevec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 SELECT
 	l2_norm(sv) = rust_sparsevec_l2_norm(sv)
 FROM (VALUES
@@ -84,3 +100,14 @@ FROM (VALUES
 	('[-1,0,3,0]'::vector(4), '[-1,0,3,0]'::halfvec(4)),
 	('[0,0,0,0]'::vector(4), '[0,0,0,0]'::halfvec(4))
 ) AS t(v, h);
+
+SELECT
+	array_to_sparsevec(ai, -1, false) = rust_array_int_to_sparsevec(ai, -1, false),
+	array_to_sparsevec(ar, -1, false) = rust_array_real_to_sparsevec(ar, -1, false),
+	array_to_sparsevec(ad, -1, false) = rust_array_double_to_sparsevec(ad, -1, false),
+	array_to_sparsevec(an, -1, false) = rust_array_numeric_to_sparsevec(an, -1, false)
+FROM (VALUES
+	(ARRAY[0, 1, 0, 2]::integer[], ARRAY[0, 1, 0, 2]::real[], ARRAY[0, 1, 0, 2]::double precision[], ARRAY[0, 1, 0, 2]::numeric[]),
+	(ARRAY[-1, 0, 3, 0]::integer[], ARRAY[-1, 0, 3, 0]::real[], ARRAY[-1, 0, 3, 0]::double precision[], ARRAY[-1, 0, 3, 0]::numeric[]),
+	(ARRAY[0, 0, 0, 0]::integer[], ARRAY[0, 0, 0, 0]::real[], ARRAY[0, 0, 0, 0]::double precision[], ARRAY[0, 0, 0, 0]::numeric[])
+) AS t(ai, ar, ad, an);
