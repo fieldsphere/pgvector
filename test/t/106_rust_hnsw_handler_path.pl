@@ -239,6 +239,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_copy_rescan_keys'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_null_scan_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_null_scan_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_null_scan_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_null_scan_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -508,5 +518,17 @@ my $copy_rescan_keys_parity = $node->safe_psql("postgres", q{
 	) AS t(has_keys, key_count);
 });
 is($copy_rescan_keys_parity, "t\nt\nt\nt");
+
+my $use_null_scan_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_null_scan_value(orderby_is_null) =
+		   rust_hnsw_should_use_null_scan_value(orderby_is_null)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(orderby_is_null);
+});
+is($use_null_scan_value_parity, "t\nt\nt\nt");
 
 done_testing();
