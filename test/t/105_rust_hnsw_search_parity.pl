@@ -179,6 +179,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_always_add_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_update_entry_point(integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_update_entry_point'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_update_entry_point(integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_update_entry_point'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -383,5 +393,17 @@ my $always_add_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(candidate_count, ef);
 });
 is($always_add_candidate_parity, "t\nt\nt\nt");
+
+my $update_entry_point_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_update_entry_point(entry_point_is_null, element_level, entry_level) =
+		   rust_hnsw_should_update_entry_point(entry_point_is_null, element_level, entry_level)
+	FROM (VALUES
+		(1, 0, 10),
+		(0, 11, 10),
+		(0, 10, 10),
+		(0, 9, 10)
+	) AS t(entry_point_is_null, element_level, entry_level);
+});
+is($update_entry_point_parity, "t\nt\nt\nt");
 
 done_testing();
