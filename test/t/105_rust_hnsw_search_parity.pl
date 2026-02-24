@@ -159,6 +159,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_process_pruned_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_trim_candidate_list(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_trim_candidate_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_trim_candidate_list(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_trim_candidate_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -339,5 +349,17 @@ my $process_pruned_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(has_pruned_candidate);
 });
 is($process_pruned_candidate_parity, "t\nt\nt\nt");
+
+my $trim_candidate_list_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_trim_candidate_list(candidate_count, ef) =
+		   rust_hnsw_should_trim_candidate_list(candidate_count, ef)
+	FROM (VALUES
+		(0, 10),
+		(10, 10),
+		(11, 10),
+		(42, 20)
+	) AS t(candidate_count, ef);
+});
+is($trim_candidate_list_parity, "t\nt\nt\nt");
 
 done_testing();
