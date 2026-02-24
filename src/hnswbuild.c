@@ -427,6 +427,33 @@ vector_rust_hnsw_should_update_entry_point(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPoint(entryPointIsNull != 0, elementLevel, entryLevel, true));
 }
 
+static bool
+HnswShouldFlushPagesInBuild(bool graphFlushed, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_flush_pages_in_build_kernel(graphFlushed);
+
+	return !graphFlushed;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flush_pages_in_build);
+Datum
+vector_hnsw_should_flush_pages_in_build(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFlushPagesInBuild(graphFlushed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_flush_pages_in_build);
+Datum
+vector_rust_hnsw_should_flush_pages_in_build(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFlushPagesInBuild(graphFlushed != 0, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -642,7 +669,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid, Hn
 		LWLockRelease(flushLock);
 		LWLockAcquire(flushLock, LW_EXCLUSIVE);
 
-		if (!graph->flushed)
+		if (HnswShouldFlushPagesInBuild(graph->flushed, true))
 		{
 			ereport(NOTICE,
 					(errmsg("hnsw graph no longer fits into maintenance_work_mem after " INT64_FORMAT " tuples", (int64) graph->indtuples),
