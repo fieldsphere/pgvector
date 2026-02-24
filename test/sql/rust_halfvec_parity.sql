@@ -22,6 +22,14 @@ CREATE FUNCTION rust_halfvec_l2_normalize(halfvec) RETURNS halfvec
 	AS '$libdir/vector', 'vector_rust_halfvec_l2_normalize'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_halfvec_binary_quantize(halfvec) RETURNS bit
+	AS '$libdir/vector', 'vector_rust_halfvec_binary_quantize'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_halfvec_subvector(halfvec, int4, int4) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_subvector'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 CREATE FUNCTION rust_halfvec_cmp(halfvec, halfvec) RETURNS int4
 	AS '$libdir/vector', 'vector_rust_halfvec_cmp'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -65,6 +73,15 @@ FROM (VALUES
 	('[1,2,3]'::halfvec(3)),
 	('[0,0,0]'::halfvec(3)),
 	('[-1,2,-3,4]'::halfvec(4))
+) AS t(h);
+
+SELECT
+	binary_quantize(h) = rust_halfvec_binary_quantize(h),
+	subvector(h, 2, 2) = rust_halfvec_subvector(h, 2, 2)
+FROM (VALUES
+	('[1,-2,0,4]'::halfvec(4)),
+	('[0,0,0,0]'::halfvec(4)),
+	('[5,6,7,8]'::halfvec(4))
 ) AS t(h);
 
 SELECT
