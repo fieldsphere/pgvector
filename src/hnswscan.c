@@ -100,6 +100,37 @@ vector_rust_hnsw_should_return_remaining_discarded(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldReturnRemainingDiscarded(discardedIsEmpty != 0, true));
 }
 
+static bool
+HnswShouldSkipStrictOutOfOrder(int iterativeScanMode, double distance, double previousDistance, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_strict_out_of_order_kernel(iterativeScanMode, distance, previousDistance);
+
+	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT && distance < previousDistance;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_strict_out_of_order);
+Datum
+vector_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+	float8		distance = PG_GETARG_FLOAT8(1);
+	float8		previousDistance = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_strict_out_of_order);
+Datum
+vector_rust_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+	float8		distance = PG_GETARG_FLOAT8(1);
+	float8		previousDistance = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -391,11 +422,11 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 
 		heaptid = &element->heaptids[--element->heaptidsLength];
 
+		if (HnswShouldSkipStrictOutOfOrder(hnsw_iterative_scan, sc->distance, so->previousDistance, true))
+			continue;
+
 		if (hnsw_iterative_scan == HNSW_ITERATIVE_SCAN_STRICT)
 		{
-			if (sc->distance < so->previousDistance)
-				continue;
-
 			so->previousDistance = sc->distance;
 		}
 
