@@ -29,6 +29,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_disable_without_order'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_clamp_ratio(double precision) RETURNS double precision
+	AS '$libdir/vector', 'vector_hnsw_clamp_ratio'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_clamp_ratio(double precision) RETURNS double precision
+	AS '$libdir/vector', 'vector_rust_hnsw_clamp_ratio'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -47,5 +57,16 @@ my $disable_without_order_parity = $node->safe_psql("postgres", q{
 	) AS t(orderby_count);
 });
 is($disable_without_order_parity, "t\nt\nt\nt");
+
+my $clamp_ratio_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_clamp_ratio(ratio) = rust_hnsw_clamp_ratio(ratio)
+	FROM (VALUES
+		(0.0::double precision),
+		(0.2::double precision),
+		(1.0::double precision),
+		(1.5::double precision)
+	) AS t(ratio);
+});
+is($clamp_ratio_parity, "t\nt\nt\nt");
 
 done_testing();
