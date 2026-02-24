@@ -229,6 +229,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_non_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_copy_rescan_keys(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_copy_rescan_keys'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_copy_rescan_keys(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_copy_rescan_keys'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -486,5 +496,17 @@ my $reject_non_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	) AS t(snapshot_is_mvcc);
 });
 is($reject_non_mvcc_snapshot_parity, "t\nt\nt\nt");
+
+my $copy_rescan_keys_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_copy_rescan_keys(has_keys, key_count) =
+		   rust_hnsw_should_copy_rescan_keys(has_keys, key_count)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(0, 3),
+		(1, 3)
+	) AS t(has_keys, key_count);
+});
+is($copy_rescan_keys_parity, "t\nt\nt\nt");
 
 done_testing();
