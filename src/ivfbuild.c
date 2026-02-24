@@ -160,6 +160,15 @@ IvfflatChooseBuildCenterCandidate(float8 distance, float8 minDistance, bool useR
 	return distance < minDistance;
 }
 
+static bool
+IvfflatBuildShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
+
+	return freeSpace < itemSize;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_build_center_candidate);
 Datum
 vector_ivfflat_choose_build_center_candidate(PG_FUNCTION_ARGS)
@@ -178,6 +187,26 @@ vector_rust_ivfflat_choose_build_center_candidate(PG_FUNCTION_ARGS)
 	float8		minDistance = PG_GETARG_FLOAT8(1);
 
 	PG_RETURN_BOOL(IvfflatChooseBuildCenterCandidate(distance, minDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_build_should_append_page);
+Datum
+vector_ivfflat_build_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatBuildShouldAppendPage(freeSpace, itemSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_build_should_append_page);
+Datum
+vector_rust_ivfflat_build_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatBuildShouldAppendPage(freeSpace, itemSize, true));
 }
 
 static void
@@ -329,7 +358,7 @@ InsertTuples(Relation index, IvfflatBuildState * buildstate, ForkNumber forkNum)
 			/* Check for free space */
 			Size		itemsz = MAXALIGN(IndexTupleSize(itup));
 
-			if (PageGetFreeSpace(page) < itemsz)
+			if (IvfflatBuildShouldAppendPage(PageGetFreeSpace(page), itemsz, true))
 				IvfflatAppendPage(index, &buf, &page, &state, forkNum);
 
 			/* Add the item */
