@@ -109,6 +109,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_when_iterative_scan_off'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_limit_scan_by_resources(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_limit_scan_by_resources'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_limit_scan_by_resources(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_limit_scan_by_resources'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -222,5 +232,17 @@ my $stop_when_iterative_scan_off_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode);
 });
 is($stop_when_iterative_scan_off_parity, "t\nt\nt\nt");
+
+my $limit_scan_by_resources_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_limit_scan_by_resources(tuple_count, max_scan_tuples, memory_used, max_memory) =
+		   rust_hnsw_should_limit_scan_by_resources(tuple_count, max_scan_tuples, memory_used, max_memory)
+	FROM (VALUES
+		(10::bigint, 20::bigint, 100::bigint, 200::bigint),
+		(20::bigint, 20::bigint, 100::bigint, 200::bigint),
+		(10::bigint, 20::bigint, 201::bigint, 200::bigint),
+		(30::bigint, 20::bigint, 50::bigint, 200::bigint)
+	) AS t(tuple_count, max_scan_tuples, memory_used, max_memory);
+});
+is($limit_scan_by_resources_parity, "t\nt\nt\nt");
 
 done_testing();
