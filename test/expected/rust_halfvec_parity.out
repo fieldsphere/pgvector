@@ -10,3 +10,4 @@ FROM (VALUES
 ----------
  t
 (1 row)
+

@@ -831,25 +831,19 @@ halfvec_add(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
-	half	   *ax = a->x;
-	half	   *bx = b->x;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	CheckDims(a, b);
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_add_kernel(a->dim, a->x, b->x, rust_result);
 	for (int i = 0, imax = a->dim; i < imax; i++)
-	{
-#ifdef FLT16_SUPPORT
-		rx[i] = ax[i] + bx[i];
-#else
-		rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) + HalfToFloat4(bx[i]));
-#endif
-	}
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -858,7 +852,18 @@ halfvec_add(PG_FUNCTION_ARGS)
 			float_overflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: add half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_add);
+Datum
+vector_rust_halfvec_add(PG_FUNCTION_ARGS)
+{
+	return halfvec_add(fcinfo);
 }
 
 /*
