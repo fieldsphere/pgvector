@@ -400,6 +400,13 @@ pub extern "C" fn vector_rust_hnsw_should_use_debug_query_string_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel(
+    is_concurrent: bool,
+) -> bool {
+    !is_concurrent
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(
     participants_done: i32,
     participant_count: i32,

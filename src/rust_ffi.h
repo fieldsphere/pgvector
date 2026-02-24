@@ -57,6 +57,7 @@ bool		vector_rust_hnsw_should_use_relation_parallel_workers_kernel(int32 paralle
 bool		vector_rust_hnsw_should_fallback_without_workers_kernel(int32 workers_launched);
 bool		vector_rust_hnsw_should_leader_participate_kernel(bool leader_participates);
 bool		vector_rust_hnsw_should_use_debug_query_string_kernel(bool has_debug_query_string);
+bool		vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel(bool is_concurrent);
 bool		vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(int32 participants_done, int32 participant_count);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
