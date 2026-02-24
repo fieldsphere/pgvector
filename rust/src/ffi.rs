@@ -414,6 +414,13 @@ pub extern "C" fn vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_fallback_without_dsm_segment_kernel(
+    has_dsm_segment: bool,
+) -> bool {
+    !has_dsm_segment
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

@@ -83,6 +83,7 @@ static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust);
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
 static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
+static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -1244,7 +1245,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	InitializeParallelDSM(pcxt);
 
 	/* If no DSM segment was available, back out (do serial build) */
-	if (pcxt->seg == NULL)
+	if (HnswShouldFallbackWithoutDsmSegment(pcxt->seg != NULL, true))
 	{
 		if (HnswShouldUnregisterMVCCSnapshot(IsMVCCSnapshot(snapshot), true))
 			UnregisterSnapshot(snapshot);
@@ -1498,6 +1499,33 @@ vector_rust_hnsw_should_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
 	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUnregisterMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
+static bool
+HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_fallback_without_dsm_segment_kernel(hasDsmSegment);
+
+	return !hasDsmSegment;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fallback_without_dsm_segment);
+Datum
+vector_hnsw_should_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFallbackWithoutDsmSegment(hasDsmSegment != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_fallback_without_dsm_segment);
+Datum
+vector_rust_hnsw_should_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFallbackWithoutDsmSegment(hasDsmSegment != 0, true));
 }
 
 static bool
