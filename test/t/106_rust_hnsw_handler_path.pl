@@ -380,6 +380,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_varbit_type(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_varbit_type'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_varbit_type(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_varbit_type'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -836,6 +846,20 @@ my $log_leader_progress_parity = $node->safe_psql("postgres", q{
 	) AS t(progress_is_leader);
 });
 is($log_leader_progress_parity, "t\nt\nt\nt");
+
+my $reject_varbit_type_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_varbit_type(type_oid) =
+		   rust_hnsw_should_reject_varbit_type(type_oid)
+	FROM (
+		SELECT unnest(ARRAY[
+			0::integer,
+			'varbit'::regtype::oid::integer,
+			42::integer,
+			'varbit'::regtype::oid::integer
+		]) AS type_oid
+	) AS t;
+});
+is($reject_varbit_type_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
