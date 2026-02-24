@@ -1346,6 +1346,33 @@ vector_rust_hnsw_should_skip_parallel_workers(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipParallelWorkers(parallelWorkers, true));
 }
 
+static bool
+HnswShouldUseRelationParallelWorkers(int parallelWorkers, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_use_relation_parallel_workers_kernel(parallelWorkers);
+
+	return parallelWorkers != -1;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_relation_parallel_workers);
+Datum
+vector_hnsw_should_use_relation_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseRelationParallelWorkers(parallelWorkers, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_relation_parallel_workers);
+Datum
+vector_rust_hnsw_should_use_relation_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseRelationParallelWorkers(parallelWorkers, true));
+}
+
 static int
 ComputeParallelWorkers(Relation heap, Relation index)
 {
@@ -1358,7 +1385,7 @@ ComputeParallelWorkers(Relation heap, Relation index)
 
 	/* Use parallel_workers storage parameter on table if set */
 	parallel_workers = RelationGetParallelWorkers(heap, -1);
-	if (parallel_workers != -1)
+	if (HnswShouldUseRelationParallelWorkers(parallel_workers, true))
 		return Min(parallel_workers, max_parallel_maintenance_workers);
 
 	return max_parallel_maintenance_workers;
