@@ -508,6 +508,33 @@ vector_rust_hnsw_should_begin_parallel_build(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldBeginParallelBuild(parallelWorkers, true));
 }
 
+static bool
+HnswShouldEndParallelBuild(bool hasLeader, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_end_parallel_build_kernel(hasLeader);
+
+	return hasLeader;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_end_parallel_build);
+Datum
+vector_hnsw_should_end_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldEndParallelBuild(hasLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_end_parallel_build);
+Datum
+vector_rust_hnsw_should_end_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldEndParallelBuild(hasLeader != 0, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -1291,7 +1318,7 @@ BuildGraph(HnswBuildState * buildstate)
 		FlushPages(buildstate);
 
 	/* End parallel build */
-	if (buildstate->hnswleader)
+	if (HnswShouldEndParallelBuild(buildstate->hnswleader != NULL, true))
 		HnswEndParallel(buildstate->hnswleader);
 }
 
