@@ -1004,27 +1004,22 @@ Datum
 halfvec_binary_quantize(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
-	half	   *ax = a->x;
 	VarBit	   *result = InitBitVector(a->dim);
 	unsigned char *rx = VARBITS(result);
-	int			i = 0;
-	int			count = (a->dim / 8) * 8;
 
-	/* Auto-vectorized on aarch64 */
-	for (; i < count; i += 8)
-	{
-		unsigned char result_byte = 0;
-
-		for (int j = 0; j < 8; j++)
-			result_byte |= (HalfToFloat4(ax[i + j]) > 0) << (7 - j);
-
-		rx[i / 8] = result_byte;
-	}
-
-	for (; i < a->dim; i++)
-		rx[i / 8] |= (HalfToFloat4(ax[i]) > 0) << (7 - (i % 8));
+	vector_rust_halfvec_binary_quantize_kernel(a->dim, a->x, rx);
 
 	PG_RETURN_VARBIT_P(result);
+}
+
+/*
+ * Rust parity wrapper: quantize a half vector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_binary_quantize);
+Datum
+vector_rust_halfvec_binary_quantize(PG_FUNCTION_ARGS)
+{
+	return halfvec_binary_quantize(fcinfo);
 }
 
 /*
@@ -1068,10 +1063,19 @@ halfvec_subvector(PG_FUNCTION_ARGS)
 	CheckDim(dim);
 	result = InitHalfVector(dim);
 
-	for (int i = 0; i < dim; i++)
-		result->x[i] = ax[start - 1 + i];
+	vector_rust_halfvec_subvector_kernel(dim, ax, start - 1, result->x);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: get halfvec subvector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_subvector);
+Datum
+vector_rust_halfvec_subvector(PG_FUNCTION_ARGS)
+{
+	return halfvec_subvector(fcinfo);
 }
 
 /*

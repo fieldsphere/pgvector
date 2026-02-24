@@ -17,6 +17,12 @@ unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
 }
 
 #[inline]
+unsafe fn write_half_bits(base: *mut c_void, idx: usize, bits: u16) {
+    let ptr = (base as *mut u8).add(idx * 2) as *mut u16;
+    std::ptr::write_unaligned(ptr, bits);
+}
+
+#[inline]
 fn half_bits_to_f32(bits: u16) -> f32 {
     let sign = ((bits & 0x8000) as u32) << 16;
     let exponent = ((bits >> 10) & 0x1f) as u32;
@@ -777,6 +783,40 @@ pub unsafe extern "C" fn vector_rust_halfvec_concat_kernel(
 
     for i in 0..(bdim as usize) {
         *rx.add((adim as usize) + i) = half_bits_to_f32(read_half_bits(bx, i));
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_binary_quantize_kernel(
+    dim: i32,
+    ax: *const c_void,
+    rx: *mut u8,
+) {
+    let dim = dim as usize;
+    let byte_count = dim.div_ceil(8);
+
+    for i in 0..byte_count {
+        *rx.add(i) = 0;
+    }
+
+    for i in 0..dim {
+        if half_bits_to_f32(read_half_bits(ax, i)) > 0.0 {
+            *rx.add(i / 8) |= 1 << (7 - (i % 8));
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_subvector_kernel(
+    dim: i32,
+    ax: *const c_void,
+    start_index: i32,
+    rx: *mut c_void,
+) {
+    let start_index = start_index as usize;
+
+    for i in 0..(dim as usize) {
+        write_half_bits(rx, i, read_half_bits(ax, start_index + i));
     }
 }
 
