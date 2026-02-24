@@ -93,6 +93,7 @@ static bool HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, boo
 static bool HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust);
 static bool HnswShouldSkipNullBuildTuple(bool isNull, bool useRust);
 static bool HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust);
+static bool HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -216,13 +217,13 @@ CreateGraphPages(HnswBuildState * buildstate)
 		HnswSetElementTuple(base, etup, element);
 
 		/* Keep element and neighbors on the same page if possible */
-		if (PageGetFreeSpace(page) < etupSize || (combinedSize <= maxSize && PageGetFreeSpace(page) < combinedSize))
+		if (PageGetFreeSpace(page) < etupSize || (HnswShouldStoreNeighborsOnSamePage((int64) combinedSize, (int64) maxSize, true) && PageGetFreeSpace(page) < combinedSize))
 			HnswBuildAppendPage(index, &buf, &page, forkNum);
 
 		/* Calculate offsets */
 		element->blkno = BufferGetBlockNumber(buf);
 		element->offno = OffsetNumberNext(PageGetMaxOffsetNumber(page));
-		if (combinedSize <= maxSize)
+		if (HnswShouldStoreNeighborsOnSamePage((int64) combinedSize, (int64) maxSize, true))
 		{
 			element->neighborPage = element->blkno;
 			element->neighborOffno = OffsetNumberNext(element->offno);
@@ -1786,6 +1787,35 @@ vector_rust_hnsw_should_update_progress_after_insert(PG_FUNCTION_ARGS)
 	int32		tupleInserted = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUpdateProgressAfterInsert(tupleInserted != 0, true));
+}
+
+static bool
+HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(combinedSize, maxSize);
+
+	return combinedSize <= maxSize;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_store_neighbors_on_same_page);
+Datum
+vector_hnsw_should_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldStoreNeighborsOnSamePage(combinedSize, maxSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_store_neighbors_on_same_page);
+Datum
+vector_rust_hnsw_should_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldStoreNeighborsOnSamePage(combinedSize, maxSize, true));
 }
 
 static bool
