@@ -59,6 +59,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_return_empty_without_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_resume_from_discarded(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_resume_from_discarded'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_resume_from_discarded(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_resume_from_discarded'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -112,5 +122,17 @@ my $return_empty_without_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(entry_point_is_null);
 });
 is($return_empty_without_entrypoint_parity, "t\nt\nt\nt");
+
+my $resume_from_discarded_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_resume_from_discarded(discarded_is_empty) =
+		   rust_hnsw_should_resume_from_discarded(discarded_is_empty)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(discarded_is_empty);
+});
+is($resume_from_discarded_parity, "t\nt\nt\nt");
 
 done_testing();
