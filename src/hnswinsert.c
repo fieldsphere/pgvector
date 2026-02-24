@@ -29,6 +29,7 @@ static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
 static bool HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust);
 static bool HnswShouldAbortOnDiskElementMoveNext(bool building, bool useRust);
+static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust);
 
 /*
  * Get the insert page
@@ -349,7 +350,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	}
 
 	/* Commit */
-	if (building)
+	if (HnswShouldCommitOnDiskAddElementWithBufferDirty(building, true))
 	{
 		MarkBufferDirty(buf);
 		if (nbuf != buf)
@@ -1160,6 +1161,33 @@ vector_rust_hnsw_should_abort_ondisk_element_move_next(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAbortOnDiskElementMoveNext(building != 0, true));
+}
+
+static bool
+HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
+
+	return building;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_commit_ondisk_add_element_with_buffer_dirty);
+Datum
+vector_hnsw_should_commit_ondisk_add_element_with_buffer_dirty(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCommitOnDiskAddElementWithBufferDirty(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_commit_ondisk_add_element_with_buffer_dirty);
+Datum
+vector_rust_hnsw_should_commit_ondisk_add_element_with_buffer_dirty(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCommitOnDiskAddElementWithBufferDirty(building != 0, true));
 }
 
 static bool
