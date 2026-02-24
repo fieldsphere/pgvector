@@ -14,6 +14,14 @@ CREATE FUNCTION rust_halfvec_concat(halfvec, halfvec) RETURNS halfvec
 	AS '$libdir/vector', 'vector_rust_halfvec_concat'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_halfvec_l2_norm(halfvec) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_halfvec_l2_norm'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_halfvec_l2_normalize(halfvec) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_l2_normalize'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 SELECT
 	halfvec_add(h1, h2) = rust_halfvec_add(h1, h2),
 	halfvec_sub(h1, h2) = rust_halfvec_sub(h1, h2),
@@ -29,3 +37,12 @@ FROM (VALUES
 	('[1,2]'::halfvec(2), '[3,4]'::halfvec(2)),
 	('[-1,2]'::halfvec(2), '[0,5]'::halfvec(2))
 ) AS t(h1, h2);
+
+SELECT
+	l2_norm(h) = rust_halfvec_l2_norm(h),
+	l2_normalize(h) = rust_halfvec_l2_normalize(h)
+FROM (VALUES
+	('[1,2,3]'::halfvec(3)),
+	('[0,0,0]'::halfvec(3)),
+	('[-1,2,-3,4]'::halfvec(4))
+) AS t(h);

@@ -769,18 +769,18 @@ Datum
 halfvec_l2_norm(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
-	half	   *ax = a->x;
-	double		norm = 0.0;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->dim; i++)
-	{
-		double		axi = (double) HalfToFloat4(ax[i]);
+	PG_RETURN_FLOAT8(vector_rust_halfvec_l2_norm_kernel(a->dim, a->x));
+}
 
-		norm += axi * axi;
-	}
-
-	PG_RETURN_FLOAT8(sqrt(norm));
+/*
+ * Rust parity wrapper: halfvec L2 norm
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l2_norm);
+Datum
+vector_rust_halfvec_l2_norm(PG_FUNCTION_ARGS)
+{
+	return halfvec_l2_norm(fcinfo);
 }
 
 /*
@@ -791,35 +791,37 @@ Datum
 halfvec_l2_normalize(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
-	half	   *ax = a->x;
-	double		norm = 0;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_l2_normalize_kernel(a->dim, a->x, rust_result);
 	for (int i = 0; i < a->dim; i++)
-		norm += (double) HalfToFloat4(ax[i]) * (double) HalfToFloat4(ax[i]);
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
-	norm = sqrt(norm);
-
-	/* Return zero vector for zero norm */
-	if (norm > 0)
+	/* Check for overflow */
+	for (int i = 0; i < a->dim; i++)
 	{
-		for (int i = 0; i < a->dim; i++)
-			rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) / norm);
-
-		/* Check for overflow */
-		for (int i = 0; i < a->dim; i++)
-		{
-			if (HalfIsInf(rx[i]))
-				float_overflow_error();
-		}
+		if (HalfIsInf(rx[i]))
+			float_overflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec L2 normalize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l2_normalize);
+Datum
+vector_rust_halfvec_l2_normalize(PG_FUNCTION_ARGS)
+{
+	return halfvec_l2_normalize(fcinfo);
 }
 
 /*

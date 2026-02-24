@@ -544,3 +544,34 @@ pub unsafe extern "C" fn vector_rust_halfvec_concat_kernel(
         *rx.add((adim as usize) + i) = half_bits_to_f32(read_half_bits(bx, i));
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_l2_norm_kernel(dim: i32, ax: *const c_void) -> f64 {
+    let mut norm = 0.0f64;
+
+    for i in 0..(dim as usize) {
+        let a = half_bits_to_f32(read_half_bits(ax, i)) as f64;
+        norm += a * a;
+    }
+
+    norm.sqrt()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_l2_normalize_kernel(
+    dim: i32,
+    ax: *const c_void,
+    rx: *mut f32,
+) {
+    let norm = vector_rust_halfvec_l2_norm_kernel(dim, ax);
+
+    if norm > 0.0 {
+        for i in 0..(dim as usize) {
+            *rx.add(i) = (half_bits_to_f32(read_half_bits(ax, i)) as f64 / norm) as f32;
+        }
+    } else {
+        for i in 0..(dim as usize) {
+            *rx.add(i) = 0.0;
+        }
+    }
+}
