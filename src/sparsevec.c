@@ -10,6 +10,7 @@
 #include "halfvec.h"
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
@@ -1054,14 +1055,18 @@ Datum
 sparsevec_l2_norm(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
-	float	   *ax = SPARSEVEC_VALUES(a);
-	double		norm = 0.0;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->nnz; i++)
-		norm += (double) ax[i] * (double) ax[i];
+	PG_RETURN_FLOAT8(vector_rust_sparsevec_l2_norm_kernel(a->nnz, SPARSEVEC_VALUES(a)));
+}
 
-	PG_RETURN_FLOAT8(sqrt(norm));
+/*
+ * Rust parity wrapper: sparse vector L2 norm
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l2_norm);
+Datum
+vector_rust_sparsevec_l2_norm(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l2_norm(fcinfo);
 }
 
 /*
@@ -1073,28 +1078,25 @@ sparsevec_l2_normalize(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
 	float	   *ax = SPARSEVEC_VALUES(a);
-	double		norm = 0;
+	double		norm;
 	SparseVector *result;
 	float	   *rx;
 
 	result = InitSparseVector(a->dim, a->nnz);
 	rx = SPARSEVEC_VALUES(result);
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->nnz; i++)
-		norm += (double) ax[i] * (double) ax[i];
-
-	norm = sqrt(norm);
+	norm = vector_rust_sparsevec_l2_norm_kernel(a->nnz, ax);
 
 	/* Return zero vector for zero norm */
 	if (norm > 0)
 	{
 		int			zeros = 0;
 
+		vector_rust_sparsevec_l2_normalize_values_kernel(a->nnz, ax, norm, rx);
+
 		for (int i = 0; i < a->nnz; i++)
 		{
 			result->indices[i] = a->indices[i];
-			rx[i] = ax[i] / norm;
 
 			if (isinf(rx[i]))
 				float_overflow_error();
@@ -1131,6 +1133,16 @@ sparsevec_l2_normalize(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: sparse vector L2 normalize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l2_normalize);
+Datum
+vector_rust_sparsevec_l2_normalize(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l2_normalize(fcinfo);
 }
 
 /*

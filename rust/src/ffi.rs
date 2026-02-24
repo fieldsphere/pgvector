@@ -461,6 +461,32 @@ pub unsafe extern "C" fn vector_rust_sparse_to_dense(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_l2_norm_kernel(nnz: i32, ax: *const f32) -> f64 {
+    let mut norm = 0.0f64;
+
+    for i in 0..(nnz as usize) {
+        let a = *ax.add(i) as f64;
+        norm += a * a;
+    }
+
+    norm.sqrt()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_sparsevec_l2_normalize_values_kernel(
+    nnz: i32,
+    ax: *const f32,
+    norm: f64,
+    rx: *mut f32,
+) {
+    if norm > 0.0 {
+        for i in 0..(nnz as usize) {
+            *rx.add(i) = (*ax.add(i) as f64 / norm) as f32;
+        }
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_halfvec_add_kernel(
     dim: i32,
     ax: *const c_void,
