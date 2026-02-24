@@ -562,6 +562,33 @@ vector_rust_hnsw_should_scan_heap_for_build(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldScanHeapForBuild(hasHeap != 0, true));
 }
 
+static bool
+HnswShouldUseParallelHeapScan(bool hasLeader, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_use_parallel_heap_scan_kernel(hasLeader);
+
+	return hasLeader;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_parallel_heap_scan);
+Datum
+vector_hnsw_should_use_parallel_heap_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseParallelHeapScan(hasLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_parallel_heap_scan);
+Datum
+vector_rust_hnsw_should_use_parallel_heap_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseParallelHeapScan(hasLeader != 0, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -1331,7 +1358,7 @@ BuildGraph(HnswBuildState * buildstate)
 	/* Add tuples to graph */
 	if (HnswShouldScanHeapForBuild(buildstate->heap != NULL, true))
 	{
-		if (buildstate->hnswleader)
+		if (HnswShouldUseParallelHeapScan(buildstate->hnswleader != NULL, true))
 			buildstate->reltuples = ParallelHeapScan(buildstate);
 		else
 			buildstate->reltuples = table_index_build_scan(buildstate->heap, buildstate->index, buildstate->indexInfo,
