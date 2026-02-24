@@ -44,7 +44,7 @@ my $finalize_parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_finalize_center(values, n) = rust_ivfflat_finalize_center(values, n)
 	FROM (VALUES
 		(ARRAY[2.0, 4.0, 6.0]::double precision[], 2),
-		(ARRAY[1e500::float8, -1e500::float8, 4.0]::double precision[], 2),
+		(ARRAY['Infinity'::float8, '-Infinity'::float8, 4.0]::double precision[], 2),
 		(ARRAY[0.0, 0.0, 0.0]::double precision[], 3)
 	) AS t(values, n);
 });

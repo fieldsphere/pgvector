@@ -88,6 +88,67 @@ IvfflatCenterCounts(ArrayType *assignmentsArray, int32 centerCount, bool useRust
 	return result;
 }
 
+static ArrayType *
+IvfflatFinalizeCenter(ArrayType *aggArray, int32 centerCount, bool useRust)
+{
+	Datum	   *aggDatums;
+	int			dimensions;
+	float	   *agg;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(aggArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("aggregate array must be 1-D")));
+
+	if (ARR_HASNULL(aggArray) && array_contains_nulls(aggArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("aggregate array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(aggArray) != FLOAT8OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("aggregate array must be double precision[]")));
+
+	deconstruct_array(aggArray, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE,
+					  &aggDatums, NULL, &dimensions);
+
+	agg = palloc(sizeof(float) * dimensions);
+	for (int i = 0; i < dimensions; i++)
+		agg[i] = (float) DatumGetFloat8(aggDatums[i]);
+
+	if (useRust)
+		vector_rust_ivfflat_finalize_center_kernel(dimensions, agg, centerCount);
+	else
+	{
+		for (int i = 0; i < dimensions; i++)
+		{
+			if (isinf(agg[i]))
+				agg[i] = agg[i] > 0 ? FLT_MAX : -FLT_MAX;
+			agg[i] /= centerCount;
+		}
+	}
+
+	resultDatums = palloc(sizeof(Datum) * dimensions);
+	for (int i = 0; i < dimensions; i++)
+		resultDatums[i] = Float4GetDatum(agg[i]);
+
+	result = construct_array(resultDatums, dimensions, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(agg);
+	pfree(aggDatums);
+
+	return result;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_center_counts);
 Datum
 vector_ivfflat_center_counts(PG_FUNCTION_ARGS)
@@ -106,6 +167,26 @@ vector_rust_ivfflat_center_counts(PG_FUNCTION_ARGS)
 	int32		centerCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_ARRAYTYPE_P(IvfflatCenterCounts(assignmentsArray, centerCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_finalize_center);
+Datum
+vector_ivfflat_finalize_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *aggArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatFinalizeCenter(aggArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_finalize_center);
+Datum
+vector_rust_ivfflat_finalize_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *aggArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatFinalizeCenter(aggArray, centerCount, true));
 }
 
 /*
@@ -306,16 +387,8 @@ ComputeNewCenters(VectorArray samples, float *agg, VectorArray newCenters, int *
 
 		if (centerCounts[j] > 0)
 		{
-			/* Double avoids overflow, but requires more memory */
 			/* TODO Update bounds */
-			for (int k = 0; k < dimensions; k++)
-			{
-				if (isinf(x[k]))
-					x[k] = x[k] > 0 ? FLT_MAX : -FLT_MAX;
-			}
-
-			for (int k = 0; k < dimensions; k++)
-				x[k] /= centerCounts[j];
+			vector_rust_ivfflat_finalize_center_kernel(dimensions, x, centerCounts[j]);
 		}
 		else
 		{

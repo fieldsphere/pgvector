@@ -589,6 +589,25 @@ pub unsafe extern "C" fn vector_rust_ivfflat_zero_agg_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_finalize_center_kernel(
+    dimensions: i32,
+    agg: *mut f32,
+    center_count: i32,
+) {
+    let center_count = center_count as f32;
+
+    for i in 0..(dimensions as usize) {
+        let mut value = *agg.add(i);
+
+        if value.is_infinite() {
+            value = if value > 0.0 { f32::MAX } else { -f32::MAX };
+        }
+
+        *agg.add(i) = value / center_count;
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,
