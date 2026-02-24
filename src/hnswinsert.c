@@ -34,6 +34,7 @@ static bool HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRus
 static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust);
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
+static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
 
 /*
  * Get the insert page
@@ -327,7 +328,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	else
 	{
 		e->offno = OffsetNumberNext(PageGetMaxOffsetNumber(page));
-		if (nbuf == buf)
+		if (HnswShouldUseNextNeighborOffset(nbuf == buf, true))
 			e->neighborOffno = OffsetNumberNext(e->offno);
 		else
 			e->neighborOffno = FirstOffsetNumber;
@@ -1279,6 +1280,33 @@ vector_rust_hnsw_should_use_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
 	int32		hasNewInsertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseNeighborPageAsInsertPage(hasNewInsertPage != 0, true));
+}
+
+static bool
+HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(sameBuffer);
+
+	return sameBuffer;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_next_neighbor_offset);
+Datum
+vector_hnsw_should_use_next_neighbor_offset(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNextNeighborOffset(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_next_neighbor_offset);
+Datum
+vector_rust_hnsw_should_use_next_neighbor_offset(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNextNeighborOffset(sameBuffer != 0, true));
 }
 
 static bool
