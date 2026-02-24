@@ -3,6 +3,7 @@
 #include "access/genam.h"
 #include "access/generic_xlog.h"
 #include "hnsw.h"
+#include "rust_ffi.h"
 #include "nodes/execnodes.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
@@ -760,6 +761,33 @@ HnswInsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid
 	HnswInsertTupleOnDisk(index, &support, value, heaptid, false);
 }
 
+static bool
+HnswShouldSkipNullInsertTuple(bool isNull, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_null_insert_tuple_kernel(isNull);
+
+	return isNull;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_null_insert_tuple);
+Datum
+vector_hnsw_should_skip_null_insert_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNullInsertTuple(isNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_null_insert_tuple);
+Datum
+vector_rust_hnsw_should_skip_null_insert_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNullInsertTuple(isNull != 0, true));
+}
+
 /*
  * Insert a tuple into the index
  */
@@ -776,7 +804,7 @@ hnswinsert(Relation index, Datum *values, bool *isnull, ItemPointer heap_tid,
 	MemoryContext insertCtx;
 
 	/* Skip nulls */
-	if (isnull[0])
+	if (HnswShouldSkipNullInsertTuple(isnull[0], true))
 		return false;
 
 	/* Create memory context */

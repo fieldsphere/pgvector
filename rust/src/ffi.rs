@@ -101,6 +101,11 @@ pub extern "C" fn vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_skip_null_insert_tuple_kernel(is_null: bool) -> bool {
+    is_null
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
