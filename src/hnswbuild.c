@@ -78,6 +78,8 @@
 #define PARALLEL_KEY_HNSW_AREA			UINT64CONST(0xA000000000000002)
 #define PARALLEL_KEY_QUERY_TEXT			UINT64CONST(0xA000000000000003)
 
+static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
+
 /*
  * Create the metapage
  */
@@ -1296,7 +1298,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	hnswleader->hnswarea = hnswarea;
 
 	/* If no workers were successfully launched, back out (do serial build) */
-	if (pcxt->nworkers_launched == 0)
+	if (HnswShouldFallbackWithoutWorkers(pcxt->nworkers_launched, true))
 	{
 		HnswEndParallel(hnswleader);
 		return;
@@ -1353,6 +1355,33 @@ HnswShouldUseRelationParallelWorkers(int parallelWorkers, bool useRust)
 		return vector_rust_hnsw_should_use_relation_parallel_workers_kernel(parallelWorkers);
 
 	return parallelWorkers != -1;
+}
+
+static bool
+HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_fallback_without_workers_kernel(workersLaunched);
+
+	return workersLaunched == 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fallback_without_workers);
+Datum
+vector_hnsw_should_fallback_without_workers(PG_FUNCTION_ARGS)
+{
+	int32		workersLaunched = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFallbackWithoutWorkers(workersLaunched, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_fallback_without_workers);
+Datum
+vector_rust_hnsw_should_fallback_without_workers(PG_FUNCTION_ARGS)
+{
+	int32		workersLaunched = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFallbackWithoutWorkers(workersLaunched, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_relation_parallel_workers);
