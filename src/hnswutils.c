@@ -1039,6 +1039,15 @@ HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool u
 	return distance <= candidateDistance;
 }
 
+static bool
+HnswShouldSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_select_neighbors_early_return_kernel(candidateCount, maxNeighbors);
+
+	return candidateCount <= maxNeighbors;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1057,6 +1066,26 @@ vector_rust_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
 	float8		candidateDistance = PG_GETARG_FLOAT8(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectCloserNeighbor(distance, candidateDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_select_neighbors_early_return);
+Datum
+vector_hnsw_should_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_select_neighbors_early_return);
+Datum
+vector_rust_hnsw_should_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, true));
 }
 
 /*
@@ -1098,7 +1127,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	List	   *added = NIL;
 	bool		removedAny = false;
 
-	if (list_length(w) <= lm)
+	if (HnswShouldSelectNeighborsEarlyReturn(list_length(w), lm, true))
 		return w;
 
 	wd = palloc(sizeof(HnswCandidate *) * list_length(w));

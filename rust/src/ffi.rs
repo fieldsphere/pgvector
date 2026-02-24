@@ -37,6 +37,14 @@ pub extern "C" fn vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_select_neighbors_early_return_kernel(
+    candidate_count: i32,
+    max_neighbors: i32,
+) -> bool {
+    candidate_count <= max_neighbors
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
