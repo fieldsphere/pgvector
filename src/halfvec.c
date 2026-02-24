@@ -1080,25 +1080,7 @@ halfvec_subvector(PG_FUNCTION_ARGS)
 static int
 halfvec_cmp_internal(HalfVector * a, HalfVector * b)
 {
-	int			dim = Min(a->dim, b->dim);
-
-	/* Check values before dimensions to be consistent with Postgres arrays */
-	for (int i = 0; i < dim; i++)
-	{
-		if (HalfToFloat4(a->x[i]) < HalfToFloat4(b->x[i]))
-			return -1;
-
-		if (HalfToFloat4(a->x[i]) > HalfToFloat4(b->x[i]))
-			return 1;
-	}
-
-	if (a->dim < b->dim)
-		return -1;
-
-	if (a->dim > b->dim)
-		return 1;
-
-	return 0;
+	return vector_rust_halfvec_cmp_kernel(a->dim, a->x, b->dim, b->x);
 }
 
 /*
@@ -1190,6 +1172,16 @@ halfvec_cmp(PG_FUNCTION_ARGS)
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
 
 	PG_RETURN_INT32(halfvec_cmp_internal(a, b));
+}
+
+/*
+ * Rust parity wrapper: compare half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_cmp);
+Datum
+vector_rust_halfvec_cmp(PG_FUNCTION_ARGS)
+{
+	return halfvec_cmp(fcinfo);
 }
 
 /*

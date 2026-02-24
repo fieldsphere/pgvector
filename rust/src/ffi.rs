@@ -630,3 +630,34 @@ pub unsafe extern "C" fn vector_rust_halfvec_l2_normalize_kernel(
         }
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_cmp_kernel(
+    adim: i32,
+    ax: *const c_void,
+    bdim: i32,
+    bx: *const c_void,
+) -> i32 {
+    let dim = usize::min(adim as usize, bdim as usize);
+
+    for i in 0..dim {
+        let a = half_bits_to_f32(read_half_bits(ax, i));
+        let b = half_bits_to_f32(read_half_bits(bx, i));
+
+        if a < b {
+            return -1;
+        }
+
+        if a > b {
+            return 1;
+        }
+    }
+
+    if adim < bdim {
+        -1
+    } else if adim > bdim {
+        1
+    } else {
+        0
+    }
+}
