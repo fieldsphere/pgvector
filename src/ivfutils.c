@@ -2,11 +2,14 @@
 
 #include "access/genam.h"
 #include "access/generic_xlog.h"
+#include "catalog/pg_type.h"
 #include "fmgr.h"
 #include "halfutils.h"
 #include "halfvec.h"
 #include "ivfflat.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
+#include "utils/array.h"
 #include "utils/relcache.h"
 #include "utils/varbit.h"
 #include "vector.h"
@@ -235,6 +238,143 @@ IvfflatUpdateList(Relation index, ListInfo listInfo,
 	}
 }
 
+static ArrayType *
+IvfflatVectorSumCenter(ArrayType *leftArray, ArrayType *rightArray, bool useRust)
+{
+	Datum	   *leftDatums;
+	Datum	   *rightDatums;
+	int			leftLength;
+	int			rightLength;
+	float	   *agg;
+	float	   *center;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (ARR_NDIM(leftArray) > 1 || ARR_NDIM(rightArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("array must be 1-D")));
+
+	if ((ARR_HASNULL(leftArray) && array_contains_nulls(leftArray)) ||
+		(ARR_HASNULL(rightArray) && array_contains_nulls(rightArray)))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(leftArray) != FLOAT4OID || ARR_ELEMTYPE(rightArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("array must be real[]")));
+
+	deconstruct_array(leftArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &leftDatums, NULL, &leftLength);
+	deconstruct_array(rightArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &rightDatums, NULL, &rightLength);
+
+	if (leftLength != rightLength)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("array dimensions must match")));
+
+	agg = palloc(sizeof(float) * leftLength);
+	center = palloc(sizeof(float) * leftLength);
+	for (int i = 0; i < leftLength; i++)
+	{
+		agg[i] = DatumGetFloat4(leftDatums[i]);
+		center[i] = DatumGetFloat4(rightDatums[i]);
+	}
+
+	if (useRust)
+		vector_rust_ivfflat_vector_sum_center_kernel(leftLength, center, agg);
+	else
+	{
+		for (int i = 0; i < leftLength; i++)
+			agg[i] += center[i];
+	}
+
+	resultDatums = palloc(sizeof(Datum) * leftLength);
+	for (int i = 0; i < leftLength; i++)
+		resultDatums[i] = Float4GetDatum(agg[i]);
+
+	result = construct_array(resultDatums, leftLength, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(center);
+	pfree(agg);
+	pfree(rightDatums);
+	pfree(leftDatums);
+
+	return result;
+}
+
+static ArrayType *
+IvfflatBitSumCenter(VarBit *vec, bool useRust)
+{
+	int			dimensions = VARBITLEN(vec);
+	float	   *agg;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	agg = palloc0(sizeof(float) * dimensions);
+
+	if (useRust)
+		vector_rust_ivfflat_bit_sum_center_kernel(dimensions, VARBITS(vec), agg);
+	else
+	{
+		for (int i = 0; i < dimensions; i++)
+			agg[i] += (float) (((VARBITS(vec)[i / 8]) >> (7 - (i % 8))) & 0x01);
+	}
+
+	resultDatums = palloc(sizeof(Datum) * dimensions);
+	for (int i = 0; i < dimensions; i++)
+		resultDatums[i] = Float4GetDatum(agg[i]);
+
+	result = construct_array(resultDatums, dimensions, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(agg);
+
+	return result;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_vector_sum_center);
+Datum
+vector_ivfflat_vector_sum_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *leftArray = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *rightArray = PG_GETARG_ARRAYTYPE_P(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatVectorSumCenter(leftArray, rightArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_vector_sum_center);
+Datum
+vector_rust_ivfflat_vector_sum_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *leftArray = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *rightArray = PG_GETARG_ARRAYTYPE_P(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatVectorSumCenter(leftArray, rightArray, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_bit_sum_center);
+Datum
+vector_ivfflat_bit_sum_center(PG_FUNCTION_ARGS)
+{
+	VarBit	   *vec = PG_GETARG_VARBIT_P(0);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatBitSumCenter(vec, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_bit_sum_center);
+Datum
+vector_rust_ivfflat_bit_sum_center(PG_FUNCTION_ARGS)
+{
+	VarBit	   *vec = PG_GETARG_VARBIT_P(0);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatBitSumCenter(vec, true));
+}
+
 PGDLLEXPORT Datum l2_normalize(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum halfvec_l2_normalize(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum sparsevec_l2_normalize(PG_FUNCTION_ARGS);
@@ -301,11 +441,8 @@ static void
 VectorSumCenter(Pointer v, float *x)
 {
 	Vector	   *vec = (Vector *) v;
-	int			dim = vec->dim;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-		x[i] += vec->x[i];
+	vector_rust_ivfflat_vector_sum_center_kernel(vec->dim, vec->x, x);
 }
 
 static void
@@ -324,8 +461,7 @@ BitSumCenter(Pointer v, float *x)
 {
 	VarBit	   *vec = (VarBit *) v;
 
-	for (int i = 0; i < VARBITLEN(vec); i++)
-		x[i] += (float) (((VARBITS(vec)[i / 8]) >> (7 - (i % 8))) & 0x01);
+	vector_rust_ivfflat_bit_sum_center_kernel(VARBITLEN(vec), VARBITS(vec), x);
 }
 
 /*

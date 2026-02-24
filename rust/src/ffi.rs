@@ -623,6 +623,29 @@ pub unsafe extern "C" fn vector_rust_ivfflat_all_finite_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_vector_sum_center_kernel(
+    dimensions: i32,
+    center: *const f32,
+    agg: *mut f32,
+) {
+    for i in 0..(dimensions as usize) {
+        *agg.add(i) += *center.add(i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_bit_sum_center_kernel(
+    dimensions: i32,
+    bits: *const u8,
+    agg: *mut f32,
+) {
+    for i in 0..(dimensions as usize) {
+        let value = ((*bits.add(i / 8)) >> (7 - (i % 8))) & 0x01;
+        *agg.add(i) += value as f32;
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,
