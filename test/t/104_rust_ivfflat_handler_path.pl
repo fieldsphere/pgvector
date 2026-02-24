@@ -19,11 +19,32 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_handler_probe'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_cost_adjust(double precision, double precision, double precision, double precision, double precision, double precision) RETURNS double precision[]
+	AS '$libdir/vector', 'vector_ivfflat_cost_adjust'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_cost_adjust(double precision, double precision, double precision, double precision, double precision, double precision) RETURNS double precision[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_cost_adjust'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
 		   rust_ivfflat_handler_probe() LIKE 'rust-ivfflat-handler-%';
 });
 is($parity, "t|t");
+
+my $cost_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_cost_adjust(index_total_cost, num_index_pages, random_page_cost, seq_page_cost, ratio, rel_pages) =
+		   rust_ivfflat_cost_adjust(index_total_cost, num_index_pages, random_page_cost, seq_page_cost, ratio, rel_pages)
+	FROM (VALUES
+		(100.0::double precision, 20.0::double precision, 4.0::double precision, 1.0::double precision, 0.2::double precision, 5.0::double precision),
+		(250.0::double precision, 100.0::double precision, 3.5::double precision, 1.2::double precision, 0.8::double precision, 80.0::double precision),
+		(50.0::double precision, 15.0::double precision, 2.5::double precision, 1.0::double precision, 0.3::double precision, 2.0::double precision)
+	) AS t(index_total_cost, num_index_pages, random_page_cost, seq_page_cost, ratio, rel_pages);
+});
+is($cost_parity, "t\nt\nt");
 
 done_testing();
