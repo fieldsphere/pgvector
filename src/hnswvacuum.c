@@ -5,6 +5,7 @@
 #include "commands/vacuum.h"
 #include "hnsw.h"
 #include "nodes/pg_list.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
@@ -25,6 +26,33 @@ static bool
 DeletedContains(tidhash_hash * deleted, ItemPointer indextid)
 {
 	return tidhash_lookup(deleted, *indextid) != NULL;
+}
+
+static bool
+HnswShouldRepairUnderfilledLayer0(bool lastItemValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_repair_underfilled_layer0_kernel(lastItemValid);
+
+	return !lastItemValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_underfilled_layer0);
+Datum
+vector_hnsw_should_repair_underfilled_layer0(PG_FUNCTION_ARGS)
+{
+	int32		lastItemValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRepairUnderfilledLayer0(lastItemValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_repair_underfilled_layer0);
+Datum
+vector_rust_hnsw_should_repair_underfilled_layer0(PG_FUNCTION_ARGS)
+{
+	int32		lastItemValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRepairUnderfilledLayer0(lastItemValid != 0, true));
 }
 
 /*
@@ -180,10 +208,12 @@ NeedsUpdated(HnswVacuumState * vacuumstate, HnswElement element)
 	/* This could indicate too many candidates being deleted during insert */
 	if (!needsUpdated)
 	{
+		bool		lastItemValid;
+
 		/* Keep clang-tidy happy */
 		Assert(ntup->count > 0);
-
-		needsUpdated = !ItemPointerIsValid(&ntup->indextids[ntup->count - 1]);
+		lastItemValid = ItemPointerIsValid(&ntup->indextids[ntup->count - 1]);
+		needsUpdated = HnswShouldRepairUnderfilledLayer0(lastItemValid, true);
 	}
 
 	UnlockReleaseBuffer(buf);
