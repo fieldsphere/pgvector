@@ -46,6 +46,17 @@ pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_probe_ratio_kernel(probes: i32, lists: i32) -> c_double {
+    let mut ratio = probes as c_double / lists as c_double;
+
+    if ratio > 1.0 {
+        ratio = 1.0;
+    }
+
+    ratio
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_ivfflat_choose_insert_candidate_kernel(
     distance: c_double,
     min_distance: c_double,

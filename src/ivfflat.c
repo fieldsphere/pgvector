@@ -107,6 +107,21 @@ IvfflatAdjustCost(float8 indexTotalCost, float8 numIndexPages, float8 randomPage
 	}
 }
 
+static float8
+IvfflatProbeRatio(int probes, int lists, bool useRust)
+{
+	float8		ratio;
+
+	if (useRust)
+		return vector_rust_ivfflat_probe_ratio_kernel(probes, lists);
+
+	ratio = ((double) probes) / lists;
+	if (ratio > 1.0)
+		ratio = 1.0;
+
+	return ratio;
+}
+
 static ArrayType *
 IvfflatCostAdjust(float8 indexTotalCost, float8 numIndexPages, float8 randomPageCost, float8 seqPageCost, float8 ratio, float8 relPages, bool useRust)
 {
@@ -120,6 +135,26 @@ IvfflatCostAdjust(float8 indexTotalCost, float8 numIndexPages, float8 randomPage
 	resultDatums[1] = Float8GetDatum(adjustedTotalCost);
 
 	return construct_array(resultDatums, 2, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_probe_ratio);
+Datum
+vector_ivfflat_probe_ratio(PG_FUNCTION_ARGS)
+{
+	int32		probes = PG_GETARG_INT32(0);
+	int32		lists = PG_GETARG_INT32(1);
+
+	PG_RETURN_FLOAT8(IvfflatProbeRatio(probes, lists, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_probe_ratio);
+Datum
+vector_rust_ivfflat_probe_ratio(PG_FUNCTION_ARGS)
+{
+	int32		probes = PG_GETARG_INT32(0);
+	int32		lists = PG_GETARG_INT32(1);
+
+	PG_RETURN_FLOAT8(IvfflatProbeRatio(probes, lists, true));
 }
 
 /*
@@ -162,9 +197,7 @@ ivfflatcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	index_close(index, NoLock);
 
 	/* Get the ratio of lists that we need to visit */
-	ratio = ((double) ivfflat_probes) / lists;
-	if (ratio > 1.0)
-		ratio = 1.0;
+	ratio = IvfflatProbeRatio(ivfflat_probes, lists, true);
 
 	get_tablespace_page_costs(path->indexinfo->reltablespace, NULL, &spc_seq_page_cost);
 
