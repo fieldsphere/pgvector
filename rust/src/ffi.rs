@@ -158,6 +158,14 @@ pub unsafe extern "C" fn vector_rust_ivfflat_compute_scan_limits_kernel(
     *adjusted_max_probes = clamped_max_probes;
 }
 
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_load_more_scan_items_kernel(
+    list_index: i32,
+    max_probes: i32,
+) -> bool {
+    list_index < max_probes
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;

@@ -115,6 +115,15 @@ IvfflatShouldScanNextList(int listIndex, int maxProbes, int batchProbes, int pro
 	return listIndex < maxProbes && (batchProbes + 1) <= probes;
 }
 
+static bool
+IvfflatShouldLoadMoreScanItems(int listIndex, int maxProbes, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_load_more_scan_items_kernel(listIndex, maxProbes);
+
+	return listIndex < maxProbes;
+}
+
 static void
 IvfflatScanProbeLimits(int probes, int maxProbes, int lists, bool useRust, int *adjustedProbes, int *adjustedMaxProbes)
 {
@@ -183,6 +192,26 @@ vector_rust_ivfflat_should_scan_next_list(PG_FUNCTION_ARGS)
 	int32		probes = PG_GETARG_INT32(3);
 
 	PG_RETURN_BOOL(IvfflatShouldScanNextList(listIndex, maxProbes, batchProbes, probes, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_load_more_scan_items);
+Datum
+vector_ivfflat_should_load_more_scan_items(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldLoadMoreScanItems(listIndex, maxProbes, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_load_more_scan_items);
+Datum
+vector_rust_ivfflat_should_load_more_scan_items(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldLoadMoreScanItems(listIndex, maxProbes, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_scan_probe_limits);
@@ -597,7 +626,7 @@ ivfflatgettuple(IndexScanDesc scan, ScanDirection dir)
 
 	while (!tuplesort_gettupleslot(so->sortstate, true, false, so->mslot, NULL))
 	{
-		if (so->listIndex == so->maxProbes)
+		if (!IvfflatShouldLoadMoreScanItems(so->listIndex, so->maxProbes, true))
 			return false;
 
 		IvfflatBench("GetScanItems", GetScanItems(scan, so->value));

@@ -17,6 +17,7 @@ bool		vector_rust_ivfflat_should_update_insert_page_kernel(int32 insert_page, in
 bool		vector_rust_ivfflat_should_reuse_scan_slot_kernel(int32 list_count, int32 max_probes);
 void		vector_rust_ivfflat_scan_probe_limits_kernel(int32 probes, int32 max_probes, int32 lists, int32 *adjusted_probes, int32 *adjusted_max_probes);
 void		vector_rust_ivfflat_compute_scan_limits_kernel(int32 probes, int32 max_probes, int32 lists, int32 iterative_scan_mode, int32 *adjusted_probes, int32 *adjusted_max_probes);
+bool		vector_rust_ivfflat_should_load_more_scan_items_kernel(int32 list_index, int32 max_probes);
 uint64		vector_rust_bit_hamming_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 distance);
 double		vector_rust_bit_jaccard_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 ab, uint64 aa, uint64 bb);
 float		vector_rust_half_l2_squared_distance(int dim, const void *ax, const void *bx);
