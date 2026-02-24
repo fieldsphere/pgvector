@@ -353,6 +353,33 @@ vector_rust_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectMissingOrderBy(orderByIsNull != 0, true));
 }
 
+static bool
+HnswShouldRejectNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel(snapshotIsMVCC);
+
+	return !snapshotIsMVCC;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_non_mvcc_snapshot);
+Datum
+vector_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectNonMVCCSnapshot(snapshotIsMVCC != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_non_mvcc_snapshot);
+Datum
+vector_rust_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectNonMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -549,7 +576,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 
 		/* Requires MVCC-compliant snapshot as not able to maintain a pin */
 		/* https://www.postgresql.org/docs/current/index-locking.html */
-		if (!IsMVCCSnapshot(scan->xs_snapshot))
+		if (HnswShouldRejectNonMVCCSnapshot(IsMVCCSnapshot(scan->xs_snapshot), true))
 			elog(ERROR, "non-MVCC snapshots are not supported with hnsw");
 
 		/* Get scan value */
