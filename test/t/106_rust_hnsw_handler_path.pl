@@ -370,6 +370,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_log_leader_progress(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_log_leader_progress'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_log_leader_progress(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_log_leader_progress'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -814,6 +824,18 @@ my $reserve_graph_memory_parity = $node->safe_psql("postgres", q{
 	) AS t(est_hnsw_area, est_other);
 });
 is($reserve_graph_memory_parity, "t\nt\nt\nt");
+
+my $log_leader_progress_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_log_leader_progress(progress_is_leader) =
+		   rust_hnsw_should_log_leader_progress(progress_is_leader)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(progress_is_leader);
+});
+is($log_leader_progress_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
