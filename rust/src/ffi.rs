@@ -102,6 +102,13 @@ pub extern "C" fn vector_rust_ivfflat_should_append_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_follow_insert_page_link_kernel(
+    insert_page: i32,
+) -> bool {
+    insert_page != -1
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_ivfflat_should_set_insert_page_kernel(
     ndeletable: i32,
     insert_page_is_valid: bool,

@@ -13,6 +13,7 @@ bool		vector_rust_ivfflat_choose_scan_list_candidate_kernel(double distance, int
 bool		vector_rust_ivfflat_should_scan_next_list_kernel(int32 list_index, int32 max_probes, int32 batch_probes, int32 probes);
 bool		vector_rust_ivfflat_choose_build_center_candidate_kernel(double distance, double min_distance);
 bool		vector_rust_ivfflat_should_append_page_kernel(int32 free_space, int32 item_size);
+bool		vector_rust_ivfflat_should_follow_insert_page_link_kernel(int32 insert_page);
 bool		vector_rust_ivfflat_should_set_insert_page_kernel(int32 ndeletable, bool insert_page_is_valid);
 bool		vector_rust_ivfflat_should_update_insert_page_kernel(int32 insert_page, int32 original_insert_page);
 bool		vector_rust_ivfflat_should_reuse_scan_slot_kernel(int32 list_count, int32 max_probes);

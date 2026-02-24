@@ -41,6 +41,15 @@ IvfflatShouldUpdateInsertPage(BlockNumber insertPage, BlockNumber originalInsert
 	return insertPage != originalInsertPage;
 }
 
+static bool
+IvfflatShouldFollowInsertPageLink(BlockNumber insertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
+
+	return BlockNumberIsValid(insertPage);
+}
+
 /*
  * Find the list that minimizes the distance function
  */
@@ -156,6 +165,24 @@ vector_rust_ivfflat_should_update_insert_page(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(IvfflatShouldUpdateInsertPage((BlockNumber) insertPage, (BlockNumber) originalInsertPage, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_follow_insert_page_link);
+Datum
+vector_ivfflat_should_follow_insert_page_link(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldFollowInsertPageLink((BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_follow_insert_page_link);
+Datum
+vector_rust_ivfflat_should_follow_insert_page_link(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldFollowInsertPageLink((BlockNumber) insertPage, true));
+}
+
 /*
  * Insert a tuple into the index
  */
@@ -219,7 +246,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heap_tid)
 
 		insertPage = IvfflatPageGetOpaque(page)->nextblkno;
 
-		if (BlockNumberIsValid(insertPage))
+		if (IvfflatShouldFollowInsertPageLink(insertPage, true))
 		{
 			/* Move to next page */
 			GenericXLogAbort(state);
