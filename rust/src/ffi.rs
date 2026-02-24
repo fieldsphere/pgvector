@@ -661,3 +661,26 @@ pub unsafe extern "C" fn vector_rust_halfvec_cmp_kernel(
         0
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_accum_init_kernel(
+    dim: i32,
+    ax: *const c_void,
+    dst: *mut c_double,
+) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = half_bits_to_f32(read_half_bits(ax, i)) as c_double;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_accum_add_kernel(
+    dim: i32,
+    state: *const c_double,
+    ax: *const c_void,
+    dst: *mut c_double,
+) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = *state.add(i) + (half_bits_to_f32(read_half_bits(ax, i)) as c_double);
+    }
+}

@@ -38,6 +38,8 @@ void		vector_rust_halfvec_concat_kernel(int adim, const void *ax, int bdim, cons
 double		vector_rust_halfvec_l2_norm_kernel(int dim, const void *ax);
 void		vector_rust_halfvec_l2_normalize_kernel(int dim, const void *ax, float *rx);
 int32		vector_rust_halfvec_cmp_kernel(int adim, const void *ax, int bdim, const void *bx);
+void		vector_rust_halfvec_accum_init_kernel(int dim, const void *ax, double *dst);
+void		vector_rust_halfvec_accum_add_kernel(int dim, const double *state, const void *ax, double *dst);
 double		vector_rust_sparsevec_l2_norm_kernel(int nnz, const float *ax);
 void		vector_rust_sparsevec_l2_normalize_values_kernel(int nnz, const float *ax, double norm, float *rx);
 int32		vector_rust_sparsevec_cmp_kernel(int adim, int annz, const int32 *aindices, const float *ax, int bdim, int bnnz, const int32 *bindices, const float *bx);

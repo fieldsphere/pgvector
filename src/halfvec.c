@@ -1198,7 +1198,7 @@ halfvec_accum(PG_FUNCTION_ARGS)
 	bool		newarr;
 	float8		n;
 	Datum	   *statedatums;
-	half	   *x = newval->x;
+	float8	   *sums;
 	ArrayType  *result;
 
 	/* Check array before using */
@@ -1215,24 +1215,20 @@ halfvec_accum(PG_FUNCTION_ARGS)
 
 	statedatums = CreateStateDatums(dim);
 	statedatums[0] = Float8GetDatum(n);
+	sums = palloc(sizeof(float8) * dim);
 
 	if (newarr)
-	{
-		for (int i = 0; i < dim; i++)
-			statedatums[i + 1] = Float8GetDatum((double) HalfToFloat4(x[i]));
-	}
+		vector_rust_halfvec_accum_init_kernel(dim, newval->x, sums);
 	else
+		vector_rust_halfvec_accum_add_kernel(dim, statevalues + 1, newval->x, sums);
+
+	for (int i = 0; i < dim; i++)
 	{
-		for (int i = 0; i < dim; i++)
-		{
-			double		v = statevalues[i + 1] + (double) HalfToFloat4(x[i]);
+		/* Check for overflow */
+		if (isinf(sums[i]))
+			float_overflow_error();
 
-			/* Check for overflow */
-			if (isinf(v))
-				float_overflow_error();
-
-			statedatums[i + 1] = Float8GetDatum(v);
-		}
+		statedatums[i + 1] = Float8GetDatum(sums[i]);
 	}
 
 	/* Use float8 array like float4_accum */
@@ -1240,9 +1236,20 @@ halfvec_accum(PG_FUNCTION_ARGS)
 							 FLOAT8OID,
 							 sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE);
 
+	pfree(sums);
 	pfree(statedatums);
 
 	PG_RETURN_ARRAYTYPE_P(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec aggregate transition
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_accum);
+Datum
+vector_rust_halfvec_accum(PG_FUNCTION_ARGS)
+{
+	return halfvec_accum(fcinfo);
 }
 
 /*
@@ -1257,6 +1264,7 @@ halfvec_avg(PG_FUNCTION_ARGS)
 	float8		n;
 	uint16		dim;
 	HalfVector *result;
+	float	   *avg_values;
 
 	/* Check array before using */
 	statevalues = CheckStateArray(statearray, "halfvec_avg");
@@ -1270,13 +1278,26 @@ halfvec_avg(PG_FUNCTION_ARGS)
 	dim = STATE_DIMS(statearray);
 	CheckDim(dim);
 	result = InitHalfVector(dim);
+	avg_values = palloc(sizeof(float) * dim);
+	vector_rust_vector_avg(dim, statevalues + 1, n, avg_values);
 	for (int i = 0; i < dim; i++)
 	{
-		result->x[i] = Float4ToHalf(statevalues[i + 1] / n);
+		result->x[i] = Float4ToHalf(avg_values[i]);
 		CheckElement(result->x[i]);
 	}
+	pfree(avg_values);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec aggregate final
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_avg);
+Datum
+vector_rust_halfvec_avg(PG_FUNCTION_ARGS)
+{
+	return halfvec_avg(fcinfo);
 }
 
 /*
