@@ -419,6 +419,33 @@ vector_rust_hnsw_should_return_after_duplicate_insert(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldSkipUpdateGraphForDuplicate(bool duplicateFound, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(duplicateFound);
+
+	return duplicateFound;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_update_graph_for_duplicate);
+Datum
+vector_hnsw_should_skip_update_graph_for_duplicate(PG_FUNCTION_ARGS)
+{
+	int32		duplicateFound = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipUpdateGraphForDuplicate(duplicateFound != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_update_graph_for_duplicate);
+Datum
+vector_rust_hnsw_should_skip_update_graph_for_duplicate(PG_FUNCTION_ARGS)
+{
+	int32		duplicateFound = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipUpdateGraphForDuplicate(duplicateFound != 0, true));
+}
+
+static bool
 HnswShouldFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
 {
 	if (useRust)
@@ -796,7 +823,7 @@ UpdateGraphInMemory(HnswSupport * support, HnswElement element, int m, HnswEleme
 	char	   *base = buildstate->hnswarea;
 
 	/* Look for duplicate */
-	if (FindDuplicateInMemory(base, element))
+	if (HnswShouldSkipUpdateGraphForDuplicate(FindDuplicateInMemory(base, element), true))
 		return;
 
 	/* Add element */

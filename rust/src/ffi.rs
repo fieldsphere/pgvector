@@ -94,6 +94,13 @@ pub extern "C" fn vector_rust_hnsw_should_return_after_duplicate_insert_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(
+    duplicate_found: bool,
+) -> bool {
+    duplicate_found
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
