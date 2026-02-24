@@ -299,6 +299,33 @@ vector_rust_hnsw_should_handle_empty_work_list(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHandleEmptyWorkList(workListLength, true));
 }
 
+static bool
+HnswShouldAdvanceOnExhaustedHeapTids(int heaptidsLength, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
+
+	return heaptidsLength == 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_advance_on_exhausted_heaptids);
+Datum
+vector_hnsw_should_advance_on_exhausted_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAdvanceOnExhaustedHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_advance_on_exhausted_heaptids);
+Datum
+vector_rust_hnsw_should_advance_on_exhausted_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAdvanceOnExhaustedHeapTids(heaptidsLength, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -574,7 +601,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 		element = HnswPtrAccess(base, sc->element);
 
 		/* Move to next element if no valid heap TIDs */
-		if (element->heaptidsLength == 0)
+		if (HnswShouldAdvanceOnExhaustedHeapTids(element->heaptidsLength, true))
 		{
 			so->w = list_delete_last(so->w);
 
