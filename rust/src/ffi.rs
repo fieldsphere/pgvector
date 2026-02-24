@@ -497,6 +497,14 @@ pub extern "C" fn vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(
+    tuple_size: i64,
+    alloc_size: i64,
+) -> bool {
+    tuple_size > alloc_size
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

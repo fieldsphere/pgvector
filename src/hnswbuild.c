@@ -94,6 +94,7 @@ static bool HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
 static bool HnswShouldSkipNullBuildTuple(bool isNull, bool useRust);
 static bool HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust);
 static bool HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust);
+static bool HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -209,7 +210,7 @@ CreateGraphPages(HnswBuildState * buildstate)
 		combinedSize = etupSize + ntupSize + sizeof(ItemIdData);
 
 		/* Initial size check */
-		if (etupSize > HNSW_TUPLE_ALLOC_SIZE)
+		if (HnswShouldRejectOversizedElementTuple((int64) etupSize, (int64) HNSW_TUPLE_ALLOC_SIZE, true))
 			ereport(ERROR,
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 					 errmsg("index tuple too large")));
@@ -1787,6 +1788,35 @@ vector_rust_hnsw_should_update_progress_after_insert(PG_FUNCTION_ARGS)
 	int32		tupleInserted = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUpdateProgressAfterInsert(tupleInserted != 0, true));
+}
+
+static bool
+HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(tupleSize, allocSize);
+
+	return tupleSize > allocSize;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_oversized_element_tuple);
+Datum
+vector_hnsw_should_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
+{
+	int64		tupleSize = PG_GETARG_INT64(0);
+	int64		allocSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectOversizedElementTuple(tupleSize, allocSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_oversized_element_tuple);
+Datum
+vector_rust_hnsw_should_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
+{
+	int64		tupleSize = PG_GETARG_INT64(0);
+	int64		allocSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectOversizedElementTuple(tupleSize, allocSize, true));
 }
 
 static bool
