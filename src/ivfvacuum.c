@@ -14,39 +14,39 @@
 #endif
 
 static bool
+IvfflatVacuumPageIsValid(BlockNumber page, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+
+	return BlockNumberIsValid(page);
+}
+
+static bool
 IvfflatShouldSetInsertPage(int ndeletable, BlockNumber insertPage, bool useRust)
 {
 	if (useRust)
-		return vector_rust_ivfflat_should_set_insert_page_kernel(ndeletable, BlockNumberIsValid(insertPage));
+		return vector_rust_ivfflat_should_set_insert_page_kernel(ndeletable, IvfflatVacuumPageIsValid(insertPage, true));
 
-	return !BlockNumberIsValid(insertPage) && ndeletable > 0;
+	return !IvfflatVacuumPageIsValid(insertPage, false) && ndeletable > 0;
 }
 
 static bool
 IvfflatShouldUpdateVacuumInsertPage(BlockNumber insertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
-
-	return BlockNumberIsValid(insertPage);
+	return IvfflatVacuumPageIsValid(insertPage, useRust);
 }
 
 static bool
 IvfflatShouldVisitVacuumListPage(BlockNumber page, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
-
-	return BlockNumberIsValid(page);
+	return IvfflatVacuumPageIsValid(page, useRust);
 }
 
 static bool
 IvfflatShouldVisitVacuumEntryPage(BlockNumber page, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
-
-	return BlockNumberIsValid(page);
+	return IvfflatVacuumPageIsValid(page, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_set_insert_page);
@@ -121,6 +121,24 @@ vector_rust_ivfflat_should_visit_vacuum_entry_page(PG_FUNCTION_ARGS)
 	int32		page = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(IvfflatShouldVisitVacuumEntryPage((BlockNumber) page, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_vacuum_page_is_valid);
+Datum
+vector_ivfflat_vacuum_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatVacuumPageIsValid((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_vacuum_page_is_valid);
+Datum
+vector_rust_ivfflat_vacuum_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatVacuumPageIsValid((BlockNumber) page, true));
 }
 
 /*
