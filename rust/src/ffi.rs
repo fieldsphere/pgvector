@@ -531,6 +531,13 @@ pub extern "C" fn vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(
+    overwrite_succeeded: bool,
+) -> bool {
+    !overwrite_succeeded
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

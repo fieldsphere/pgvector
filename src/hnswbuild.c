@@ -98,6 +98,7 @@ static bool HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSi
 static bool HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust);
 static bool HnswShouldAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust);
 static bool HnswShouldRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust);
+static bool HnswShouldRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -305,7 +306,7 @@ WriteNeighborTuples(HnswBuildState * buildstate)
 
 		HnswSetNeighborTuple(base, ntup, element, m);
 
-		if (!PageIndexTupleOverwrite(page, element->neighborOffno, (Item) ntup, ntupSize))
+		if (HnswShouldRejectNeighborOverwrite(PageIndexTupleOverwrite(page, element->neighborOffno, (Item) ntup, ntupSize), true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 
 		/* Commit */
@@ -1911,6 +1912,33 @@ vector_rust_hnsw_should_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
 	int32		expectedOffset = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectUnexpectedItemOffset(insertedOffset, expectedOffset, true));
+}
+
+static bool
+HnswShouldRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
+
+	return !overwriteSucceeded;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_neighbor_overwrite);
+Datum
+vector_hnsw_should_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectNeighborOverwrite(overwriteSucceeded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_neighbor_overwrite);
+Datum
+vector_rust_hnsw_should_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectNeighborOverwrite(overwriteSucceeded != 0, true));
 }
 
 static bool
