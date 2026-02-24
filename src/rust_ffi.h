@@ -43,6 +43,8 @@ void		vector_rust_ivfflat_finalize_center_kernel(int dimensions, float *agg, int
 bool		vector_rust_ivfflat_all_finite_kernel(int dimensions, const float *values);
 void		vector_rust_ivfflat_vector_sum_center_kernel(int dimensions, const float *center, float *agg);
 void		vector_rust_ivfflat_bit_sum_center_kernel(int dimensions, const unsigned char *bits, float *agg);
+void		vector_rust_ivfflat_vector_update_center_kernel(int dimensions, const float *values, float *output);
+void		vector_rust_ivfflat_bit_update_center_kernel(int dimensions, const float *values, unsigned char *output);
 void		vector_rust_halfvec_add_kernel(int dim, const void *ax, const void *bx, float *rx);
 void		vector_rust_halfvec_sub_kernel(int dim, const void *ax, const void *bx, float *rx);
 void		vector_rust_halfvec_mul_kernel(int dim, const void *ax, const void *bx, float *rx);

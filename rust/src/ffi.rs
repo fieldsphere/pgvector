@@ -646,6 +646,37 @@ pub unsafe extern "C" fn vector_rust_ivfflat_bit_sum_center_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_vector_update_center_kernel(
+    dimensions: i32,
+    values: *const f32,
+    output: *mut f32,
+) {
+    for i in 0..(dimensions as usize) {
+        *output.add(i) = *values.add(i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_bit_update_center_kernel(
+    dimensions: i32,
+    values: *const f32,
+    output: *mut u8,
+) {
+    let dimensions = dimensions as usize;
+    let byte_count = dimensions.div_ceil(8);
+
+    for i in 0..byte_count {
+        *output.add(i) = 0;
+    }
+
+    for i in 0..dimensions {
+        if *values.add(i) > 0.5 {
+            *output.add(i / 8) |= 1 << (7 - (i % 8));
+        }
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,

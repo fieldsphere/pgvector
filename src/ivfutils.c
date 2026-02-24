@@ -2,6 +2,7 @@
 
 #include "access/genam.h"
 #include "access/generic_xlog.h"
+#include "bitvec.h"
 #include "catalog/pg_type.h"
 #include "fmgr.h"
 #include "halfutils.h"
@@ -337,6 +338,98 @@ IvfflatBitSumCenter(VarBit *vec, bool useRust)
 	return result;
 }
 
+static float *
+IvfflatRealArrayToFloat(ArrayType *array, int *length)
+{
+	Datum	   *datums;
+	float	   *values;
+
+	if (ARR_NDIM(array) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("array must be 1-D")));
+
+	if (ARR_HASNULL(array) && array_contains_nulls(array))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(array) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("array must be real[]")));
+
+	deconstruct_array(array, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &datums, NULL, length);
+
+	values = palloc(sizeof(float) * (*length));
+	for (int i = 0; i < *length; i++)
+		values[i] = DatumGetFloat4(datums[i]);
+
+	pfree(datums);
+	return values;
+}
+
+static ArrayType *
+IvfflatVectorUpdateCenter(ArrayType *valuesArray, bool useRust)
+{
+	int			dimensions;
+	float	   *values;
+	Vector	   *vec;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	values = IvfflatRealArrayToFloat(valuesArray, &dimensions);
+	vec = InitVector(dimensions);
+
+	if (useRust)
+		vector_rust_ivfflat_vector_update_center_kernel(dimensions, values, vec->x);
+	else
+	{
+		for (int i = 0; i < dimensions; i++)
+			vec->x[i] = values[i];
+	}
+
+	resultDatums = palloc(sizeof(Datum) * dimensions);
+	for (int i = 0; i < dimensions; i++)
+		resultDatums[i] = Float4GetDatum(vec->x[i]);
+
+	result = construct_array(resultDatums, dimensions, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(vec);
+	pfree(values);
+
+	return result;
+}
+
+static VarBit *
+IvfflatBitUpdateCenter(ArrayType *valuesArray, bool useRust)
+{
+	int			dimensions;
+	float	   *values;
+	VarBit	   *vec;
+	unsigned char *nx;
+
+	values = IvfflatRealArrayToFloat(valuesArray, &dimensions);
+	vec = InitBitVector(dimensions);
+	nx = VARBITS(vec);
+
+	if (useRust)
+		vector_rust_ivfflat_bit_update_center_kernel(dimensions, values, nx);
+	else
+	{
+		for (uint32 i = 0; i < VARBITBYTES(vec); i++)
+			nx[i] = 0;
+
+		for (int i = 0; i < dimensions; i++)
+			nx[i / 8] |= (values[i] > 0.5 ? 1 : 0) << (7 - (i % 8));
+	}
+
+	pfree(values);
+	return vec;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_vector_sum_center);
 Datum
 vector_ivfflat_vector_sum_center(PG_FUNCTION_ARGS)
@@ -375,6 +468,42 @@ vector_rust_ivfflat_bit_sum_center(PG_FUNCTION_ARGS)
 	PG_RETURN_ARRAYTYPE_P(IvfflatBitSumCenter(vec, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_vector_update_center);
+Datum
+vector_ivfflat_vector_update_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatVectorUpdateCenter(valuesArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_vector_update_center);
+Datum
+vector_rust_ivfflat_vector_update_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatVectorUpdateCenter(valuesArray, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_bit_update_center);
+Datum
+vector_ivfflat_bit_update_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_VARBIT_P(IvfflatBitUpdateCenter(valuesArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_bit_update_center);
+Datum
+vector_rust_ivfflat_bit_update_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_VARBIT_P(IvfflatBitUpdateCenter(valuesArray, true));
+}
+
 PGDLLEXPORT Datum l2_normalize(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum halfvec_l2_normalize(PG_FUNCTION_ARGS);
 PGDLLEXPORT Datum sparsevec_l2_normalize(PG_FUNCTION_ARGS);
@@ -404,9 +533,7 @@ VectorUpdateCenter(Pointer v, int dimensions, float *x)
 
 	SET_VARSIZE(vec, VECTOR_SIZE(dimensions));
 	vec->dim = dimensions;
-
-	for (int i = 0; i < dimensions; i++)
-		vec->x[i] = x[i];
+	vector_rust_ivfflat_vector_update_center_kernel(dimensions, x, vec->x);
 }
 
 static void
@@ -429,12 +556,7 @@ BitUpdateCenter(Pointer v, int dimensions, float *x)
 
 	SET_VARSIZE(vec, VARBITTOTALLEN(dimensions));
 	VARBITLEN(vec) = dimensions;
-
-	for (uint32 i = 0; i < VARBITBYTES(vec); i++)
-		nx[i] = 0;
-
-	for (int i = 0; i < dimensions; i++)
-		nx[i / 8] |= (x[i] > 0.5 ? 1 : 0) << (7 - (i % 8));
+	vector_rust_ivfflat_bit_update_center_kernel(dimensions, x, nx);
 }
 
 static void
