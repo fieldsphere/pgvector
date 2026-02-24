@@ -156,6 +156,33 @@ vector_rust_hnsw_should_disable_without_order(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldDisableWithoutOrder(orderbyCount, true));
 }
 
+static double
+HnswClampRatio(double ratio, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_clamp_ratio_kernel(ratio);
+
+	return ratio > 1 ? 1 : ratio;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_clamp_ratio);
+Datum
+vector_hnsw_clamp_ratio(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_FLOAT8(HnswClampRatio(ratio, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_clamp_ratio);
+Datum
+vector_rust_hnsw_clamp_ratio(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_FLOAT8(HnswClampRatio(ratio, true));
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -231,8 +258,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 
 		ratio = (entryLevel * m + layer0TuplesMax * layer0Selectivity) / path->indexinfo->tuples;
 
-		if (ratio > 1)
-			ratio = 1;
+		ratio = HnswClampRatio(ratio, true);
 	}
 	else
 		ratio = 1;
