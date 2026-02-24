@@ -189,6 +189,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_disable_without_order'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_visit_scan_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_visit_scan_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_visit_scan_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_visit_scan_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -398,5 +408,17 @@ my $disable_without_order_parity = $node->safe_psql("postgres", q{
 	) AS t(orderby_count);
 });
 is($disable_without_order_parity, "t\nt\nt\nt");
+
+my $visit_scan_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_visit_scan_page(page_no) =
+		   rust_ivfflat_should_visit_scan_page(page_no)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1),
+		(42)
+	) AS t(page_no);
+});
+is($visit_scan_page_parity, "t\nt\nt\nt");
 
 done_testing();
