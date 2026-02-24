@@ -114,6 +114,7 @@ static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLeve
 static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust);
 static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
 static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1121,6 +1122,15 @@ HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
 	return hasDiscardedHeap;
 }
 
+static bool
+HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_track_update_index_kernel(hasUpdateIndexPointer);
+
+	return hasUpdateIndexPointer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1305,6 +1315,24 @@ vector_rust_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_update_index);
+Datum
+vector_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_update_index);
+Datum
+vector_rust_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
@@ -1464,7 +1492,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		neighbors->items[neighbors->length++] = newHc;
 
 		/* Track update */
-		if (updateIdx != NULL)
+		if (HnswShouldTrackUpdateIndex(updateIdx != NULL, true))
 			*updateIdx = -2;
 	}
 	else
@@ -1492,7 +1520,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 				neighbors->items[i] = newHc;
 
 				/* Track update */
-				if (updateIdx != NULL)
+				if (HnswShouldTrackUpdateIndex(updateIdx != NULL, true))
 					*updateIdx = i;
 
 				break;
