@@ -340,6 +340,35 @@ vector_rust_hnsw_can_add_duplicate_heap_tid(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswCanAddDuplicateHeapTid(heaptidsLength, maxHeaptids, true));
 }
 
+static bool
+HnswShouldFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_flush_graph_kernel((int64) memoryUsed, (int64) memoryTotal);
+
+	return memoryUsed >= memoryTotal;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flush_graph);
+Datum
+vector_hnsw_should_flush_graph(PG_FUNCTION_ARGS)
+{
+	int64		memoryUsed = PG_GETARG_INT64(0);
+	int64		memoryTotal = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldFlushGraph((Size) memoryUsed, (Size) memoryTotal, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_flush_graph);
+Datum
+vector_rust_hnsw_should_flush_graph(PG_FUNCTION_ARGS)
+{
+	int64		memoryUsed = PG_GETARG_INT64(0);
+	int64		memoryTotal = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldFlushGraph((Size) memoryUsed, (Size) memoryTotal, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -548,7 +577,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid, Hn
 	 * Check that we have enough memory available for the new element now that
 	 * we have the allocator lock, and flush pages if needed.
 	 */
-	if (graph->memoryUsed >= graph->memoryTotal)
+	if (HnswShouldFlushGraph(graph->memoryUsed, graph->memoryTotal, true))
 	{
 		LWLockRelease(&graph->allocatorLock);
 

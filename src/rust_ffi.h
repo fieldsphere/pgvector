@@ -10,6 +10,7 @@ bool		vector_rust_hnsw_should_reject_closer_neighbor_kernel(double distance, dou
 bool		vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(int32 heaptids_length, int32 max_heaptids);
 bool		vector_rust_hnsw_should_select_neighbors_early_return_kernel(int32 candidate_count, int32 max_neighbors);
 bool		vector_rust_hnsw_should_repair_underfilled_layer0_kernel(bool last_item_valid);
+bool		vector_rust_hnsw_should_flush_graph_kernel(int64 memory_used, int64 memory_total);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);

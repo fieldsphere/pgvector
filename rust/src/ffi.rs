@@ -52,6 +52,14 @@ pub extern "C" fn vector_rust_hnsw_should_repair_underfilled_layer0_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_flush_graph_kernel(
+    memory_used: i64,
+    memory_total: i64,
+) -> bool {
+    memory_used >= memory_total
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,
