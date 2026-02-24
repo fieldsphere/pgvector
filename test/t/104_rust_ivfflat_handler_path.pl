@@ -139,6 +139,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_load_more_scan_items'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_probe_ratio(integer, integer) RETURNS double precision
+	AS '$libdir/vector', 'vector_ivfflat_probe_ratio'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_probe_ratio(integer, integer) RETURNS double precision
+	AS '$libdir/vector', 'vector_rust_ivfflat_probe_ratio'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -289,5 +299,16 @@ my $load_more_scan_items_parity = $node->safe_psql("postgres", q{
 	) AS t(list_index, max_probes);
 });
 is($load_more_scan_items_parity, "t\nt\nt\nt");
+
+my $probe_ratio_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_probe_ratio(probes, lists) = rust_ivfflat_probe_ratio(probes, lists)
+	FROM (VALUES
+		(1, 10),
+		(5, 10),
+		(10, 10),
+		(12, 10)
+	) AS t(probes, lists);
+});
+is($probe_ratio_parity, "t\nt\nt\nt");
 
 done_testing();
