@@ -87,6 +87,13 @@ pub extern "C" fn vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatc
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_return_after_duplicate_insert_kernel(
+    duplicate_inserted: bool,
+) -> bool {
+    duplicate_inserted
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,

@@ -392,6 +392,33 @@ vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS
 }
 
 static bool
+HnswShouldReturnAfterDuplicateInsert(bool duplicateInserted, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_return_after_duplicate_insert_kernel(duplicateInserted);
+
+	return duplicateInserted;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_after_duplicate_insert);
+Datum
+vector_hnsw_should_return_after_duplicate_insert(PG_FUNCTION_ARGS)
+{
+	int32		duplicateInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnAfterDuplicateInsert(duplicateInserted != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_after_duplicate_insert);
+Datum
+vector_rust_hnsw_should_return_after_duplicate_insert(PG_FUNCTION_ARGS)
+{
+	int32		duplicateInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnAfterDuplicateInsert(duplicateInserted != 0, true));
+}
+
+static bool
 HnswShouldFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
 {
 	if (useRust)
@@ -708,7 +735,7 @@ FindDuplicateInMemory(char *base, HnswElement element)
 			return false;
 
 		/* Check for space */
-		if (AddDuplicateInMemory(element, neighborElement))
+		if (HnswShouldReturnAfterDuplicateInsert(AddDuplicateInMemory(element, neighborElement), true))
 			return true;
 	}
 
