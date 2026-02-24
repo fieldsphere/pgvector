@@ -99,6 +99,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_without_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_stop_when_iterative_scan_off(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_stop_when_iterative_scan_off'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_stop_when_iterative_scan_off(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_when_iterative_scan_off'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -200,5 +210,17 @@ my $stop_without_discarded_parity = $node->safe_psql("postgres", q{
 	) AS t(discarded_is_null);
 });
 is($stop_without_discarded_parity, "t\nt\nt\nt");
+
+my $stop_when_iterative_scan_off_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_stop_when_iterative_scan_off(iterative_scan_mode) =
+		   rust_hnsw_should_stop_when_iterative_scan_off(iterative_scan_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(0)
+	) AS t(iterative_scan_mode);
+});
+is($stop_when_iterative_scan_off_parity, "t\nt\nt\nt");
 
 done_testing();
