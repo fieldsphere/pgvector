@@ -54,6 +54,16 @@ pub extern "C" fn vector_rust_ivfflat_choose_insert_candidate_kernel(
     distance < min_distance || !insert_page_is_valid
 }
 
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_choose_scan_list_candidate_kernel(
+    distance: c_double,
+    list_count: i32,
+    max_probes: i32,
+    max_distance: c_double,
+) -> bool {
+    list_count < max_probes || distance < max_distance
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;

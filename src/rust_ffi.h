@@ -8,6 +8,7 @@ const char *vector_rust_bridge_version_cstr(void);
 const char *vector_rust_ivfflat_handler_probe_cstr(void);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 bool		vector_rust_ivfflat_choose_insert_candidate_kernel(double distance, double min_distance, bool insert_page_is_valid);
+bool		vector_rust_ivfflat_choose_scan_list_candidate_kernel(double distance, int32 list_count, int32 max_probes, double max_distance);
 uint64		vector_rust_bit_hamming_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 distance);
 double		vector_rust_bit_jaccard_distance(uint32 bytes, unsigned char *ax, unsigned char *bx, uint64 ab, uint64 aa, uint64 bb);
 float		vector_rust_half_l2_squared_distance(int dim, const void *ax, const void *bx);

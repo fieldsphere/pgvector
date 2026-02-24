@@ -13,6 +13,7 @@
 #include "ivfflat.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
@@ -39,6 +40,39 @@ CompareLists(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 		return -1;
 
 	return 0;
+}
+
+static bool
+IvfflatChooseScanListCandidate(float8 distance, int listCount, int maxProbes, float8 maxDistance, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_choose_scan_list_candidate_kernel(distance, listCount, maxProbes, maxDistance);
+
+	return listCount < maxProbes || distance < maxDistance;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_scan_list_candidate);
+Datum
+vector_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	int32		listCount = PG_GETARG_INT32(1);
+	int32		maxProbes = PG_GETARG_INT32(2);
+	float8		maxDistance = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(IvfflatChooseScanListCandidate(distance, listCount, maxProbes, maxDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_choose_scan_list_candidate);
+Datum
+vector_rust_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	int32		listCount = PG_GETARG_INT32(1);
+	int32		maxProbes = PG_GETARG_INT32(2);
+	float8		maxDistance = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(IvfflatChooseScanListCandidate(distance, listCount, maxProbes, maxDistance, true));
 }
 
 /*
@@ -73,28 +107,20 @@ GetScanLists(IndexScanDesc scan, Datum value)
 			/* Use procinfo from the index instead of scan key for performance */
 			distance = DatumGetFloat8(so->distfunc(so->procinfo, so->collation, PointerGetDatum(&list->center), value));
 
-			if (listCount < so->maxProbes)
+			if (IvfflatChooseScanListCandidate(distance, listCount, so->maxProbes, maxDistance, true))
 			{
 				IvfflatScanList *scanlist;
 
-				scanlist = &so->lists[listCount];
-				scanlist->startPage = list->startPage;
-				scanlist->distance = distance;
-				listCount++;
-
-				/* Add to heap */
-				pairingheap_add(so->listQueue, &scanlist->ph_node);
-
-				/* Calculate max distance */
-				if (listCount == so->maxProbes)
-					maxDistance = GetScanList(pairingheap_first(so->listQueue))->distance;
-			}
-			else if (distance < maxDistance)
-			{
-				IvfflatScanList *scanlist;
-
-				/* Remove */
-				scanlist = GetScanList(pairingheap_remove_first(so->listQueue));
+				if (listCount < so->maxProbes)
+				{
+					scanlist = &so->lists[listCount];
+					listCount++;
+				}
+				else
+				{
+					/* Remove */
+					scanlist = GetScanList(pairingheap_remove_first(so->listQueue));
+				}
 
 				/* Reuse */
 				scanlist->startPage = list->startPage;
