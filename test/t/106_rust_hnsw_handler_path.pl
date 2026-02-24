@@ -400,6 +400,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_excess_dimensions(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_excess_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_excess_dimensions(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_excess_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -882,6 +892,18 @@ my $reject_missing_dimensions_parity = $node->safe_psql("postgres", q{
 	) AS t(dimensions);
 });
 is($reject_missing_dimensions_parity, "t\nt\nt\nt");
+
+my $reject_excess_dimensions_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_excess_dimensions(dimensions, max_dimensions) =
+		   rust_hnsw_should_reject_excess_dimensions(dimensions, max_dimensions)
+	FROM (VALUES
+		(3, 3),
+		(4, 3),
+		(16, 1024),
+		(2048, 1024)
+	) AS t(dimensions, max_dimensions);
+});
+is($reject_excess_dimensions_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
