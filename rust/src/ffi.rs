@@ -608,6 +608,21 @@ pub unsafe extern "C" fn vector_rust_ivfflat_finalize_center_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_all_finite_kernel(
+    dimensions: i32,
+    values: *const f32,
+) -> bool {
+    for i in 0..(dimensions as usize) {
+        let value = *values.add(i);
+        if value.is_nan() || value.is_infinite() {
+            return false;
+        }
+    }
+
+    true
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,

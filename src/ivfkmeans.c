@@ -189,6 +189,56 @@ IvfflatZeroAgg(int32 centerCount, int32 dimensions, bool useRust)
 	return result;
 }
 
+static bool
+IvfflatAllFinite(ArrayType *valuesArray, bool useRust)
+{
+	Datum	   *valueDatums;
+	int			length;
+	float	   *values;
+	bool		allFinite = true;
+
+	if (ARR_NDIM(valuesArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("values array must be 1-D")));
+
+	if (ARR_HASNULL(valuesArray) && array_contains_nulls(valuesArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("values array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(valuesArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("values array must be real[]")));
+
+	deconstruct_array(valuesArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &valueDatums, NULL, &length);
+
+	values = palloc(sizeof(float) * length);
+	for (int i = 0; i < length; i++)
+		values[i] = DatumGetFloat4(valueDatums[i]);
+
+	if (useRust)
+		allFinite = vector_rust_ivfflat_all_finite_kernel(length, values);
+	else
+	{
+		for (int i = 0; i < length; i++)
+		{
+			if (isnan(values[i]) || isinf(values[i]))
+			{
+				allFinite = false;
+				break;
+			}
+		}
+	}
+
+	pfree(values);
+	pfree(valueDatums);
+
+	return allFinite;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_center_counts);
 Datum
 vector_ivfflat_center_counts(PG_FUNCTION_ARGS)
@@ -247,6 +297,24 @@ vector_rust_ivfflat_zero_agg(PG_FUNCTION_ARGS)
 	int32		dimensions = PG_GETARG_INT32(1);
 
 	PG_RETURN_ARRAYTYPE_P(IvfflatZeroAgg(centerCount, dimensions, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_all_finite);
+Datum
+vector_ivfflat_all_finite(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_BOOL(IvfflatAllFinite(valuesArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_all_finite);
+Datum
+vector_rust_ivfflat_all_finite(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_BOOL(IvfflatAllFinite(valuesArray, true));
 }
 
 /*
@@ -726,15 +794,8 @@ CheckElements(VectorArray centers, const IvfflatTypeInfo * typeInfo)
 
 		/* /fp:fast may not propagate NaN with MSVC, but that's alright */
 		typeInfo->sumCenter(VectorArrayGet(centers, i), scratch);
-
-		for (int j = 0; j < centers->dim; j++)
-		{
-			if (isnan(scratch[j]))
-				elog(ERROR, "NaN detected. Please report a bug.");
-
-			if (isinf(scratch[j]))
-				elog(ERROR, "Infinite value detected. Please report a bug.");
-		}
+		if (!vector_rust_ivfflat_all_finite_kernel(centers->dim, scratch))
+			elog(ERROR, "Non-finite value detected. Please report a bug.");
 	}
 }
 
