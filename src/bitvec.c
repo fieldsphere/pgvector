@@ -99,3 +99,23 @@ vector_rust_jaccard_distance(PG_FUNCTION_ARGS)
 
 	PG_RETURN_FLOAT8(vector_rust_bit_jaccard_distance(VARBITBYTES(a), VARBITS(a), VARBITS(b), 0, 0, 0));
 }
+
+/*
+ * Rust parity wrapper symbol for bit Hamming distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_bit_hamming_distance_pg);
+Datum
+vector_rust_bit_hamming_distance_pg(PG_FUNCTION_ARGS)
+{
+	return vector_rust_hamming_distance(fcinfo);
+}
+
+/*
+ * Rust parity wrapper symbol for bit Jaccard distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_bit_jaccard_distance_pg);
+Datum
+vector_rust_bit_jaccard_distance_pg(PG_FUNCTION_ARGS)
+{
+	return vector_rust_jaccard_distance(fcinfo);
+}
