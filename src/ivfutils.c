@@ -216,6 +216,21 @@ IvfflatShouldAllowInsertPageAfterOriginal(BlockNumber insertPage, BlockNumber or
 	return !BlockNumberIsValid(originalInsertPage) || insertPage >= originalInsertPage;
 }
 
+static bool
+IvfflatShouldWriteListStartPage(BlockNumber startPage, BlockNumber currentStartPage, bool useRust)
+{
+	if (useRust)
+	{
+		bool		isValid;
+
+		isValid = vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) startPage);
+		return isValid &&
+			vector_rust_ivfflat_should_update_insert_page_kernel((int32) startPage, (int32) currentStartPage);
+	}
+
+	return BlockNumberIsValid(startPage) && startPage != currentStartPage;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_write_list_insert_page);
 Datum
 vector_ivfflat_should_write_list_insert_page(PG_FUNCTION_ARGS)
@@ -256,6 +271,26 @@ vector_rust_ivfflat_should_allow_insert_page_after_original(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(IvfflatShouldAllowInsertPageAfterOriginal((BlockNumber) insertPage, (BlockNumber) originalInsertPage, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_write_list_start_page);
+Datum
+vector_ivfflat_should_write_list_start_page(PG_FUNCTION_ARGS)
+{
+	int32		startPage = PG_GETARG_INT32(0);
+	int32		currentStartPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldWriteListStartPage((BlockNumber) startPage, (BlockNumber) currentStartPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_write_list_start_page);
+Datum
+vector_rust_ivfflat_should_write_list_start_page(PG_FUNCTION_ARGS)
+{
+	int32		startPage = PG_GETARG_INT32(0);
+	int32		currentStartPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldWriteListStartPage((BlockNumber) startPage, (BlockNumber) currentStartPage, true));
+}
+
 /*
  * Update the start or insert page of a list
  */
@@ -287,7 +322,7 @@ IvfflatUpdateList(Relation index, ListInfo listInfo,
 		}
 	}
 
-	if (BlockNumberIsValid(startPage) && startPage != list->startPage)
+	if (IvfflatShouldWriteListStartPage(startPage, list->startPage, true))
 	{
 		list->startPage = startPage;
 		changed = true;
