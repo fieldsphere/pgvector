@@ -129,6 +129,33 @@ hnswbuildphasename(int64 phasenum)
 	}
 }
 
+static bool
+HnswShouldDisableWithoutOrder(int orderbyCount, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_disable_without_order_kernel(orderbyCount);
+
+	return orderbyCount == 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_disable_without_order);
+Datum
+vector_hnsw_should_disable_without_order(PG_FUNCTION_ARGS)
+{
+	int32		orderbyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDisableWithoutOrder(orderbyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_disable_without_order);
+Datum
+vector_rust_hnsw_should_disable_without_order(PG_FUNCTION_ARGS)
+{
+	int32		orderbyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDisableWithoutOrder(orderbyCount, true));
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -146,7 +173,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	Relation	index;
 
 	/* Never use index without order */
-	if (path->indexorderbys == NIL)
+	if (HnswShouldDisableWithoutOrder(list_length(path->indexorderbys), true))
 	{
 		*indexStartupCost = get_float8_infinity();
 		*indexTotalCost = get_float8_infinity();
