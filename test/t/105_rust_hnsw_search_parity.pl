@@ -59,6 +59,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_flush_graph'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_ondisk_phase(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_ondisk_phase'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_ondisk_phase(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_ondisk_phase'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -119,5 +129,17 @@ my $flush_graph_parity = $node->safe_psql("postgres", q{
 	) AS t(memory_used, memory_total);
 });
 is($flush_graph_parity, "t\nt\nt\nt");
+
+my $ondisk_phase_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_ondisk_phase(flushed) =
+		   rust_hnsw_should_use_ondisk_phase(flushed)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(flushed);
+});
+is($ondisk_phase_parity, "t\nt\nt\nt");
 
 done_testing();
