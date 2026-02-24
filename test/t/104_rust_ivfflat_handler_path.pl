@@ -39,6 +39,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_choose_insert_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_choose_scan_list_candidate(double precision, integer, integer, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_choose_scan_list_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_choose_scan_list_candidate(double precision, integer, integer, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_choose_scan_list_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -68,5 +78,17 @@ my $insert_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(distance, min_distance, insert_page);
 });
 is($insert_candidate_parity, "t\nt\nt\nt");
+
+my $scan_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_choose_scan_list_candidate(distance, list_count, max_probes, max_distance) =
+		   rust_ivfflat_choose_scan_list_candidate(distance, list_count, max_probes, max_distance)
+	FROM (VALUES
+		(0.5::double precision, 0, 5, 1.0::double precision),
+		(1.5::double precision, 5, 5, 2.0::double precision),
+		(2.5::double precision, 5, 5, 2.0::double precision),
+		(0.1::double precision, 3, 3, 0.1::double precision)
+	) AS t(distance, list_count, max_probes, max_distance);
+});
+is($scan_candidate_parity, "t\nt\nt\nt");
 
 done_testing();
