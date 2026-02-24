@@ -49,6 +49,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_repair_underfilled_layer0'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_flush_graph(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_flush_graph'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_flush_graph(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_flush_graph'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -97,5 +107,17 @@ my $repair_underfilled_layer0_parity = $node->safe_psql("postgres", q{
 	) AS t(last_item_valid);
 });
 is($repair_underfilled_layer0_parity, "t\nt\nt\nt");
+
+my $flush_graph_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_flush_graph(memory_used, memory_total) =
+		   rust_hnsw_should_flush_graph(memory_used, memory_total)
+	FROM (VALUES
+		(0::bigint, 10::bigint),
+		(9::bigint, 10::bigint),
+		(10::bigint, 10::bigint),
+		(11::bigint, 10::bigint)
+	) AS t(memory_used, memory_total);
+});
+is($flush_graph_parity, "t\nt\nt\nt");
 
 done_testing();
