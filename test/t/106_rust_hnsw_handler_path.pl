@@ -139,6 +139,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_update_previous_distance'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_flush_graph_pages_at_end(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_flush_graph_pages_at_end'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_flush_graph_pages_at_end(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_flush_graph_pages_at_end'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -288,5 +298,17 @@ my $update_previous_distance_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode);
 });
 is($update_previous_distance_parity, "t\nt\nt\nt");
+
+my $flush_graph_pages_at_end_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_flush_graph_pages_at_end(graph_flushed) =
+		   rust_hnsw_should_flush_graph_pages_at_end(graph_flushed)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(graph_flushed);
+});
+is($flush_graph_pages_at_end_parity, "t\nt\nt\nt");
 
 done_testing();
