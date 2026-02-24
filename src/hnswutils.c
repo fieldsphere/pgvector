@@ -115,6 +115,7 @@ static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLengt
 static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
 static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
+static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1131,6 +1132,15 @@ HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 	return hasUpdateIndexPointer;
 }
 
+static bool
+HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_process_pruned_candidate_kernel(hasPrunedCandidate);
+
+	return hasPrunedCandidate;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1333,6 +1343,24 @@ vector_rust_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_pruned_candidate);
+Datum
+vector_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessPrunedCandidate(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_pruned_candidate);
+Datum
+vector_rust_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessPrunedCandidate(hasPrunedCandidate != 0, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
@@ -1509,7 +1537,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		SelectNeighbors(base, c, lm, support, &neighbors->closerSet, &newHc, &pruned, true);
 
 		/* Should not happen */
-		if (pruned == NULL)
+		if (!HnswShouldProcessPrunedCandidate(pruned != NULL, true))
 			return;
 
 		/* Find and replace the pruned element */
