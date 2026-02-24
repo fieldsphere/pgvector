@@ -113,6 +113,14 @@ pub extern "C" fn vector_rust_hnsw_should_update_ondisk_insert_page_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot_kernel(
+    free_slot_index: i32,
+    max_heaptids: i32,
+) -> bool {
+    free_slot_index == 0 || free_slot_index == max_heaptids
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,

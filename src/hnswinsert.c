@@ -21,6 +21,7 @@ static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual,
 static bool HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, bool useRust);
 static bool HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust);
 static bool HnswShouldUpdateOnDiskInsertPage(bool hasNewInsertPage, bool useRust);
+static bool HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust);
 
 /*
  * Get the insert page
@@ -621,7 +622,7 @@ AddDuplicateOnDisk(Relation index, HnswElement element, HnswElement dup, bool bu
 	}
 
 	/* Either being deleted or we lost our chance to another backend */
-	if (i == 0 || i == HNSW_HEAPTIDS)
+	if (HnswShouldRejectOnDiskDuplicateInsertSlot(i, HNSW_HEAPTIDS, true))
 	{
 		if (!building)
 			GenericXLogAbort(state);
@@ -932,6 +933,35 @@ vector_rust_hnsw_should_update_ondisk_insert_page(PG_FUNCTION_ARGS)
 	int32		hasNewInsertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUpdateOnDiskInsertPage(hasNewInsertPage != 0, true));
+}
+
+static bool
+HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot_kernel(freeSlotIndex, maxHeaptids);
+
+	return freeSlotIndex == 0 || freeSlotIndex == maxHeaptids;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_ondisk_duplicate_insert_slot);
+Datum
+vector_hnsw_should_reject_ondisk_duplicate_insert_slot(PG_FUNCTION_ARGS)
+{
+	int32		freeSlotIndex = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(freeSlotIndex, maxHeaptids, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot);
+Datum
+vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot(PG_FUNCTION_ARGS)
+{
+	int32		freeSlotIndex = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true));
 }
 
 static bool
