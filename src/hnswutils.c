@@ -10,6 +10,7 @@
 #include "lib/pairingheap.h"
 #include "nodes/pg_list.h"
 #include "port/atomics.h"
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "storage/bufmgr.h"
 #include "utils/datum.h"
@@ -1029,6 +1030,35 @@ CompareCandidateDistancesOffset(const ListCell *a, const ListCell *b)
 	return 0;
 }
 
+static bool
+HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_closer_neighbor_kernel(distance, candidateDistance);
+
+	return distance <= candidateDistance;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
+Datum
+vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectCloserNeighbor(distance, candidateDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_closer_neighbor);
+Datum
+vector_rust_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectCloserNeighbor(distance, candidateDistance, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
@@ -1046,7 +1076,7 @@ CheckElementCloser(char *base, HnswCandidate * e, List *r, HnswSupport * support
 		Datum		riValue = HnswGetValue(base, riElement);
 		float		distance = HnswGetDistance(eValue, riValue, support);
 
-		if (distance <= e->distance)
+		if (HnswShouldRejectCloserNeighbor(distance, e->distance, true))
 			return false;
 	}
 

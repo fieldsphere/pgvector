@@ -6,6 +6,7 @@
 void		vector_rust_init(void);
 const char *vector_rust_bridge_version_cstr(void);
 const char *vector_rust_ivfflat_handler_probe_cstr(void);
+bool		vector_rust_hnsw_should_reject_closer_neighbor_kernel(double distance, double candidate_distance);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);
