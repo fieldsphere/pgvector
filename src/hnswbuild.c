@@ -1319,6 +1319,33 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 /*
  * Compute parallel workers
  */
+static bool
+HnswShouldSkipParallelWorkers(int parallelWorkers, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_parallel_workers_kernel(parallelWorkers);
+
+	return parallelWorkers == 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_parallel_workers);
+Datum
+vector_hnsw_should_skip_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipParallelWorkers(parallelWorkers, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_parallel_workers);
+Datum
+vector_rust_hnsw_should_skip_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipParallelWorkers(parallelWorkers, true));
+}
+
 static int
 ComputeParallelWorkers(Relation heap, Relation index)
 {
@@ -1326,7 +1353,7 @@ ComputeParallelWorkers(Relation heap, Relation index)
 
 	/* Make sure it's safe to use parallel workers */
 	parallel_workers = plan_create_index_workers(RelationGetRelid(heap), RelationGetRelid(index));
-	if (parallel_workers == 0)
+	if (HnswShouldSkipParallelWorkers(parallel_workers, true))
 		return 0;
 
 	/* Use parallel_workers storage parameter on table if set */
