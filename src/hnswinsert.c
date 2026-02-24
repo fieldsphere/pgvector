@@ -32,6 +32,7 @@ static bool HnswShouldAbortOnDiskElementMoveNext(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRust);
 static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust);
+static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 
 /*
  * Get the insert page
@@ -361,7 +362,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	else
 		GenericXLogFinish(state);
 	UnlockReleaseBuffer(buf);
-	if (nbuf != buf)
+	if (HnswShouldReleaseOnDiskNeighborBuffer(nbuf == buf, true))
 		UnlockReleaseBuffer(nbuf);
 
 	/* Update the insert page */
@@ -1250,6 +1251,33 @@ vector_rust_hnsw_should_update_add_element_insert_page(PG_FUNCTION_ARGS)
 	int32		pageChanged = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldUpdateAddElementInsertPage(hasNewInsertPage != 0, pageChanged != 0, true));
+}
+
+static bool
+HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
+
+	return !sameBuffer;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_ondisk_neighbor_buffer);
+Datum
+vector_hnsw_should_release_ondisk_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseOnDiskNeighborBuffer(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_release_ondisk_neighbor_buffer);
+Datum
+vector_rust_hnsw_should_release_ondisk_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseOnDiskNeighborBuffer(sameBuffer != 0, true));
 }
 
 static bool
