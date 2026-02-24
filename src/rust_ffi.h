@@ -32,5 +32,8 @@ void		vector_rust_vector_avg(int dim, const double *state, double n, float *dst)
 void		vector_rust_halfvec_to_vector(int dim, const void *ax, float *rx);
 void		vector_rust_sparse_to_dense(int nnz, const int32 *indices, const float *values, float *rx);
 void		vector_rust_halfvec_add_kernel(int dim, const void *ax, const void *bx, float *rx);
+void		vector_rust_halfvec_sub_kernel(int dim, const void *ax, const void *bx, float *rx);
+void		vector_rust_halfvec_mul_kernel(int dim, const void *ax, const void *bx, float *rx);
+void		vector_rust_halfvec_concat_kernel(int adim, const void *ax, int bdim, const void *bx, float *rx);
 
 #endif

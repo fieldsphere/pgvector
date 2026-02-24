@@ -1,13 +1,38 @@
 CREATE FUNCTION rust_halfvec_add(halfvec, halfvec) RETURNS halfvec
 	AS '$libdir/vector', 'vector_rust_halfvec_add'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_halfvec_sub(halfvec, halfvec) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_sub'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_halfvec_mul(halfvec, halfvec) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_mul'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_halfvec_concat(halfvec, halfvec) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_concat'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 SELECT
-	halfvec_add(h1, h2) = rust_halfvec_add(h1, h2)
+	halfvec_add(h1, h2) = rust_halfvec_add(h1, h2),
+	halfvec_sub(h1, h2) = rust_halfvec_sub(h1, h2),
+	halfvec_mul(h1, h2) = rust_halfvec_mul(h1, h2)
 FROM (VALUES
-	('[1,2,3]'::halfvec(3), '[3,2,1]'::halfvec(3))
+	('[1,2,3]'::halfvec(3), '[3,2,1]'::halfvec(3)),
+	('[0.5,0.25,0.75]'::halfvec(3), '[0.1,0.2,0.3]'::halfvec(3))
+) AS t(h1, h2);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+ t        | t        | t
+ t        | t        | t
+(2 rows)
+
+SELECT
+	halfvec_concat(h1, h2) = rust_halfvec_concat(h1, h2)
+FROM (VALUES
+	('[1,2]'::halfvec(2), '[3,4]'::halfvec(2)),
+	('[-1,2]'::halfvec(2), '[0,5]'::halfvec(2))
 ) AS t(h1, h2);
  ?column? 
 ----------
  t
-(1 row)
+ t
+(2 rows)
 

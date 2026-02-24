@@ -875,25 +875,19 @@ halfvec_sub(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
-	half	   *ax = a->x;
-	half	   *bx = b->x;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	CheckDims(a, b);
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_sub_kernel(a->dim, a->x, b->x, rust_result);
 	for (int i = 0, imax = a->dim; i < imax; i++)
-	{
-#ifdef FLT16_SUPPORT
-		rx[i] = ax[i] - bx[i];
-#else
-		rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) - HalfToFloat4(bx[i]));
-#endif
-	}
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -902,7 +896,18 @@ halfvec_sub(PG_FUNCTION_ARGS)
 			float_overflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: subtract half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_sub);
+Datum
+vector_rust_halfvec_sub(PG_FUNCTION_ARGS)
+{
+	return halfvec_sub(fcinfo);
 }
 
 /*
@@ -918,21 +923,17 @@ halfvec_mul(PG_FUNCTION_ARGS)
 	half	   *bx = b->x;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	CheckDims(a, b);
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_mul_kernel(a->dim, ax, bx, rust_result);
 	for (int i = 0, imax = a->dim; i < imax; i++)
-	{
-#ifdef FLT16_SUPPORT
-		rx[i] = ax[i] * bx[i];
-#else
-		rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) * HalfToFloat4(bx[i]));
-#endif
-	}
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
 	/* Check for overflow and underflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -944,7 +945,18 @@ halfvec_mul(PG_FUNCTION_ARGS)
 			float_underflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: multiply half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_mul);
+Datum
+vector_rust_halfvec_mul(PG_FUNCTION_ARGS)
+{
+	return halfvec_mul(fcinfo);
 }
 
 /*
@@ -957,18 +969,29 @@ halfvec_concat(PG_FUNCTION_ARGS)
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
 	HalfVector *result;
+	float	   *rust_result;
 	int			dim = a->dim + b->dim;
 
 	CheckDim(dim);
 	result = InitHalfVector(dim);
+	rust_result = palloc(sizeof(float) * dim);
 
-	for (int i = 0; i < a->dim; i++)
-		result->x[i] = a->x[i];
+	vector_rust_halfvec_concat_kernel(a->dim, a->x, b->dim, b->x, rust_result);
+	for (int i = 0; i < dim; i++)
+		result->x[i] = Float4ToHalfUnchecked(rust_result[i]);
 
-	for (int i = 0; i < b->dim; i++)
-		result->x[i + a->dim] = b->x[i];
-
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: concatenate half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_concat);
+Datum
+vector_rust_halfvec_concat(PG_FUNCTION_ARGS)
+{
+	return halfvec_concat(fcinfo);
 }
 
 /*

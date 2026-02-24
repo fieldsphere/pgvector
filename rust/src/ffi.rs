@@ -473,3 +473,48 @@ pub unsafe extern "C" fn vector_rust_halfvec_add_kernel(
         *rx.add(i) = a + b;
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_sub_kernel(
+    dim: i32,
+    ax: *const c_void,
+    bx: *const c_void,
+    rx: *mut f32,
+) {
+    for i in 0..(dim as usize) {
+        let a = half_bits_to_f32(read_half_bits(ax, i));
+        let b = half_bits_to_f32(read_half_bits(bx, i));
+        *rx.add(i) = a - b;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_mul_kernel(
+    dim: i32,
+    ax: *const c_void,
+    bx: *const c_void,
+    rx: *mut f32,
+) {
+    for i in 0..(dim as usize) {
+        let a = half_bits_to_f32(read_half_bits(ax, i));
+        let b = half_bits_to_f32(read_half_bits(bx, i));
+        *rx.add(i) = a * b;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_halfvec_concat_kernel(
+    adim: i32,
+    ax: *const c_void,
+    bdim: i32,
+    bx: *const c_void,
+    rx: *mut f32,
+) {
+    for i in 0..(adim as usize) {
+        *rx.add(i) = half_bits_to_f32(read_half_bits(ax, i));
+    }
+
+    for i in 0..(bdim as usize) {
+        *rx.add((adim as usize) + i) = half_bits_to_f32(read_half_bits(bx, i));
+    }
+}
