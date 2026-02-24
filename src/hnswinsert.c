@@ -19,6 +19,7 @@ static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elemen
 static bool HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust);
 static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust);
 static bool HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, bool useRust);
+static bool HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust);
 
 /*
  * Get the insert page
@@ -676,7 +677,7 @@ UpdateGraphOnDisk(Relation index, HnswSupport * support, HnswElement element, in
 	BlockNumber newInsertPage = InvalidBlockNumber;
 
 	/* Look for duplicate */
-	if (FindDuplicateOnDisk(index, element, building))
+	if (HnswShouldSkipOnDiskGraphUpdateForDuplicate(FindDuplicateOnDisk(index, element, building), true))
 		return;
 
 	/* Add element */
@@ -876,6 +877,33 @@ vector_rust_hnsw_should_return_after_ondisk_duplicate_insert(PG_FUNCTION_ARGS)
 	int32		duplicateInserted = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnAfterOnDiskDuplicateInsert(duplicateInserted != 0, true));
+}
+
+static bool
+HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(duplicateFound);
+
+	return duplicateFound;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_ondisk_graph_update_for_duplicate);
+Datum
+vector_hnsw_should_skip_ondisk_graph_update_for_duplicate(PG_FUNCTION_ARGS)
+{
+	int32		duplicateFound = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipOnDiskGraphUpdateForDuplicate(duplicateFound != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_ondisk_graph_update_for_duplicate);
+Datum
+vector_rust_hnsw_should_skip_ondisk_graph_update_for_duplicate(PG_FUNCTION_ARGS)
+{
+	int32		duplicateFound = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipOnDiskGraphUpdateForDuplicate(duplicateFound != 0, true));
 }
 
 static bool
