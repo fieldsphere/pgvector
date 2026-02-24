@@ -326,6 +326,33 @@ vector_rust_hnsw_should_advance_on_exhausted_heaptids(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldAdvanceOnExhaustedHeapTids(heaptidsLength, true));
 }
 
+static bool
+HnswShouldRejectMissingOrderBy(bool orderByIsNull, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_missing_orderby_kernel(orderByIsNull);
+
+	return orderByIsNull;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_missing_orderby);
+Datum
+vector_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectMissingOrderBy(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_missing_orderby);
+Datum
+vector_rust_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectMissingOrderBy(orderByIsNull != 0, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -517,7 +544,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 #endif
 
 		/* Safety check */
-		if (scan->orderByData == NULL)
+		if (HnswShouldRejectMissingOrderBy(scan->orderByData == NULL, true))
 			elog(ERROR, "cannot scan hnsw index without order");
 
 		/* Requires MVCC-compliant snapshot as not able to maintain a pin */
