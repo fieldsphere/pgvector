@@ -319,6 +319,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_leader_participate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_debug_query_string(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_debug_query_string'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_debug_query_string(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_debug_query_string'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -684,5 +694,17 @@ my $leader_participate_parity = $node->safe_psql("postgres", q{
 	) AS t(leader_participates);
 });
 is($leader_participate_parity, "t\nt\nt\nt");
+
+my $use_debug_query_string_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_debug_query_string(has_debug_query_string) =
+		   rust_hnsw_should_use_debug_query_string(has_debug_query_string)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_debug_query_string);
+});
+is($use_debug_query_string_parity, "t\nt\nt\nt");
 
 done_testing();
