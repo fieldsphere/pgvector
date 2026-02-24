@@ -15,6 +15,8 @@
 #include "varatt.h"
 #endif
 
+static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust);
+
 /*
  * Get the insert page
  */
@@ -685,7 +687,7 @@ UpdateGraphOnDisk(Relation index, HnswSupport * support, HnswElement element, in
 	HnswUpdateNeighborsOnDisk(index, support, element, m, false, building);
 
 	/* Update entry point if needed */
-	if (entryPoint == NULL || element->level > entryPoint->level)
+	if (HnswShouldUpdateEntryPointOnDisk(entryPoint == NULL, element->level, entryPoint != NULL ? entryPoint->level : -1, true))
 		HnswUpdateMetaPage(index, HNSW_UPDATE_ENTRY_GREATER, element, InvalidBlockNumber, MAIN_FORKNUM, building);
 }
 
@@ -717,7 +719,7 @@ HnswInsertTupleOnDisk(Relation index, HnswSupport * support, Datum value, ItemPo
 	HnswPtrStore(base, element->value, (char *) DatumGetPointer(value));
 
 	/* Prevent concurrent inserts when likely updating entry point */
-	if (entryPoint == NULL || element->level > entryPoint->level)
+	if (HnswShouldUpdateEntryPointOnDisk(entryPoint == NULL, element->level, entryPoint != NULL ? entryPoint->level : -1, true))
 	{
 		/* Release shared lock */
 		UnlockPage(index, HNSW_UPDATE_LOCK, lockmode);
@@ -759,6 +761,37 @@ HnswInsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid
 		return;
 
 	HnswInsertTupleOnDisk(index, &support, value, heaptid, false);
+}
+
+static bool
+HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_entry_point_kernel(entryPointIsNull, elementLevel, entryLevel);
+
+	return entryPointIsNull || elementLevel > entryLevel;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_entrypoint_ondisk);
+Datum
+vector_hnsw_should_update_entrypoint_ondisk(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+	int32		elementLevel = PG_GETARG_INT32(1);
+	int32		entryLevel = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldUpdateEntryPointOnDisk(entryPointIsNull != 0, elementLevel, entryLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_entrypoint_ondisk);
+Datum
+vector_rust_hnsw_should_update_entrypoint_ondisk(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+	int32		elementLevel = PG_GETARG_INT32(1);
+	int32		entryLevel = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldUpdateEntryPointOnDisk(entryPointIsNull != 0, elementLevel, entryLevel, true));
 }
 
 static bool
