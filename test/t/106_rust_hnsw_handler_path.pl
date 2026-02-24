@@ -620,6 +620,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_ondisk_duplicate_insert_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_ondisk_duplicate_insert_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_ondisk_duplicate_insert_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1366,6 +1376,18 @@ my $update_ondisk_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(has_new_insert_page);
 });
 is($update_ondisk_insert_page_parity, "t\nt\nt\nt");
+
+my $reject_ondisk_duplicate_insert_slot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_ondisk_duplicate_insert_slot(free_slot_index, max_heaptids) =
+		   rust_hnsw_should_reject_ondisk_duplicate_insert_slot(free_slot_index, max_heaptids)
+	FROM (VALUES
+		(0, 10),
+		(3, 10),
+		(10, 10),
+		(1, 2)
+	) AS t(free_slot_index, max_heaptids);
+});
+is($reject_ondisk_duplicate_insert_slot_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
