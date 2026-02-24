@@ -69,6 +69,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_choose_build_center_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_append_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_append_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_append_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_append_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -134,5 +144,17 @@ my $build_center_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(distance, min_distance);
 });
 is($build_center_candidate_parity, "t\nt\nt\nt");
+
+my $append_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_append_page(free_space, item_size) =
+		   rust_ivfflat_should_append_page(free_space, item_size)
+	FROM (VALUES
+		(100, 101),
+		(100, 100),
+		(100, 99),
+		(0, 1)
+	) AS t(free_space, item_size);
+});
+is($append_page_parity, "t\nt\nt\nt");
 
 done_testing();
