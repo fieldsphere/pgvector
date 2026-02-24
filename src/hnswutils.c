@@ -111,6 +111,7 @@ static bool HnswShouldAddSearchCandidate(float8 candidateDistance, float8 fronti
 static bool HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust);
 static bool HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust);
 static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust);
+static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1089,6 +1090,15 @@ HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useR
 	return candidateLevel < searchLevel;
 }
 
+static bool
+HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_keep_pruned_connection_kernel(wdoff, wdlen, resultLength, maxNeighbors);
+
+	return wdoff < wdlen && resultLength < maxNeighbors;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1211,6 +1221,30 @@ vector_rust_hnsw_should_skip_lower_level_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipLowerLevelCandidate(candidateLevel, searchLevel, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_keep_pruned_connection);
+Datum
+vector_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_keep_pruned_connection);
+Datum
+vector_rust_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
@@ -1326,7 +1360,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	*closerSet = sortCandidates;
 
 	/* Keep pruned connections */
-	while (wdoff < wdlen && list_length(r) < lm)
+	while (HnswShouldKeepPrunedConnection(wdoff, wdlen, list_length(r), lm, true))
 		r = lappend(r, wd[wdoff++]);
 
 	/* Return pruned for update connections */
