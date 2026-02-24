@@ -29,6 +29,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_finalize_center'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_zero_agg(integer, integer) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_zero_agg'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_zero_agg(integer, integer) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_zero_agg'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_center_counts(assignments, centers) = rust_ivfflat_center_counts(assignments, centers)
@@ -49,5 +59,15 @@ my $finalize_parity = $node->safe_psql("postgres", q{
 	) AS t(values, n);
 });
 is($finalize_parity, "t\nt\nt");
+
+my $zero_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_zero_agg(centers, dims) = rust_ivfflat_zero_agg(centers, dims)
+	FROM (VALUES
+		(1, 3),
+		(2, 2),
+		(3, 4)
+	) AS t(centers, dims);
+});
+is($zero_parity, "t\nt\nt");
 
 done_testing();
