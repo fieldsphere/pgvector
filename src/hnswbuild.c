@@ -85,6 +85,7 @@ static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
 static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
 static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust);
 static bool HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust);
+static bool HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -1087,7 +1088,7 @@ HnswParallelScanAndInsert(Relation heapRel, Relation indexRel, HnswShared * hnsw
 	SpinLockRelease(&hnswshared->mutex);
 
 	/* Log statistics */
-	if (progress)
+	if (HnswShouldLogLeaderProgress(progress, true))
 		ereport(DEBUG1, (errmsg("leader processed " INT64_FORMAT " tuples", (int64) reltuples)));
 	else
 		ereport(DEBUG1, (errmsg("worker processed " INT64_FORMAT " tuples", (int64) reltuples)));
@@ -1556,6 +1557,33 @@ vector_rust_hnsw_should_reserve_graph_memory(PG_FUNCTION_ARGS)
 	int64		estOther = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldReserveGraphMemory(estHnswArea, estOther, true));
+}
+
+static bool
+HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_log_leader_progress_kernel(progressIsLeader);
+
+	return progressIsLeader;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_log_leader_progress);
+Datum
+vector_hnsw_should_log_leader_progress(PG_FUNCTION_ARGS)
+{
+	int32		progressIsLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLogLeaderProgress(progressIsLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_log_leader_progress);
+Datum
+vector_rust_hnsw_should_log_leader_progress(PG_FUNCTION_ARGS)
+{
+	int32		progressIsLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLogLeaderProgress(progressIsLeader != 0, true));
 }
 
 static bool

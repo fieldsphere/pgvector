@@ -429,6 +429,13 @@ pub extern "C" fn vector_rust_hnsw_should_reserve_graph_memory_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_log_leader_progress_kernel(
+    progress_is_leader: bool,
+) -> bool {
+    progress_is_leader
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {
