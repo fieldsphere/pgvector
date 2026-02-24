@@ -109,6 +109,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_lower_level_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_keep_pruned_connection(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_keep_pruned_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_keep_pruned_connection(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_keep_pruned_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -229,5 +239,17 @@ my $skip_lower_level_candidate_parity = $node->safe_psql("postgres", q{
 	) AS t(candidate_level, search_level);
 });
 is($skip_lower_level_candidate_parity, "t\nt\nt\nt");
+
+my $keep_pruned_connection_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_keep_pruned_connection(wdoff, wdlen, result_length, max_neighbors) =
+		   rust_hnsw_should_keep_pruned_connection(wdoff, wdlen, result_length, max_neighbors)
+	FROM (VALUES
+		(0, 2, 0, 2),
+		(2, 2, 0, 2),
+		(0, 2, 2, 2),
+		(1, 3, 1, 2)
+	) AS t(wdoff, wdlen, result_length, max_neighbors);
+});
+is($keep_pruned_connection_parity, "t\nt\nt\nt");
 
 done_testing();
