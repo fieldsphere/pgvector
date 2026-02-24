@@ -119,6 +119,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_scan_probe_limits'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_compute_scan_limits(integer, integer, integer, integer) RETURNS integer[]
+	AS '$libdir/vector', 'vector_ivfflat_compute_scan_limits'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_compute_scan_limits(integer, integer, integer, integer) RETURNS integer[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_compute_scan_limits'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -244,5 +254,18 @@ my $scan_probe_limits_parity = $node->safe_psql("postgres", q{
 	) AS t(probes, max_probes, lists);
 });
 is($scan_probe_limits_parity, "t\nt\nt\nt");
+
+my $compute_scan_limits_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_compute_scan_limits(probes, max_probes, lists, iterative_scan) =
+		   rust_ivfflat_compute_scan_limits(probes, max_probes, lists, iterative_scan)
+	FROM (VALUES
+		(4, 8, 10, 0),
+		(4, 8, 10, 1),
+		(12, 5, 10, 0),
+		(2, 50, 20, 1),
+		(1, 1, 1, 1)
+	) AS t(probes, max_probes, lists, iterative_scan);
+});
+is($compute_scan_limits_parity, "t\nt\nt\nt\nt");
 
 done_testing();
