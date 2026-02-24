@@ -69,6 +69,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_ondisk_phase'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_add_search_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_add_search_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_add_search_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_add_search_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -141,5 +151,17 @@ my $ondisk_phase_parity = $node->safe_psql("postgres", q{
 	) AS t(flushed);
 });
 is($ondisk_phase_parity, "t\nt\nt\nt");
+
+my $add_search_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_add_search_candidate(candidate_distance, frontier_distance, always_add) =
+		   rust_hnsw_should_add_search_candidate(candidate_distance, frontier_distance, always_add)
+	FROM (VALUES
+		(0.1::double precision, 0.2::double precision, 0),
+		(0.3::double precision, 0.2::double precision, 0),
+		(0.3::double precision, 0.2::double precision, 1),
+		(0.2::double precision, 0.2::double precision, 0)
+	) AS t(candidate_distance, frontier_distance, always_add);
+});
+is($add_search_candidate_parity, "t\nt\nt\nt");
 
 done_testing();
