@@ -481,6 +481,33 @@ vector_rust_hnsw_should_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFlushGraphPagesAtEnd(graphFlushed != 0, true));
 }
 
+static bool
+HnswShouldBeginParallelBuild(int parallelWorkers, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_begin_parallel_build_kernel(parallelWorkers);
+
+	return parallelWorkers > 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_begin_parallel_build);
+Datum
+vector_hnsw_should_begin_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldBeginParallelBuild(parallelWorkers, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_begin_parallel_build);
+Datum
+vector_rust_hnsw_should_begin_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldBeginParallelBuild(parallelWorkers, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -1244,7 +1271,7 @@ BuildGraph(HnswBuildState * buildstate)
 		parallel_workers = ComputeParallelWorkers(buildstate->heap, buildstate->index);
 
 	/* Attempt to launch parallel worker scan when required */
-	if (parallel_workers > 0)
+	if (HnswShouldBeginParallelBuild(parallel_workers, true))
 		HnswBeginParallel(buildstate, buildstate->indexInfo->ii_Concurrent, parallel_workers);
 
 	/* Add tuples to graph */
