@@ -2,11 +2,13 @@
 
 #include "access/genam.h"
 #include "access/relscan.h"
+#include "fmgr.h"
 #include "hnsw.h"
 #include "lib/pairingheap.h"
 #include "miscadmin.h"
 #include "nodes/pg_list.h"
 #include "pgstat.h"
+#include "rust_ffi.h"
 #include "storage/lmgr.h"
 #include "utils/float.h"
 #include "utils/memutils.h"
@@ -16,6 +18,33 @@
 #if PG_VERSION_NUM >= 160000
 #include "varatt.h"
 #endif
+
+static bool
+HnswShouldReturnEmptyWithoutEntryPoint(bool entryPointIsNull, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(entryPointIsNull);
+
+	return entryPointIsNull;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_empty_without_entrypoint);
+Datum
+vector_hnsw_should_return_empty_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutEntryPoint(entryPointIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_empty_without_entrypoint);
+Datum
+vector_rust_hnsw_should_return_empty_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutEntryPoint(entryPointIsNull != 0, true));
+}
 
 /*
  * Algorithm 5 from paper
@@ -39,7 +68,7 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	q->value = value;
 	so->m = m;
 
-	if (entryPoint == NULL)
+	if (HnswShouldReturnEmptyWithoutEntryPoint(entryPoint == NULL, true))
 		return NIL;
 
 	ep = list_make1(HnswEntryCandidate(base, entryPoint, q, index, support, false));
