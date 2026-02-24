@@ -369,6 +369,33 @@ vector_rust_hnsw_should_flush_graph(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFlushGraph((Size) memoryUsed, (Size) memoryTotal, true));
 }
 
+static bool
+HnswShouldUseOnDiskPhase(bool graphFlushed, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_use_ondisk_phase_kernel(graphFlushed);
+
+	return graphFlushed;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_ondisk_phase);
+Datum
+vector_hnsw_should_use_ondisk_phase(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseOnDiskPhase(graphFlushed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_ondisk_phase);
+Datum
+vector_rust_hnsw_should_use_ondisk_phase(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseOnDiskPhase(graphFlushed != 0, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -560,7 +587,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid, Hn
 	LWLockAcquire(flushLock, LW_SHARED);
 
 	/* Are we in the on-disk phase? */
-	if (graph->flushed)
+	if (HnswShouldUseOnDiskPhase(graph->flushed, true))
 	{
 		LWLockRelease(flushLock);
 
