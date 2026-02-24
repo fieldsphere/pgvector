@@ -183,6 +183,37 @@ vector_rust_hnsw_clamp_ratio(PG_FUNCTION_ARGS)
 	PG_RETURN_FLOAT8(HnswClampRatio(ratio, true));
 }
 
+static bool
+HnswShouldAdjustStartupCost(double startupPages, double relPages, double ratio, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_adjust_startup_cost_kernel(startupPages, relPages, ratio);
+
+	return startupPages > relPages && ratio < 0.5;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_adjust_startup_cost);
+Datum
+vector_hnsw_should_adjust_startup_cost(PG_FUNCTION_ARGS)
+{
+	float8		startupPages = PG_GETARG_FLOAT8(0);
+	float8		relPages = PG_GETARG_FLOAT8(1);
+	float8		ratio = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldAdjustStartupCost(startupPages, relPages, ratio, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_adjust_startup_cost);
+Datum
+vector_rust_hnsw_should_adjust_startup_cost(PG_FUNCTION_ARGS)
+{
+	float8		startupPages = PG_GETARG_FLOAT8(0);
+	float8		relPages = PG_GETARG_FLOAT8(1);
+	float8		ratio = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldAdjustStartupCost(startupPages, relPages, ratio, true));
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -270,7 +301,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 
 	/* Adjust cost if needed since TOAST not included in seq scan cost */
 	startupPages = costs.numIndexPages * ratio;
-	if (startupPages > path->indexinfo->rel->pages && ratio < 0.5)
+	if (HnswShouldAdjustStartupCost(startupPages, path->indexinfo->rel->pages, ratio, true))
 	{
 		/* Change all page cost from random to sequential */
 		costs.indexStartupCost -= startupPages * (costs.spc_random_page_cost - spc_seq_page_cost);
