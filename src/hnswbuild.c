@@ -82,6 +82,7 @@ static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
 static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust);
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
+static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
 /*
@@ -1154,7 +1155,7 @@ HnswEndParallel(HnswLeader * hnswleader)
 	WaitForParallelWorkersToFinish(hnswleader->pcxt);
 
 	/* Free last reference to MVCC snapshot, if one was used */
-	if (IsMVCCSnapshot(hnswleader->snapshot))
+	if (HnswShouldUnregisterMVCCSnapshot(IsMVCCSnapshot(hnswleader->snapshot), true))
 		UnregisterSnapshot(hnswleader->snapshot);
 	DestroyParallelContext(hnswleader->pcxt);
 	ExitParallelMode();
@@ -1244,7 +1245,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	/* If no DSM segment was available, back out (do serial build) */
 	if (pcxt->seg == NULL)
 	{
-		if (IsMVCCSnapshot(snapshot))
+		if (HnswShouldUnregisterMVCCSnapshot(IsMVCCSnapshot(snapshot), true))
 			UnregisterSnapshot(snapshot);
 		DestroyParallelContext(pcxt);
 		ExitParallelMode();
@@ -1469,6 +1470,33 @@ vector_rust_hnsw_should_finish_parallel_heap_scan(PG_FUNCTION_ARGS)
 	int32		participantCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldFinishParallelHeapScan(participantsDone, participantCount, true));
+}
+
+static bool
+HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(snapshotIsMVCC);
+
+	return snapshotIsMVCC;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_unregister_mvcc_snapshot);
+Datum
+vector_hnsw_should_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUnregisterMVCCSnapshot(snapshotIsMVCC != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_unregister_mvcc_snapshot);
+Datum
+vector_rust_hnsw_should_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUnregisterMVCCSnapshot(snapshotIsMVCC != 0, true));
 }
 
 static bool
