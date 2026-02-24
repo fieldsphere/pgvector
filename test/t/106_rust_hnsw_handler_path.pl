@@ -530,6 +530,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_return_after_duplicate_insert(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_return_after_duplicate_insert'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_return_after_duplicate_insert(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_return_after_duplicate_insert'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1168,6 +1178,18 @@ my $stop_duplicate_search_on_value_mismatch_parity = $node->safe_psql("postgres"
 	) AS t(values_equal);
 });
 is($stop_duplicate_search_on_value_mismatch_parity, "t\nt\nt\nt");
+
+my $return_after_duplicate_insert_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_return_after_duplicate_insert(duplicate_inserted) =
+		   rust_hnsw_should_return_after_duplicate_insert(duplicate_inserted)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(duplicate_inserted);
+});
+is($return_after_duplicate_insert_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
