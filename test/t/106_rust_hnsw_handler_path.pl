@@ -460,6 +460,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_oversized_element_tuple(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_oversized_element_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_oversized_element_tuple(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_oversized_element_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1014,6 +1024,18 @@ my $store_neighbors_on_same_page_parity = $node->safe_psql("postgres", q{
 	) AS t(combined_size, max_size);
 });
 is($store_neighbors_on_same_page_parity, "t\nt\nt\nt");
+
+my $reject_oversized_element_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_oversized_element_tuple(tuple_size, alloc_size) =
+		   rust_hnsw_should_reject_oversized_element_tuple(tuple_size, alloc_size)
+	FROM (VALUES
+		(32::bigint, 64::bigint),
+		(64::bigint, 64::bigint),
+		(65::bigint, 64::bigint),
+		(2048::bigint, 1024::bigint)
+	) AS t(tuple_size, alloc_size);
+});
+is($reject_oversized_element_tuple_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
