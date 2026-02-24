@@ -259,6 +259,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_normalize_scan_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_initialize_scan_state(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_initialize_scan_state'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_initialize_scan_state(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_initialize_scan_state'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -552,5 +562,17 @@ my $normalize_scan_value_parity = $node->safe_psql("postgres", q{
 	) AS t(has_normproc);
 });
 is($normalize_scan_value_parity, "t\nt\nt\nt");
+
+my $initialize_scan_state_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_initialize_scan_state(is_first_scan) =
+		   rust_hnsw_should_initialize_scan_state(is_first_scan)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_first_scan);
+});
+is($initialize_scan_state_parity, "t\nt\nt\nt");
 
 done_testing();
