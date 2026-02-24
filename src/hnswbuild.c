@@ -91,6 +91,7 @@ static bool HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust);
 static bool HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust);
 static bool HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust);
 static bool HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust);
+static bool HnswShouldSkipNullBuildTuple(bool isNull, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -874,7 +875,7 @@ BuildCallback(Relation index, ItemPointer tid, Datum *values,
 	MemoryContext oldCtx;
 
 	/* Skip nulls */
-	if (isnull[0])
+	if (HnswShouldSkipNullBuildTuple(isnull[0], true))
 		return;
 
 	/* Use memory context */
@@ -1730,6 +1731,33 @@ vector_rust_hnsw_should_write_wal_page(PG_FUNCTION_ARGS)
 	int32		isInitFork = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldWriteWalPage(needsWal != 0, isInitFork != 0, true));
+}
+
+static bool
+HnswShouldSkipNullBuildTuple(bool isNull, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_null_build_tuple_kernel(isNull);
+
+	return isNull;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_null_build_tuple);
+Datum
+vector_hnsw_should_skip_null_build_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNullBuildTuple(isNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_null_build_tuple);
+Datum
+vector_rust_hnsw_should_skip_null_build_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNullBuildTuple(isNull != 0, true));
 }
 
 static bool
