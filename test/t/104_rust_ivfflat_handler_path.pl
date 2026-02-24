@@ -29,6 +29,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_cost_adjust'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_choose_insert_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_choose_insert_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_choose_insert_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_choose_insert_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -46,5 +56,17 @@ my $cost_parity = $node->safe_psql("postgres", q{
 	) AS t(index_total_cost, num_index_pages, random_page_cost, seq_page_cost, ratio, rel_pages);
 });
 is($cost_parity, "t\nt\nt");
+
+my $insert_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_choose_insert_candidate(distance, min_distance, insert_page) =
+		   rust_ivfflat_choose_insert_candidate(distance, min_distance, insert_page)
+	FROM (VALUES
+		(0.5::double precision, 1.0::double precision, 10),
+		(1.5::double precision, 1.0::double precision, 10),
+		(3.0::double precision, 3.0::double precision, -1),
+		(2.9::double precision, 3.0::double precision, 42)
+	) AS t(distance, min_distance, insert_page);
+});
+is($insert_candidate_parity, "t\nt\nt\nt");
 
 done_testing();
