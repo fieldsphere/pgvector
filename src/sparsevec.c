@@ -684,9 +684,10 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 	char		typalign;
 	Datum	   *elemsp;
 	int			nelemsp;
-	int			nnz = 0;
+	int			nnz;
+	float	   *dense_values;
 	float	   *values;
-	int			j = 0;
+	int			j;
 
 	if (ARR_NDIM(array) > 1)
 		ereport(ERROR,
@@ -704,85 +705,41 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 	CheckDim(nelemsp);
 	CheckExpectedDim(typmod, nelemsp);
 
-#ifdef _MSC_VER
-/* /fp:fast may not propagate +/-Infinity or NaN */
-#define IS_NOT_ZERO(v) (isnan((float) (v)) || isinf((float) (v)) || ((float) (v)) != 0)
-#else
-#define IS_NOT_ZERO(v) (((float) (v)) != 0)
-#endif
+	dense_values = palloc(sizeof(float) * nelemsp);
 
 	if (ARR_ELEMTYPE(array) == INT4OID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DatumGetInt32(elemsp[i]));
+			dense_values[i] = (float) DatumGetInt32(elemsp[i]);
 	}
 	else if (ARR_ELEMTYPE(array) == FLOAT8OID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DatumGetFloat8(elemsp[i]));
+			dense_values[i] = (float) DatumGetFloat8(elemsp[i]);
 	}
 	else if (ARR_ELEMTYPE(array) == FLOAT4OID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DatumGetFloat4(elemsp[i]));
+			dense_values[i] = DatumGetFloat4(elemsp[i]);
 	}
 	else if (ARR_ELEMTYPE(array) == NUMERICOID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DirectFunctionCall1(numeric_float4, elemsp[i]));
+			dense_values[i] = DatumGetFloat4(DirectFunctionCall1(numeric_float4, elemsp[i]));
 	}
 	else
 	{
+		pfree(dense_values);
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
 				 errmsg("unsupported array type")));
 	}
 
+	nnz = vector_rust_vector_to_sparse_count_kernel(nelemsp, dense_values);
 	result = InitSparseVector(nelemsp, nnz);
 	values = SPARSEVEC_VALUES(result);
-
-#define PROCESS_ARRAY_ELEM(elem) \
-	do { \
-		float v = (float) (elem); \
-		if (IS_NOT_ZERO(v)) { \
-			/* Safety check */ \
-			if (j >= result->nnz) \
-				elog(ERROR, "safety check failed"); \
-			result->indices[j] = i; \
-			values[j] = v; \
-			j++; \
-		} \
-	} while (0)
-
-	if (ARR_ELEMTYPE(array) == INT4OID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetInt32(elemsp[i]));
-	}
-	else if (ARR_ELEMTYPE(array) == FLOAT8OID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetFloat8(elemsp[i]));
-	}
-	else if (ARR_ELEMTYPE(array) == FLOAT4OID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetFloat4(elemsp[i]));
-	}
-	else if (ARR_ELEMTYPE(array) == NUMERICOID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetFloat4(DirectFunctionCall1(numeric_float4, elemsp[i])));
-	}
-	else
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_EXCEPTION),
-				 errmsg("unsupported array type")));
-	}
-
-#undef PROCESS_ARRAY_ELEM
-#undef IS_NOT_ZERO
+	j = vector_rust_vector_to_sparse_fill_kernel(nelemsp, dense_values, result->indices, values);
+	pfree(dense_values);
 
 	/*
 	 * Free allocation from deconstruct_array. Do not free individual elements
@@ -798,6 +755,16 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 		CheckElement(values[i]);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: array to sparse vector cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_array_to_sparsevec);
+Datum
+vector_rust_array_to_sparsevec(PG_FUNCTION_ARGS)
+{
+	return array_to_sparsevec(fcinfo);
 }
 
 /*
