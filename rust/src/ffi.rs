@@ -561,6 +561,23 @@ pub unsafe extern "C" fn vector_rust_halfvec_to_sparse_fill_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_center_counts_kernel(
+    sample_count: i32,
+    closest_centers: *const i32,
+    center_count: i32,
+    counts: *mut i32,
+) {
+    for i in 0..(center_count as usize) {
+        *counts.add(i) = 0;
+    }
+
+    for i in 0..(sample_count as usize) {
+        let center = *closest_centers.add(i) as usize;
+        *counts.add(center) += 1;
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,

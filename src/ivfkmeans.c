@@ -5,15 +5,108 @@
 #include <math.h>
 
 #include "access/genam.h"
+#include "catalog/pg_type.h"
 #include "fmgr.h"
 #include "ivfflat.h"
 #include "miscadmin.h"
+#include "rust_ffi.h"
+#include "utils/array.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
 
 #if PG_VERSION_NUM >= 160000
 #include "varatt.h"
 #endif
+
+static ArrayType *
+IvfflatCenterCounts(ArrayType *assignmentsArray, int32 centerCount, bool useRust)
+{
+	Datum	   *assignmentDatums;
+	int			assignmentLength;
+	int32	   *assignments;
+	int32	   *counts;
+	Datum	   *countDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(assignmentsArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("assignments array must be 1-D")));
+
+	if (ARR_HASNULL(assignmentsArray) && array_contains_nulls(assignmentsArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("assignments array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(assignmentsArray) != INT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("assignments array must be integer[]")));
+
+	deconstruct_array(assignmentsArray, INT4OID, sizeof(int32), true, TYPALIGN_INT,
+					  &assignmentDatums, NULL, &assignmentLength);
+
+	assignments = palloc(sizeof(int32) * assignmentLength);
+	for (int i = 0; i < assignmentLength; i++)
+	{
+		int32		center = DatumGetInt32(assignmentDatums[i]);
+
+		if (center < 0 || center >= centerCount)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("assignment index out of bounds")));
+
+		assignments[i] = center;
+	}
+
+	counts = palloc0(sizeof(int32) * centerCount);
+
+	if (useRust)
+		vector_rust_ivfflat_center_counts_kernel(assignmentLength, assignments, centerCount, counts);
+	else
+	{
+		for (int i = 0; i < assignmentLength; i++)
+			counts[assignments[i]] += 1;
+	}
+
+	countDatums = palloc(sizeof(Datum) * centerCount);
+	for (int i = 0; i < centerCount; i++)
+		countDatums[i] = Int32GetDatum(counts[i]);
+
+	result = construct_array(countDatums, centerCount, INT4OID, sizeof(int32), true, TYPALIGN_INT);
+
+	pfree(countDatums);
+	pfree(counts);
+	pfree(assignments);
+	pfree(assignmentDatums);
+
+	return result;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_center_counts);
+Datum
+vector_ivfflat_center_counts(PG_FUNCTION_ARGS)
+{
+	ArrayType  *assignmentsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatCenterCounts(assignmentsArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_center_counts);
+Datum
+vector_rust_ivfflat_center_counts(PG_FUNCTION_ARGS)
+{
+	ArrayType  *assignmentsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatCenterCounts(assignmentsArray, centerCount, true));
+}
 
 /*
  * Initialize with kmeans++
@@ -204,16 +297,13 @@ ComputeNewCenters(VectorArray samples, float *agg, VectorArray newCenters, int *
 
 		for (int k = 0; k < dimensions; k++)
 			x[k] = 0.0;
-
-		centerCounts[j] = 0;
 	}
 
 	/* Increment sum of closest center */
 	SumCenters(samples, agg, closestCenters, typeInfo);
 
 	/* Increment count of closest center */
-	for (int j = 0; j < numSamples; j++)
-		centerCounts[closestCenters[j]] += 1;
+	vector_rust_ivfflat_center_counts_kernel(numSamples, closestCenters, numCenters, centerCounts);
 
 	/* Divide sum by count */
 	for (int j = 0; j < numCenters; j++)
