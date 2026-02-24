@@ -51,6 +51,7 @@
 #include "miscadmin.h"
 #include "nodes/execnodes.h"
 #include "optimizer/optimizer.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "tcop/tcopprot.h"
 #include "utils/datum.h"
@@ -310,6 +311,35 @@ FlushPages(HnswBuildState * buildstate)
 	MemoryContextReset(buildstate->graphCtx);
 }
 
+static bool
+HnswCanAddDuplicateHeapTid(int heaptidsLength, int maxHeaptids, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
+
+	return heaptidsLength < maxHeaptids;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_can_add_duplicate_heap_tid);
+Datum
+vector_hnsw_can_add_duplicate_heap_tid(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswCanAddDuplicateHeapTid(heaptidsLength, maxHeaptids, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_can_add_duplicate_heap_tid);
+Datum
+vector_rust_hnsw_can_add_duplicate_heap_tid(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswCanAddDuplicateHeapTid(heaptidsLength, maxHeaptids, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -318,7 +348,7 @@ AddDuplicateInMemory(HnswElement element, HnswElement dup)
 {
 	LWLockAcquire(&dup->lock, LW_EXCLUSIVE);
 
-	if (dup->heaptidsLength == HNSW_HEAPTIDS)
+	if (!HnswCanAddDuplicateHeapTid(dup->heaptidsLength, HNSW_HEAPTIDS, true))
 	{
 		LWLockRelease(&dup->lock);
 		return false;
