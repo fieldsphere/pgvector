@@ -407,6 +407,13 @@ pub extern "C" fn vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel(
+    is_concurrent: bool,
+) -> bool {
+    !is_concurrent
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

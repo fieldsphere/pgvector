@@ -82,6 +82,7 @@ static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
 static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust);
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
+static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -1120,7 +1121,7 @@ HnswParallelBuildMain(dsm_segment *seg, shm_toc *toc)
 	hnswshared = shm_toc_lookup(toc, PARALLEL_KEY_HNSW_SHARED, false);
 
 	/* Open relations using lock modes known to be obtained by index.c */
-	if (!hnswshared->isconcurrent)
+	if (HnswShouldUseNonConcurrentLockModes(hnswshared->isconcurrent, true))
 	{
 		heapLockmode = ShareLock;
 		indexLockmode = AccessExclusiveLock;
@@ -1497,6 +1498,33 @@ vector_rust_hnsw_should_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
 	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUnregisterMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
+static bool
+HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel(isConcurrent);
+
+	return !isConcurrent;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_non_concurrent_lock_modes);
+Datum
+vector_hnsw_should_use_non_concurrent_lock_modes(PG_FUNCTION_ARGS)
+{
+	int32		isConcurrent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNonConcurrentLockModes(isConcurrent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_non_concurrent_lock_modes);
+Datum
+vector_rust_hnsw_should_use_non_concurrent_lock_modes(PG_FUNCTION_ARGS)
+{
+	int32		isConcurrent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNonConcurrentLockModes(isConcurrent != 0, true));
 }
 
 static bool
