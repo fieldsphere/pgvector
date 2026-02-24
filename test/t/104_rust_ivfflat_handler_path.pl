@@ -59,6 +59,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_scan_next_list'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_choose_build_center_candidate(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_choose_build_center_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_choose_build_center_candidate(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_choose_build_center_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -112,5 +122,17 @@ my $should_scan_parity = $node->safe_psql("postgres", q{
 	) AS t(list_index, max_probes, batch_probes, probes);
 });
 is($should_scan_parity, "t\nt\nt\nt");
+
+my $build_center_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_choose_build_center_candidate(distance, min_distance) =
+		   rust_ivfflat_choose_build_center_candidate(distance, min_distance)
+	FROM (VALUES
+		(0.5::double precision, 1.0::double precision),
+		(1.5::double precision, 1.0::double precision),
+		(2.0::double precision, 2.0::double precision),
+		(-1.0::double precision, 0.0::double precision)
+	) AS t(distance, min_distance);
+});
+is($build_center_candidate_parity, "t\nt\nt\nt");
 
 done_testing();
