@@ -121,6 +121,13 @@ pub extern "C" fn vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot_ke
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(
+    building: bool,
+) -> bool {
+    building
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,

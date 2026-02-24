@@ -22,6 +22,7 @@ static bool HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, b
 static bool HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust);
 static bool HnswShouldUpdateOnDiskInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust);
+static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust);
 
 /*
  * Get the insert page
@@ -634,7 +635,7 @@ AddDuplicateOnDisk(Relation index, HnswElement element, HnswElement dup, bool bu
 	etup->heaptids[i] = element->heaptids[0];
 
 	/* Commit */
-	if (building)
+	if (HnswShouldCommitOnDiskDuplicateWithBufferDirty(building, true))
 		MarkBufferDirty(buf);
 	else
 		GenericXLogFinish(state);
@@ -962,6 +963,33 @@ vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot(PG_FUNCTION_ARGS)
 	int32		maxHeaptids = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true));
+}
+
+static bool
+HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
+
+	return building;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty);
+Datum
+vector_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCommitOnDiskDuplicateWithBufferDirty(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty);
+Datum
+vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCommitOnDiskDuplicateWithBufferDirty(building != 0, true));
 }
 
 static bool
