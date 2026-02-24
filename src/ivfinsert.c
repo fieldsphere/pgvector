@@ -50,6 +50,15 @@ IvfflatShouldFollowInsertPageLink(BlockNumber insertPage, bool useRust)
 	return BlockNumberIsValid(insertPage);
 }
 
+static bool
+IvfflatShouldVisitInsertListPage(BlockNumber page, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+
+	return BlockNumberIsValid(page);
+}
+
 /*
  * Find the list that minimizes the distance function
  */
@@ -69,7 +78,7 @@ FindInsertPage(Relation index, Datum *values, BlockNumber *insertPage, ListInfo 
 	collation = index->rd_indcollation[0];
 
 	/* Search all list pages */
-	while (BlockNumberIsValid(nextblkno))
+	while (IvfflatShouldVisitInsertListPage(nextblkno, true))
 	{
 		Buffer		cbuf;
 		Page		cpage;
@@ -181,6 +190,24 @@ vector_rust_ivfflat_should_follow_insert_page_link(PG_FUNCTION_ARGS)
 	int32		insertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(IvfflatShouldFollowInsertPageLink((BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_insert_list_page);
+Datum
+vector_ivfflat_should_visit_insert_list_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitInsertListPage((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_visit_insert_list_page);
+Datum
+vector_rust_ivfflat_should_visit_insert_list_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitInsertListPage((BlockNumber) page, true));
 }
 
 /*
