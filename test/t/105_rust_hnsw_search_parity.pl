@@ -189,6 +189,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_update_entry_point'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_flush_pages_in_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_flush_pages_in_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_flush_pages_in_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_flush_pages_in_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -405,5 +415,17 @@ my $update_entry_point_parity = $node->safe_psql("postgres", q{
 	) AS t(entry_point_is_null, element_level, entry_level);
 });
 is($update_entry_point_parity, "t\nt\nt\nt");
+
+my $flush_pages_in_build_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_flush_pages_in_build(graph_flushed) =
+		   rust_hnsw_should_flush_pages_in_build(graph_flushed)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(graph_flushed);
+});
+is($flush_pages_in_build_parity, "t\nt\nt\nt");
 
 done_testing();
