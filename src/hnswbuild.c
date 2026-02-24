@@ -79,6 +79,7 @@
 #define PARALLEL_KEY_QUERY_TEXT			UINT64CONST(0xA000000000000003)
 
 static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
+static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 
 /*
  * Create the metapage
@@ -1291,7 +1292,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	LaunchParallelWorkers(pcxt);
 	hnswleader->pcxt = pcxt;
 	hnswleader->nparticipanttuplesorts = pcxt->nworkers_launched;
-	if (leaderparticipates)
+	if (HnswShouldLeaderParticipate(leaderparticipates, true))
 		hnswleader->nparticipanttuplesorts++;
 	hnswleader->hnswshared = hnswshared;
 	hnswleader->snapshot = snapshot;
@@ -1311,7 +1312,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	buildstate->hnswleader = hnswleader;
 
 	/* Join heap scan ourselves */
-	if (leaderparticipates)
+	if (HnswShouldLeaderParticipate(leaderparticipates, true))
 		HnswLeaderParticipateAsWorker(buildstate);
 
 	/* Wait for all launched workers */
@@ -1382,6 +1383,33 @@ vector_rust_hnsw_should_fallback_without_workers(PG_FUNCTION_ARGS)
 	int32		workersLaunched = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFallbackWithoutWorkers(workersLaunched, true));
+}
+
+static bool
+HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_leader_participate_kernel(leaderParticipates);
+
+	return leaderParticipates;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_leader_participate);
+Datum
+vector_hnsw_should_leader_participate(PG_FUNCTION_ARGS)
+{
+	int32		leaderParticipates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLeaderParticipate(leaderParticipates != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_leader_participate);
+Datum
+vector_rust_hnsw_should_leader_participate(PG_FUNCTION_ARGS)
+{
+	int32		leaderParticipates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLeaderParticipate(leaderParticipates != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_relation_parallel_workers);

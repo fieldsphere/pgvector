@@ -55,6 +55,7 @@ bool		vector_rust_hnsw_should_increment_instrument_searches_kernel(bool has_inst
 bool		vector_rust_hnsw_should_skip_parallel_workers_kernel(int32 parallel_workers);
 bool		vector_rust_hnsw_should_use_relation_parallel_workers_kernel(int32 parallel_workers);
 bool		vector_rust_hnsw_should_fallback_without_workers_kernel(int32 workers_launched);
+bool		vector_rust_hnsw_should_leader_participate_kernel(bool leader_participates);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);
