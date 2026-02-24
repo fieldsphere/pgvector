@@ -291,13 +291,7 @@ ComputeNewCenters(VectorArray samples, float *agg, VectorArray newCenters, int *
 	int			numSamples = samples->length;
 
 	/* Reset sum and count */
-	for (int j = 0; j < numCenters; j++)
-	{
-		float	   *x = agg + ((int64) j * dimensions);
-
-		for (int k = 0; k < dimensions; k++)
-			x[k] = 0.0;
-	}
+	vector_rust_ivfflat_zero_agg_kernel(numCenters, dimensions, agg);
 
 	/* Increment sum of closest center */
 	SumCenters(samples, agg, closestCenters, typeInfo);

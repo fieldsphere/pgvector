@@ -578,6 +578,17 @@ pub unsafe extern "C" fn vector_rust_ivfflat_center_counts_kernel(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vector_rust_ivfflat_zero_agg_kernel(
+    center_count: i32,
+    dimensions: i32,
+    agg: *mut f32,
+) {
+    for i in 0..((center_count as usize) * (dimensions as usize)) {
+        *agg.add(i) = 0.0;
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_sparsevec_l1_distance_kernel(
     annz: i32,
     aindices: *const i32,
