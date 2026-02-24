@@ -129,6 +129,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_compute_scan_limits'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_load_more_scan_items(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_load_more_scan_items'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_load_more_scan_items(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_load_more_scan_items'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -267,5 +277,17 @@ my $compute_scan_limits_parity = $node->safe_psql("postgres", q{
 	) AS t(probes, max_probes, lists, iterative_scan);
 });
 is($compute_scan_limits_parity, "t\nt\nt\nt\nt");
+
+my $load_more_scan_items_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_load_more_scan_items(list_index, max_probes) =
+		   rust_ivfflat_should_load_more_scan_items(list_index, max_probes)
+	FROM (VALUES
+		(0, 5),
+		(4, 5),
+		(5, 5),
+		(6, 5)
+	) AS t(list_index, max_probes);
+});
+is($load_more_scan_items_parity, "t\nt\nt\nt");
 
 done_testing();
