@@ -31,6 +31,7 @@ double		vector_rust_hnsw_clamp_ratio_kernel(double ratio);
 bool		vector_rust_hnsw_should_adjust_startup_cost_kernel(double startup_pages, double rel_pages, double ratio);
 bool		vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(bool entry_point_is_null);
 bool		vector_rust_hnsw_should_resume_from_discarded_kernel(bool discarded_is_empty);
+bool		vector_rust_hnsw_should_return_remaining_discarded_kernel(bool discarded_is_empty);
 void		vector_rust_ivfflat_adjust_cost_kernel(double index_total_cost, double num_index_pages, double random_page_cost, double seq_page_cost, double ratio, double rel_pages, double sequential_ratio, double *adjusted_total_cost, double *adjusted_startup_cost);
 double		vector_rust_ivfflat_probe_ratio_kernel(int32 probes, int32 lists);
 bool		vector_rust_ivfflat_should_disable_without_order_kernel(int32 orderby_count);
