@@ -380,6 +380,35 @@ vector_rust_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectNonMVCCSnapshot(snapshotIsMVCC != 0, true));
 }
 
+static bool
+HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_copy_rescan_keys_kernel(hasKeys, keyCount);
+
+	return hasKeys && keyCount > 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_rescan_keys);
+Datum
+vector_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_copy_rescan_keys);
+Datum
+vector_rust_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -537,10 +566,10 @@ hnswrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int no
 	so->previousDistance = -get_float8_infinity();
 	MemoryContextReset(so->tmpCtx);
 
-	if (keys && scan->numberOfKeys > 0)
+	if (HnswShouldCopyRescanKeys(keys != NULL, scan->numberOfKeys, true))
 		memmove(scan->keyData, keys, scan->numberOfKeys * sizeof(ScanKeyData));
 
-	if (orderbys && scan->numberOfOrderBys > 0)
+	if (HnswShouldCopyRescanKeys(orderbys != NULL, scan->numberOfOrderBys, true))
 		memmove(scan->orderByData, orderbys, scan->numberOfOrderBys * sizeof(ScanKeyData));
 }
 
