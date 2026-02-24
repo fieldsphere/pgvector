@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::{c_char, c_double, c_void};
 
 static RUST_BRIDGE_VERSION: &[u8] = b"rust-bridge-v1\0";
 
@@ -387,5 +387,55 @@ pub unsafe extern "C" fn vector_rust_vector_cmp(
         1
     } else {
         0
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_copy_f64(dim: i32, src: *const c_double, dst: *mut c_double) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = *src.add(i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_accum_init(dim: i32, x: *const f32, dst: *mut c_double) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = *x.add(i) as c_double;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_accum_add(
+    dim: i32,
+    state: *const c_double,
+    x: *const f32,
+    dst: *mut c_double,
+) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = *state.add(i) + (*x.add(i) as c_double);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_combine_add(
+    dim: i32,
+    a: *const c_double,
+    b: *const c_double,
+    dst: *mut c_double,
+) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = *a.add(i) + *b.add(i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_avg(
+    dim: i32,
+    state: *const c_double,
+    n: c_double,
+    dst: *mut f32,
+) {
+    for i in 0..(dim as usize) {
+        *dst.add(i) = (*state.add(i) / n) as f32;
     }
 }
