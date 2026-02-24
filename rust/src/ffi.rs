@@ -128,6 +128,13 @@ pub extern "C" fn vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_di
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(
+    update_index: i32,
+) -> bool {
+    update_index == -1
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
