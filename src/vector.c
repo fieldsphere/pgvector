@@ -790,6 +790,33 @@ vector_rust_l1_distance(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Rust parity wrapper: vector norm
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_norm);
+Datum
+vector_rust_norm(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+
+	PG_RETURN_FLOAT8(vector_rust_vector_norm(a->dim, a->x));
+}
+
+/*
+ * Rust parity wrapper: L2 normalize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_l2_normalize);
+Datum
+vector_rust_l2_normalize(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *result = InitVector(a->dim);
+
+	vector_rust_vector_l2_normalize(a->dim, a->x, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
  * Get the dimensions of a vector
  */
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_dims);
@@ -809,14 +836,8 @@ Datum
 vector_norm(PG_FUNCTION_ARGS)
 {
 	Vector	   *a = PG_GETARG_VECTOR_P(0);
-	float	   *ax = a->x;
-	double		norm = 0.0;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->dim; i++)
-		norm += (double) ax[i] * (double) ax[i];
-
-	PG_RETURN_FLOAT8(sqrt(norm));
+	PG_RETURN_FLOAT8(vector_rust_vector_norm(a->dim, a->x));
 }
 
 /*
@@ -827,32 +848,19 @@ Datum
 l2_normalize(PG_FUNCTION_ARGS)
 {
 	Vector	   *a = PG_GETARG_VECTOR_P(0);
-	float	   *ax = a->x;
-	double		norm = 0;
 	Vector	   *result;
 	float	   *rx;
 
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
+	vector_rust_vector_l2_normalize(a->dim, a->x, rx);
+
+	/* Check for overflow */
 	for (int i = 0; i < a->dim; i++)
-		norm += (double) ax[i] * (double) ax[i];
-
-	norm = sqrt(norm);
-
-	/* Return zero vector for zero norm */
-	if (norm > 0)
 	{
-		for (int i = 0; i < a->dim; i++)
-			rx[i] = ax[i] / norm;
-
-		/* Check for overflow */
-		for (int i = 0; i < a->dim; i++)
-		{
-			if (isinf(rx[i]))
-				float_overflow_error();
-		}
+		if (isinf(rx[i]))
+			float_overflow_error();
 	}
 
 	PG_RETURN_POINTER(result);
@@ -982,25 +990,24 @@ Datum
 binary_quantize(PG_FUNCTION_ARGS)
 {
 	Vector	   *a = PG_GETARG_VECTOR_P(0);
-	float	   *ax = a->x;
 	VarBit	   *result = InitBitVector(a->dim);
-	unsigned char *rx = VARBITS(result);
-	int			i = 0;
-	int			count = (a->dim / 8) * 8;
 
-	/* Auto-vectorized */
-	for (; i < count; i += 8)
-	{
-		unsigned char result_byte = 0;
+	vector_rust_vector_binary_quantize(a->dim, a->x, VARBITS(result));
 
-		for (int j = 0; j < 8; j++)
-			result_byte |= (ax[i + j] > 0) << (7 - j);
+	PG_RETURN_VARBIT_P(result);
+}
 
-		rx[i / 8] = result_byte;
-	}
+/*
+ * Rust parity wrapper: binary quantize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_binary_quantize);
+Datum
+vector_rust_binary_quantize(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	VarBit	   *result = InitBitVector(a->dim);
 
-	for (; i < a->dim; i++)
-		rx[i / 8] |= (ax[i] > 0) << (7 - (i % 8));
+	vector_rust_vector_binary_quantize(a->dim, a->x, VARBITS(result));
 
 	PG_RETURN_VARBIT_P(result);
 }
@@ -1046,8 +1053,47 @@ subvector(PG_FUNCTION_ARGS)
 	CheckDim(dim);
 	result = InitVector(dim);
 
-	for (int i = 0; i < dim; i++)
-		result->x[i] = ax[start - 1 + i];
+	vector_rust_vector_subvector(dim, ax, start - 1, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: subvector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_subvector);
+Datum
+vector_rust_subvector(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	int32		start = PG_GETARG_INT32(1);
+	int32		count = PG_GETARG_INT32(2);
+	int32		end;
+	int			dim;
+	Vector	   *result;
+
+	if (count < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("vector must have at least 1 dimension")));
+
+	if (start > a->dim - count)
+		end = a->dim + 1;
+	else
+		end = start + count;
+
+	if (start < 1)
+		start = 1;
+	else if (start > a->dim)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("vector must have at least 1 dimension")));
+
+	dim = end - start;
+	CheckDim(dim);
+	result = InitVector(dim);
+
+	vector_rust_vector_subvector(dim, a->x, start - 1, result->x);
 
 	PG_RETURN_POINTER(result);
 }
@@ -1058,25 +1104,7 @@ subvector(PG_FUNCTION_ARGS)
 int
 vector_cmp_internal(Vector * a, Vector * b)
 {
-	int			dim = Min(a->dim, b->dim);
-
-	/* Check values before dimensions to be consistent with Postgres arrays */
-	for (int i = 0; i < dim; i++)
-	{
-		if (a->x[i] < b->x[i])
-			return -1;
-
-		if (a->x[i] > b->x[i])
-			return 1;
-	}
-
-	if (a->dim < b->dim)
-		return -1;
-
-	if (a->dim > b->dim)
-		return 1;
-
-	return 0;
+	return vector_rust_vector_cmp(a->dim, a->x, b->dim, b->x);
 }
 
 /*
@@ -1168,6 +1196,19 @@ vector_cmp(PG_FUNCTION_ARGS)
 	Vector	   *b = PG_GETARG_VECTOR_P(1);
 
 	PG_RETURN_INT32(vector_cmp_internal(a, b));
+}
+
+/*
+ * Rust parity wrapper: compare vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_cmp);
+Datum
+vector_rust_cmp(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	PG_RETURN_INT32(vector_rust_vector_cmp(a->dim, a->x, b->dim, b->x));
 }
 
 /*

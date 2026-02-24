@@ -19,5 +19,10 @@ void		vector_rust_vector_add(int dim, const float *ax, const float *bx, float *r
 void		vector_rust_vector_sub(int dim, const float *ax, const float *bx, float *rx);
 void		vector_rust_vector_mul(int dim, const float *ax, const float *bx, float *rx);
 void		vector_rust_vector_concat(int adim, const float *ax, int bdim, const float *bx, float *rx);
+double		vector_rust_vector_norm(int dim, const float *ax);
+void		vector_rust_vector_l2_normalize(int dim, const float *ax, float *rx);
+void		vector_rust_vector_binary_quantize(int dim, const float *ax, unsigned char *rx);
+void		vector_rust_vector_subvector(int dim, const float *ax, int start_index, float *rx);
+int32		vector_rust_vector_cmp(int adim, const float *ax, int bdim, const float *bx);
 
 #endif

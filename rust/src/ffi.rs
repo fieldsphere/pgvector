@@ -294,3 +294,98 @@ pub unsafe extern "C" fn vector_rust_vector_concat(
         *rx.add((adim as usize) + i) = *bx.add(i);
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_norm(dim: i32, ax: *const f32) -> f64 {
+    let mut norm = 0.0f64;
+
+    for i in 0..(dim as usize) {
+        let a = *ax.add(i) as f64;
+        norm += a * a;
+    }
+
+    norm.sqrt()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_l2_normalize(dim: i32, ax: *const f32, rx: *mut f32) {
+    let norm = vector_rust_vector_norm(dim, ax);
+
+    if norm > 0.0 {
+        for i in 0..(dim as usize) {
+            *rx.add(i) = (*ax.add(i) as f64 / norm) as f32;
+        }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_binary_quantize(
+    dim: i32,
+    ax: *const f32,
+    rx: *mut u8,
+) {
+    let mut i = 0usize;
+    let dim = dim as usize;
+    let count = (dim / 8) * 8;
+
+    while i < count {
+        let mut result_byte = 0u8;
+
+        for j in 0..8 {
+            result_byte |= ((*ax.add(i + j) > 0.0) as u8) << (7 - j);
+        }
+
+        *rx.add(i / 8) = result_byte;
+        i += 8;
+    }
+
+    while i < dim {
+        *rx.add(i / 8) |= ((*ax.add(i) > 0.0) as u8) << (7 - (i % 8));
+        i += 1;
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_subvector(
+    dim: i32,
+    ax: *const f32,
+    start_index: i32,
+    rx: *mut f32,
+) {
+    let start = start_index as usize;
+
+    for i in 0..(dim as usize) {
+        *rx.add(i) = *ax.add(start + i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_cmp(
+    adim: i32,
+    ax: *const f32,
+    bdim: i32,
+    bx: *const f32,
+) -> i32 {
+    let dim = usize::min(adim as usize, bdim as usize);
+
+    for i in 0..dim {
+        let a = *ax.add(i);
+        let b = *bx.add(i);
+
+        if a < b {
+            return -1;
+        }
+
+        if a > b {
+            return 1;
+        }
+    }
+
+    if adim < bdim {
+        -1
+    } else if adim > bdim {
+        1
+    } else {
+        0
+    }
+}
