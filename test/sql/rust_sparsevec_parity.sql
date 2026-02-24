@@ -26,6 +26,14 @@ CREATE FUNCTION rust_sparsevec_cosine_distance(sparsevec, sparsevec) RETURNS flo
 	AS '$libdir/vector', 'vector_rust_sparsevec_cosine_distance'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_vector_to_sparsevec(vector, integer, boolean) RETURNS sparsevec
+	AS '$libdir/vector', 'vector_rust_vector_to_sparsevec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_halfvec_to_sparsevec(halfvec, integer, boolean) RETURNS sparsevec
+	AS '$libdir/vector', 'vector_rust_halfvec_to_sparsevec'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 SELECT
 	l2_norm(sv) = rust_sparsevec_l2_norm(sv)
 FROM (VALUES
@@ -67,3 +75,12 @@ FROM (VALUES
 	('{1:-1,2:3}/3'::sparsevec(3), '{2:1,3:-4}/3'::sparsevec(3)),
 	('{}/3'::sparsevec(3), '{1:1}/3'::sparsevec(3))
 ) AS t(s1, s2);
+
+SELECT
+	vector_to_sparsevec(v, -1, false) = rust_vector_to_sparsevec(v, -1, false),
+	halfvec_to_sparsevec(h, -1, false) = rust_halfvec_to_sparsevec(h, -1, false)
+FROM (VALUES
+	('[0,1,0,2]'::vector(4), '[0,1,0,2]'::halfvec(4)),
+	('[-1,0,3,0]'::vector(4), '[-1,0,3,0]'::halfvec(4)),
+	('[0,0,0,0]'::vector(4), '[0,0,0,0]'::halfvec(4))
+) AS t(v, h);
