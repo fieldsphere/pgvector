@@ -64,6 +64,16 @@ pub extern "C" fn vector_rust_ivfflat_choose_scan_list_candidate_kernel(
     list_count < max_probes || distance < max_distance
 }
 
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_should_scan_next_list_kernel(
+    list_index: i32,
+    max_probes: i32,
+    batch_probes: i32,
+    probes: i32,
+) -> bool {
+    list_index < max_probes && (batch_probes + 1) <= probes
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;

@@ -75,6 +75,39 @@ vector_rust_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(IvfflatChooseScanListCandidate(distance, listCount, maxProbes, maxDistance, true));
 }
 
+static bool
+IvfflatShouldScanNextList(int listIndex, int maxProbes, int batchProbes, int probes, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_scan_next_list_kernel(listIndex, maxProbes, batchProbes, probes);
+
+	return listIndex < maxProbes && (batchProbes + 1) <= probes;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_scan_next_list);
+Datum
+vector_ivfflat_should_scan_next_list(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		batchProbes = PG_GETARG_INT32(2);
+	int32		probes = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(IvfflatShouldScanNextList(listIndex, maxProbes, batchProbes, probes, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_scan_next_list);
+Datum
+vector_rust_ivfflat_should_scan_next_list(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		batchProbes = PG_GETARG_INT32(2);
+	int32		probes = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(IvfflatShouldScanNextList(listIndex, maxProbes, batchProbes, probes, true));
+}
+
 /*
  * Get lists and sort by distance
  */
@@ -157,9 +190,12 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	tuplesort_reset(so->sortstate);
 
 	/* Search closest probes lists */
-	while (so->listIndex < so->maxProbes && (++batchProbes) <= so->probes)
+	while (IvfflatShouldScanNextList(so->listIndex, so->maxProbes, batchProbes, so->probes, true))
 	{
-		BlockNumber searchPage = so->listPages[so->listIndex++];
+		BlockNumber searchPage;
+
+		batchProbes++;
+		searchPage = so->listPages[so->listIndex++];
 
 		/* Search all entry pages for list */
 		while (BlockNumberIsValid(searchPage))
