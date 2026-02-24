@@ -420,6 +420,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_write_wal_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_write_wal_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_write_wal_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_write_wal_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -926,6 +936,18 @@ my $reject_low_ef_construction_parity = $node->safe_psql("postgres", q{
 	) AS t(ef_construction, m);
 });
 is($reject_low_ef_construction_parity, "t\nt\nt\nt");
+
+my $write_wal_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_write_wal_page(needs_wal, is_init_fork) =
+		   rust_hnsw_should_write_wal_page(needs_wal, is_init_fork)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(0, 1),
+		(1, 1)
+	) AS t(needs_wal, is_init_fork);
+});
+is($write_wal_page_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
