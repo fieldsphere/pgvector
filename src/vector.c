@@ -877,9 +877,7 @@ vector_add(PG_FUNCTION_ARGS)
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		rx[i] = ax[i] + bx[i];
+	vector_rust_vector_add(a->dim, ax, bx, rx);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -910,9 +908,7 @@ vector_sub(PG_FUNCTION_ARGS)
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		rx[i] = ax[i] - bx[i];
+	vector_rust_vector_sub(a->dim, ax, bx, rx);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -943,9 +939,7 @@ vector_mul(PG_FUNCTION_ARGS)
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		rx[i] = ax[i] * bx[i];
+	vector_rust_vector_mul(a->dim, ax, bx, rx);
 
 	/* Check for overflow and underflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)

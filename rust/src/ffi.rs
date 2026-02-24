@@ -241,3 +241,39 @@ pub unsafe extern "C" fn vector_rust_vector_l1_distance(
 
     distance
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_add(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+    rx: *mut f32,
+) {
+    for i in 0..(dim as usize) {
+        *rx.add(i) = *ax.add(i) + *bx.add(i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_sub(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+    rx: *mut f32,
+) {
+    for i in 0..(dim as usize) {
+        *rx.add(i) = *ax.add(i) - *bx.add(i);
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vector_rust_vector_mul(
+    dim: i32,
+    ax: *const f32,
+    bx: *const f32,
+    rx: *mut f32,
+) {
+    for i in 0..(dim as usize) {
+        *rx.add(i) = *ax.add(i) * *bx.add(i);
+    }
+}
