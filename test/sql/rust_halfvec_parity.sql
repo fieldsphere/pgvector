@@ -26,6 +26,22 @@ CREATE FUNCTION rust_halfvec_cmp(halfvec, halfvec) RETURNS int4
 	AS '$libdir/vector', 'vector_rust_halfvec_cmp'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+CREATE FUNCTION rust_halfvec_accum(double precision[], halfvec) RETURNS double precision[]
+	AS '$libdir/vector', 'vector_rust_halfvec_accum'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION rust_halfvec_avg(double precision[]) RETURNS halfvec
+	AS '$libdir/vector', 'vector_rust_halfvec_avg'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE AGGREGATE rust_avg(halfvec) (
+	SFUNC = rust_halfvec_accum,
+	STYPE = double precision[],
+	FINALFUNC = rust_halfvec_avg,
+	INITCOND = '{0}',
+	PARALLEL = SAFE
+);
+
 SELECT
 	halfvec_add(h1, h2) = rust_halfvec_add(h1, h2),
 	halfvec_sub(h1, h2) = rust_halfvec_sub(h1, h2),
@@ -58,3 +74,11 @@ FROM (VALUES
 	('[1,2,3]'::halfvec(3), '[1,2,4]'::halfvec(3)),
 	('[1,2,3]'::halfvec(3), '[1,2]'::halfvec(2))
 ) AS t(h1, h2);
+
+SELECT
+	avg(h) = rust_avg(h)
+FROM (VALUES
+	('[1,2,3]'::halfvec(3)),
+	('[4,5,6]'::halfvec(3)),
+	('[7,8,9]'::halfvec(3))
+) AS t(h);
