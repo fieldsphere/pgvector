@@ -129,6 +129,36 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_adjust_upper_bounds'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_init_upper_bounds(real[], integer) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_init_upper_bounds'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_init_upper_bounds(real[], integer) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_init_upper_bounds'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_init_closest_centers(real[], integer) RETURNS integer[]
+	AS '$libdir/vector', 'vector_ivfflat_init_closest_centers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_init_closest_centers(real[], integer) RETURNS integer[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_init_closest_centers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_compute_s(real[], integer) RETURNS real[]
+	AS '$libdir/vector', 'vector_ivfflat_compute_s'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_compute_s(real[], integer) RETURNS real[]
+	AS '$libdir/vector', 'vector_rust_ivfflat_compute_s'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_center_counts(assignments, centers) = rust_ivfflat_center_counts(assignments, centers)
@@ -251,5 +281,38 @@ my $upper_bounds_parity = $node->safe_psql("postgres", q{
 	) AS t(upper_vals, closest, deltas);
 });
 is($upper_bounds_parity, "t\nt\nt");
+
+my $init_upper_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_init_upper_bounds(lower_vals, center_count) =
+		   rust_ivfflat_init_upper_bounds(lower_vals, center_count)
+	FROM (VALUES
+		(ARRAY[2.0, 4.0, 1.0, 5.0, 3.0, 6.0]::real[], 3),
+		(ARRAY[9.0, 8.0, 7.0, 6.0]::real[], 2),
+		(ARRAY[0.5, 0.25, 0.125, 1.0, 2.0, 3.0]::real[], 3)
+	) AS t(lower_vals, center_count);
+});
+is($init_upper_parity, "t\nt\nt");
+
+my $init_closest_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_init_closest_centers(lower_vals, center_count) =
+		   rust_ivfflat_init_closest_centers(lower_vals, center_count)
+	FROM (VALUES
+		(ARRAY[2.0, 4.0, 1.0, 5.0, 3.0, 6.0]::real[], 3),
+		(ARRAY[9.0, 8.0, 7.0, 6.0]::real[], 2),
+		(ARRAY[0.5, 0.25, 0.125, 1.0, 2.0, 3.0]::real[], 3)
+	) AS t(lower_vals, center_count);
+});
+is($init_closest_parity, "t\nt\nt");
+
+my $compute_s_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_compute_s(halfcdist, center_count) =
+		   rust_ivfflat_compute_s(halfcdist, center_count)
+	FROM (VALUES
+		(ARRAY[0.0, 1.5, 2.5, 1.5, 0.0, 0.75, 2.5, 0.75, 0.0]::real[], 3),
+		(ARRAY[0.0, 4.0, 4.0, 0.0]::real[], 2),
+		(ARRAY[0.0, 9.0, 5.0, 9.0, 0.0, 2.0, 5.0, 2.0, 0.0]::real[], 3)
+	) AS t(halfcdist, center_count);
+});
+is($compute_s_parity, "t\nt\nt");
 
 done_testing();
