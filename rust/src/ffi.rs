@@ -110,6 +110,14 @@ pub extern "C" fn vector_rust_hnsw_should_keep_pruned_connection_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_set_pruned_from_array_kernel(
+    wdoff: i32,
+    wdlen: i32,
+) -> bool {
+    wdoff < wdlen
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     index_total_cost: c_double,
     num_index_pages: c_double,

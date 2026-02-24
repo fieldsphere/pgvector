@@ -112,6 +112,7 @@ static bool HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierD
 static bool HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust);
 static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust);
 static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust);
+static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1099,6 +1100,15 @@ HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNe
 	return wdoff < wdlen && resultLength < maxNeighbors;
 }
 
+static bool
+HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_set_pruned_from_array_kernel(wdoff, wdlen);
+
+	return wdoff < wdlen;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
 Datum
 vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
@@ -1245,6 +1255,26 @@ vector_rust_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_pruned_from_array);
+Datum
+vector_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSetPrunedFromArray(wdoff, wdlen, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_set_pruned_from_array);
+Datum
+vector_rust_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSetPrunedFromArray(wdoff, wdlen, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
@@ -1366,7 +1396,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	/* Return pruned for update connections */
 	if (pruned != NULL)
 	{
-		if (wdoff < wdlen)
+		if (HnswShouldSetPrunedFromArray(wdoff, wdlen, true))
 			*pruned = wd[wdoff];
 		else
 			*pruned = linitial(w);
