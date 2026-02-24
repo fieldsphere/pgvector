@@ -25,6 +25,7 @@ static bool HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32
 static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
+static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
 
 /*
  * Get the insert page
@@ -544,7 +545,7 @@ UpdateNeighborOnDisk(HnswElement element, HnswElement newElement, int idx, int m
 		else
 			GenericXLogFinish(state);
 	}
-	else if (!building)
+	else if (HnswShouldAbortOnDiskNeighborUpdate(building, true))
 		GenericXLogAbort(state);
 
 	UnlockReleaseBuffer(buf);
@@ -1019,6 +1020,33 @@ vector_rust_hnsw_should_commit_ondisk_neighbor_update_with_buffer_dirty(PG_FUNCT
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(building != 0, true));
+}
+
+static bool
+HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust)
+{
+	if (useRust)
+		return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
+
+	return !building;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_ondisk_neighbor_update);
+Datum
+vector_hnsw_should_abort_ondisk_neighbor_update(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortOnDiskNeighborUpdate(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_abort_ondisk_neighbor_update);
+Datum
+vector_rust_hnsw_should_abort_ondisk_neighbor_update(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortOnDiskNeighborUpdate(building != 0, true));
 }
 
 static bool
