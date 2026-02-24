@@ -459,6 +459,14 @@ pub extern "C" fn vector_rust_hnsw_should_reject_excess_dimensions_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_low_ef_construction_kernel(
+    ef_construction: i32,
+    m: i32,
+) -> bool {
+    ef_construction < 2 * m
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {

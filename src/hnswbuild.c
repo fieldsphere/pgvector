@@ -89,6 +89,7 @@ static bool HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust);
 static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
 static bool HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust);
 static bool HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust);
+static bool HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -984,7 +985,7 @@ InitBuildState(HnswBuildState * buildstate, Relation heap, Relation index, Index
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("column cannot have more than %d dimensions for hnsw index", buildstate->typeInfo->maxDimensions)));
 
-	if (buildstate->efConstruction < 2 * buildstate->m)
+	if (HnswShouldRejectLowEfConstruction(buildstate->efConstruction, buildstate->m, true))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("ef_construction must be greater than or equal to 2 * m")));
@@ -1670,6 +1671,35 @@ vector_rust_hnsw_should_reject_excess_dimensions(PG_FUNCTION_ARGS)
 	int32		maxDimensions = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectExcessDimensions(dimensions, maxDimensions, true));
+}
+
+static bool
+HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_low_ef_construction_kernel(efConstruction, m);
+
+	return efConstruction < 2 * m;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_low_ef_construction);
+Datum
+vector_hnsw_should_reject_low_ef_construction(PG_FUNCTION_ARGS)
+{
+	int32		efConstruction = PG_GETARG_INT32(0);
+	int32		m = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectLowEfConstruction(efConstruction, m, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_low_ef_construction);
+Datum
+vector_rust_hnsw_should_reject_low_ef_construction(PG_FUNCTION_ARGS)
+{
+	int32		efConstruction = PG_GETARG_INT32(0);
+	int32		m = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectLowEfConstruction(efConstruction, m, true));
 }
 
 static bool
