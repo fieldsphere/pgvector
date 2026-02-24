@@ -95,6 +95,7 @@ static bool HnswShouldSkipNullBuildTuple(bool isNull, bool useRust);
 static bool HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust);
 static bool HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust);
 static bool HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust);
+static bool HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -242,7 +243,7 @@ CreateGraphPages(HnswBuildState * buildstate)
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 
 		/* Add new page if needed */
-		if (PageGetFreeSpace(page) < ntupSize)
+		if (HnswShouldAppendNeighborPage((int64) PageGetFreeSpace(page), (int64) ntupSize, true))
 			HnswBuildAppendPage(index, &buf, &page, forkNum);
 
 		/* Add placeholder for neighbors */
@@ -1817,6 +1818,35 @@ vector_rust_hnsw_should_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
 	int64		allocSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectOversizedElementTuple(tupleSize, allocSize, true));
+}
+
+static bool
+HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, neighborTupleSize);
+
+	return freeSpace < neighborTupleSize;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_neighbor_page);
+Datum
+vector_hnsw_should_append_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		neighborTupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendNeighborPage(freeSpace, neighborTupleSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_neighbor_page);
+Datum
+vector_rust_hnsw_should_append_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		neighborTupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendNeighborPage(freeSpace, neighborTupleSize, true));
 }
 
 static bool

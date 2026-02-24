@@ -505,6 +505,14 @@ pub extern "C" fn vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_append_neighbor_page_kernel(
+    free_space: i64,
+    neighbor_tuple_size: i64,
+) -> bool {
+    free_space < neighbor_tuple_size
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {
