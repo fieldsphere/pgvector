@@ -219,6 +219,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_missing_orderby'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_non_mvcc_snapshot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_non_mvcc_snapshot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_non_mvcc_snapshot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_non_mvcc_snapshot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -464,5 +474,17 @@ my $reject_missing_orderby_parity = $node->safe_psql("postgres", q{
 	) AS t(orderby_is_null);
 });
 is($reject_missing_orderby_parity, "t\nt\nt\nt");
+
+my $reject_non_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_non_mvcc_snapshot(snapshot_is_mvcc) =
+		   rust_hnsw_should_reject_non_mvcc_snapshot(snapshot_is_mvcc)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(snapshot_is_mvcc);
+});
+is($reject_non_mvcc_snapshot_parity, "t\nt\nt\nt");
 
 done_testing();
