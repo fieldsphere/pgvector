@@ -365,6 +365,33 @@ vector_rust_hnsw_can_add_duplicate_heap_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldStopDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
+
+	return !valuesEqual;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_duplicate_search_on_value_mismatch);
+Datum
+vector_hnsw_should_stop_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopDuplicateSearchOnValueMismatch(valuesEqual != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch);
+Datum
+vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopDuplicateSearchOnValueMismatch(valuesEqual != 0, true));
+}
+
+static bool
 HnswShouldFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
 {
 	if (useRust)
@@ -677,7 +704,7 @@ FindDuplicateInMemory(char *base, HnswElement element)
 		Datum		neighborValue = HnswGetValue(base, neighborElement);
 
 		/* Exit early since ordered by distance */
-		if (!datumIsEqual(value, neighborValue, false, -1))
+		if (HnswShouldStopDuplicateSearchOnValueMismatch(datumIsEqual(value, neighborValue, false, -1), true))
 			return false;
 
 		/* Check for space */

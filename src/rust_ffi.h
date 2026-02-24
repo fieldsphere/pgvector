@@ -14,6 +14,7 @@ bool		vector_rust_hnsw_should_repair_underfilled_layer0_kernel(bool last_item_va
 bool		vector_rust_hnsw_should_flush_graph_kernel(int64 memory_used, int64 memory_total);
 bool		vector_rust_hnsw_should_use_ondisk_phase_kernel(bool graph_flushed);
 bool		vector_rust_hnsw_should_skip_invalid_index_value_kernel(bool index_value_formed);
+bool		vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(bool values_equal);
 bool		vector_rust_hnsw_should_add_search_candidate_kernel(double candidate_distance, double frontier_distance, bool always_add);
 bool		vector_rust_hnsw_should_stop_search_layer_kernel(double candidate_distance, double frontier_distance);
 bool		vector_rust_hnsw_should_append_neighbor_without_prune_kernel(int32 neighbors_length, int32 max_neighbors);

@@ -80,6 +80,13 @@ pub extern "C" fn vector_rust_hnsw_should_skip_invalid_index_value_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(
+    values_equal: bool,
+) -> bool {
+    !values_equal
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_add_search_candidate_kernel(
     candidate_distance: c_double,
     frontier_distance: c_double,
