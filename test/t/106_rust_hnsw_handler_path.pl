@@ -189,6 +189,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_parallel_heap_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_handle_empty_work_list(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_handle_empty_work_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_handle_empty_work_list(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_handle_empty_work_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -398,5 +408,17 @@ my $use_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 	) AS t(has_leader);
 });
 is($use_parallel_heap_scan_parity, "t\nt\nt\nt");
+
+my $handle_empty_work_list_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_handle_empty_work_list(work_list_length) =
+		   rust_hnsw_should_handle_empty_work_list(work_list_length)
+	FROM (VALUES
+		(0),
+		(1),
+		(3),
+		(0)
+	) AS t(work_list_length);
+});
+is($handle_empty_work_list_parity, "t\nt\nt\nt");
 
 done_testing();
