@@ -239,6 +239,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_write_list_insert_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_allow_insert_page_after_original(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_allow_insert_page_after_original'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_allow_insert_page_after_original(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_allow_insert_page_after_original'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -508,5 +518,17 @@ my $write_list_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(insert_page, current_page);
 });
 is($write_list_insert_page_parity, "t\nt\nt\nt");
+
+my $allow_insert_page_after_original_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_allow_insert_page_after_original(insert_page, original_page) =
+		   rust_ivfflat_should_allow_insert_page_after_original(insert_page, original_page)
+	FROM (VALUES
+		(5, -1),
+		(5, 5),
+		(6, 5),
+		(4, 5)
+	) AS t(insert_page, original_page);
+});
+is($allow_insert_page_after_original_parity, "t\nt\nt\nt");
 
 done_testing();
