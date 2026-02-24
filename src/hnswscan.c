@@ -436,6 +436,33 @@ vector_rust_hnsw_should_use_null_scan_value(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseNullScanValue(orderByIsNull != 0, true));
 }
 
+static bool
+HnswShouldNormalizeScanValue(bool hasNormproc, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_normalize_scan_value_kernel(hasNormproc);
+
+	return hasNormproc;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_normalize_scan_value);
+Datum
+vector_hnsw_should_normalize_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeScanValue(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_normalize_scan_value);
+Datum
+vector_rust_hnsw_should_normalize_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeScanValue(hasNormproc != 0, true));
+}
+
 /*
  * Algorithm 5 from paper
  */
@@ -523,7 +550,7 @@ GetScanValue(IndexScanDesc scan)
 		Assert(!VARATT_IS_EXTENDED(DatumGetPointer(value)));
 
 		/* Normalize if needed */
-		if (so->support.normprocinfo != NULL)
+		if (HnswShouldNormalizeScanValue(so->support.normprocinfo != NULL, true))
 			value = HnswNormValue(so->typeInfo, so->support.collation, value);
 	}
 
