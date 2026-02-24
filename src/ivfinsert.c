@@ -8,10 +8,20 @@
 #include "fmgr.h"
 #include "ivfflat.h"
 #include "nodes/execnodes.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+
+static bool
+IvfflatChooseInsertCandidate(float8 distance, float8 minDistance, BlockNumber insertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_choose_insert_candidate_kernel(distance, minDistance, BlockNumberIsValid(insertPage));
+
+	return distance < minDistance || !BlockNumberIsValid(insertPage);
+}
 
 /*
  * Find the list that minimizes the distance function
@@ -51,7 +61,7 @@ FindInsertPage(Relation index, Datum *values, BlockNumber *insertPage, ListInfo 
 			list = (IvfflatList) PageGetItem(cpage, PageGetItemId(cpage, offno));
 			distance = DatumGetFloat8(FunctionCall2Coll(procinfo, collation, values[0], PointerGetDatum(&list->center)));
 
-			if (distance < minDistance || !BlockNumberIsValid(*insertPage))
+			if (IvfflatChooseInsertCandidate(distance, minDistance, *insertPage, true))
 			{
 				*insertPage = list->insertPage;
 				listInfo->blkno = nextblkno;
@@ -64,6 +74,28 @@ FindInsertPage(Relation index, Datum *values, BlockNumber *insertPage, ListInfo 
 
 		UnlockReleaseBuffer(cbuf);
 	}
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_insert_candidate);
+Datum
+vector_ivfflat_choose_insert_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		minDistance = PG_GETARG_FLOAT8(1);
+	int32		insertPage = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(IvfflatChooseInsertCandidate(distance, minDistance, (BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_choose_insert_candidate);
+Datum
+vector_rust_ivfflat_choose_insert_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		minDistance = PG_GETARG_FLOAT8(1);
+	int32		insertPage = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(IvfflatChooseInsertCandidate(distance, minDistance, (BlockNumber) insertPage, true));
 }
 
 /*

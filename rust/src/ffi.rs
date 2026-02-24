@@ -45,6 +45,15 @@ pub unsafe extern "C" fn vector_rust_ivfflat_adjust_cost_kernel(
     *adjusted_startup_cost = startup;
 }
 
+#[no_mangle]
+pub extern "C" fn vector_rust_ivfflat_choose_insert_candidate_kernel(
+    distance: c_double,
+    min_distance: c_double,
+    insert_page_is_valid: bool,
+) -> bool {
+    distance < min_distance || !insert_page_is_valid
+}
+
 #[inline]
 unsafe fn read_half_bits(base: *const c_void, idx: usize) -> u16 {
     let ptr = (base as *const u8).add(idx * 2) as *const u16;
