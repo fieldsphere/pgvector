@@ -199,6 +199,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_handle_empty_work_list'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_advance_on_exhausted_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_advance_on_exhausted_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_advance_on_exhausted_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_advance_on_exhausted_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -420,5 +430,17 @@ my $handle_empty_work_list_parity = $node->safe_psql("postgres", q{
 	) AS t(work_list_length);
 });
 is($handle_empty_work_list_parity, "t\nt\nt\nt");
+
+my $advance_on_exhausted_heaptids_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_advance_on_exhausted_heaptids(heaptids_length) =
+		   rust_hnsw_should_advance_on_exhausted_heaptids(heaptids_length)
+	FROM (VALUES
+		(0),
+		(1),
+		(5),
+		(0)
+	) AS t(heaptids_length);
+});
+is($advance_on_exhausted_heaptids_parity, "t\nt\nt\nt");
 
 done_testing();
