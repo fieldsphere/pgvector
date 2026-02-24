@@ -99,6 +99,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_ivfflat_should_update_insert_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_ivfflat_should_reuse_scan_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_ivfflat_should_reuse_scan_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_ivfflat_should_reuse_scan_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_ivfflat_should_reuse_scan_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_ivfflat_handler_probe() = rust_ivfflat_handler_probe(),
@@ -200,5 +210,17 @@ my $update_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(insert_page, original_page);
 });
 is($update_insert_page_parity, "t\nt\nt\nt");
+
+my $reuse_scan_slot_parity = $node->safe_psql("postgres", q{
+	SELECT c_ivfflat_should_reuse_scan_slot(list_count, max_probes) =
+		   rust_ivfflat_should_reuse_scan_slot(list_count, max_probes)
+	FROM (VALUES
+		(0, 5),
+		(4, 5),
+		(5, 5),
+		(6, 5)
+	) AS t(list_count, max_probes);
+});
+is($reuse_scan_slot_parity, "t\nt\nt\nt");
 
 done_testing();
