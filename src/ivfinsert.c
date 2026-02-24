@@ -15,12 +15,21 @@
 #include "utils/rel.h"
 
 static bool
+IvfflatInsertPageIsValid(BlockNumber page, bool useRust)
+{
+	if (useRust)
+		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+
+	return BlockNumberIsValid(page);
+}
+
+static bool
 IvfflatChooseInsertCandidate(float8 distance, float8 minDistance, BlockNumber insertPage, bool useRust)
 {
 	if (useRust)
-		return vector_rust_ivfflat_choose_insert_candidate_kernel(distance, minDistance, BlockNumberIsValid(insertPage));
+		return vector_rust_ivfflat_choose_insert_candidate_kernel(distance, minDistance, IvfflatInsertPageIsValid(insertPage, true));
 
-	return distance < minDistance || !BlockNumberIsValid(insertPage);
+	return distance < minDistance || !IvfflatInsertPageIsValid(insertPage, false);
 }
 
 static bool
@@ -44,19 +53,13 @@ IvfflatShouldUpdateInsertPage(BlockNumber insertPage, BlockNumber originalInsert
 static bool
 IvfflatShouldFollowInsertPageLink(BlockNumber insertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
-
-	return BlockNumberIsValid(insertPage);
+	return IvfflatInsertPageIsValid(insertPage, useRust);
 }
 
 static bool
 IvfflatShouldVisitInsertListPage(BlockNumber page, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
-
-	return BlockNumberIsValid(page);
+	return IvfflatInsertPageIsValid(page, useRust);
 }
 
 /*
@@ -190,6 +193,24 @@ vector_rust_ivfflat_should_follow_insert_page_link(PG_FUNCTION_ARGS)
 	int32		insertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(IvfflatShouldFollowInsertPageLink((BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_insert_page_is_valid);
+Datum
+vector_ivfflat_insert_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatInsertPageIsValid((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_insert_page_is_valid);
+Datum
+vector_rust_ivfflat_insert_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatInsertPageIsValid((BlockNumber) page, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_insert_list_page);
