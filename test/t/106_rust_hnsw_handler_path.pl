@@ -269,6 +269,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_initialize_scan_state'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_increment_instrument_searches(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_increment_instrument_searches'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_increment_instrument_searches(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_increment_instrument_searches'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -574,5 +584,17 @@ my $initialize_scan_state_parity = $node->safe_psql("postgres", q{
 	) AS t(is_first_scan);
 });
 is($initialize_scan_state_parity, "t\nt\nt\nt");
+
+my $increment_instrument_searches_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_increment_instrument_searches(has_instrument) =
+		   rust_hnsw_should_increment_instrument_searches(has_instrument)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_instrument);
+});
+is($increment_instrument_searches_parity, "t\nt\nt\nt");
 
 done_testing();
