@@ -13,6 +13,8 @@
 #include "hnsw.h"
 #include "miscadmin.h"
 #include "nodes/pg_list.h"
+#include "rust_ffi.h"
+#include "utils/builtins.h"
 #include "utils/float.h"
 #include "utils/guc.h"
 #include "utils/relcache.h"
@@ -255,6 +257,20 @@ static bool
 hnswvalidate(Oid opclassoid)
 {
 	return true;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_handler_probe);
+Datum
+vector_hnsw_handler_probe(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_DATUM(CStringGetTextDatum(vector_rust_hnsw_handler_probe_cstr()));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_handler_probe);
+Datum
+vector_rust_hnsw_handler_probe(PG_FUNCTION_ARGS)
+{
+	return vector_hnsw_handler_probe(fcinfo);
 }
 
 /*

@@ -6,6 +6,7 @@
 void		vector_rust_init(void);
 const char *vector_rust_bridge_version_cstr(void);
 const char *vector_rust_ivfflat_handler_probe_cstr(void);
+const char *vector_rust_hnsw_handler_probe_cstr(void);
 bool		vector_rust_hnsw_should_reject_closer_neighbor_kernel(double distance, double candidate_distance);
 bool		vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(int32 heaptids_length, int32 max_heaptids);
 bool		vector_rust_hnsw_should_select_neighbors_early_return_kernel(int32 candidate_count, int32 max_neighbors);
