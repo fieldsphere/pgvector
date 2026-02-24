@@ -289,6 +289,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_parallel_workers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_relation_parallel_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_relation_parallel_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_relation_parallel_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_relation_parallel_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -618,5 +628,17 @@ my $skip_parallel_workers_parity = $node->safe_psql("postgres", q{
 	) AS t(parallel_workers);
 });
 is($skip_parallel_workers_parity, "t\nt\nt\nt");
+
+my $use_relation_parallel_workers_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_relation_parallel_workers(parallel_workers) =
+		   rust_hnsw_should_use_relation_parallel_workers(parallel_workers)
+	FROM (VALUES
+		(-1),
+		(0),
+		(4),
+		(2)
+	) AS t(parallel_workers);
+});
+is($use_relation_parallel_workers_parity, "t\nt\nt\nt");
 
 done_testing();
