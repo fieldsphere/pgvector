@@ -149,6 +149,46 @@ IvfflatFinalizeCenter(ArrayType *aggArray, int32 centerCount, bool useRust)
 	return result;
 }
 
+static ArrayType *
+IvfflatZeroAgg(int32 centerCount, int32 dimensions, bool useRust)
+{
+	int64		totalLength = (int64) centerCount * dimensions;
+	float	   *values;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (dimensions < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("dimensions must be at least 1")));
+
+	values = palloc(sizeof(float) * totalLength);
+
+	if (useRust)
+		vector_rust_ivfflat_zero_agg_kernel(centerCount, dimensions, values);
+	else
+	{
+		for (int64 i = 0; i < totalLength; i++)
+			values[i] = 0.0;
+	}
+
+	resultDatums = palloc(sizeof(Datum) * totalLength);
+	for (int64 i = 0; i < totalLength; i++)
+		resultDatums[i] = Float4GetDatum(values[i]);
+
+	result = construct_array(resultDatums, totalLength, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(values);
+
+	return result;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_center_counts);
 Datum
 vector_ivfflat_center_counts(PG_FUNCTION_ARGS)
@@ -187,6 +227,26 @@ vector_rust_ivfflat_finalize_center(PG_FUNCTION_ARGS)
 	int32		centerCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_ARRAYTYPE_P(IvfflatFinalizeCenter(aggArray, centerCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_zero_agg);
+Datum
+vector_ivfflat_zero_agg(PG_FUNCTION_ARGS)
+{
+	int32		centerCount = PG_GETARG_INT32(0);
+	int32		dimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatZeroAgg(centerCount, dimensions, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_zero_agg);
+Datum
+vector_rust_ivfflat_zero_agg(PG_FUNCTION_ARGS)
+{
+	int32		centerCount = PG_GETARG_INT32(0);
+	int32		dimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatZeroAgg(centerCount, dimensions, true));
 }
 
 /*
@@ -662,8 +722,7 @@ CheckElements(VectorArray centers, const IvfflatTypeInfo * typeInfo)
 
 	for (int i = 0; i < centers->length; i++)
 	{
-		for (int j = 0; j < centers->dim; j++)
-			scratch[j] = 0;
+		vector_rust_ivfflat_zero_agg_kernel(1, centers->dim, scratch);
 
 		/* /fp:fast may not propagate NaN with MSVC, but that's alright */
 		typeInfo->sumCenter(VectorArrayGet(centers, i), scratch);
