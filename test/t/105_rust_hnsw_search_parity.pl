@@ -89,6 +89,16 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_search_layer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_append_neighbor_without_prune(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_append_neighbor_without_prune'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_append_neighbor_without_prune(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_append_neighbor_without_prune'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $reject_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_closer_neighbor(distance, candidate_distance) =
@@ -185,5 +195,17 @@ my $stop_search_layer_parity = $node->safe_psql("postgres", q{
 	) AS t(candidate_distance, frontier_distance);
 });
 is($stop_search_layer_parity, "t\nt\nt\nt");
+
+my $append_neighbor_without_prune_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_append_neighbor_without_prune(neighbors_length, max_neighbors) =
+		   rust_hnsw_should_append_neighbor_without_prune(neighbors_length, max_neighbors)
+	FROM (VALUES
+		(0, 10),
+		(9, 10),
+		(10, 10),
+		(11, 10)
+	) AS t(neighbors_length, max_neighbors);
+});
+is($append_neighbor_without_prune_parity, "t\nt\nt\nt");
 
 done_testing();
