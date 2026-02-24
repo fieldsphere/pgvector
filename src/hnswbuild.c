@@ -88,6 +88,7 @@ static bool HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool
 static bool HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust);
 static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
 static bool HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust);
+static bool HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
 
@@ -978,7 +979,7 @@ InitBuildState(HnswBuildState * buildstate, Relation heap, Relation index, Index
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("column does not have dimensions")));
 
-	if (buildstate->dimensions > buildstate->typeInfo->maxDimensions)
+	if (HnswShouldRejectExcessDimensions(buildstate->dimensions, buildstate->typeInfo->maxDimensions, true))
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("column cannot have more than %d dimensions for hnsw index", buildstate->typeInfo->maxDimensions)));
@@ -1640,6 +1641,35 @@ vector_rust_hnsw_should_reject_missing_dimensions(PG_FUNCTION_ARGS)
 	int32		dimensions = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectMissingDimensions(dimensions, true));
+}
+
+static bool
+HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(dimensions, maxDimensions);
+
+	return dimensions > maxDimensions;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_excess_dimensions);
+Datum
+vector_hnsw_should_reject_excess_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+	int32		maxDimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectExcessDimensions(dimensions, maxDimensions, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_excess_dimensions);
+Datum
+vector_rust_hnsw_should_reject_excess_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+	int32		maxDimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectExcessDimensions(dimensions, maxDimensions, true));
 }
 
 static bool

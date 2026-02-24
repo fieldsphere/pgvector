@@ -451,6 +451,14 @@ pub extern "C" fn vector_rust_hnsw_should_reject_missing_dimensions_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_reject_excess_dimensions_kernel(
+    dimensions: i32,
+    max_dimensions: i32,
+) -> bool {
+    dimensions > max_dimensions
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(
     snapshot_is_mvcc: bool,
 ) -> bool {
