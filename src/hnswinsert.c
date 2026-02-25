@@ -59,6 +59,7 @@ static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
 static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust);
 static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust);
 static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
+static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
 
 /*
  * Get the insert page
@@ -417,7 +418,7 @@ HnswLoadNeighbors(HnswElement element, Relation index, int m, int lm, int lc)
 	HnswNeighborArray *neighbors = HnswInitNeighborArray(lm, NULL);
 	ItemPointerData indextids[HNSW_MAX_M * 2];
 
-	if (!HnswLoadNeighborTids(element, indextids, index, m, lm, lc))
+	if (HnswShouldReturnEmptyWithoutNeighborTids(HnswLoadNeighborTids(element, indextids, index, m, lm, lc), true))
 		return neighbors;
 
 	for (int i = 0; i < lm; i++)
@@ -1948,6 +1949,33 @@ vector_rust_hnsw_should_register_reused_neighbor_buffer(PG_FUNCTION_ARGS)
 	int32		sameBuffer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRegisterReusedNeighborBuffer(sameBuffer != 0, true));
+}
+
+static bool
+HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
+
+	return !neighborTidsLoaded;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_empty_without_neighbor_tids);
+Datum
+vector_hnsw_should_return_empty_without_neighbor_tids(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutNeighborTids(neighborTidsLoaded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_empty_without_neighbor_tids);
+Datum
+vector_rust_hnsw_should_return_empty_without_neighbor_tids(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutNeighborTids(neighborTidsLoaded != 0, true));
 }
 
 static bool
