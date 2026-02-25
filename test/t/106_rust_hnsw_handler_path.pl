@@ -1200,6 +1200,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_deleted_ondisk_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_ondisk_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2822,6 +2832,18 @@ my $set_vacuum_insert_page_when_missing_parity = $node->safe_psql("postgres", q{
 	) AS t(has_insert_page);
 });
 is($set_vacuum_insert_page_when_missing_parity, "t\nt\nt\nt");
+
+my $reuse_markdeleted_buffer_for_neighbor_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(same_page) =
+		   rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(same_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(same_page);
+});
+is($reuse_markdeleted_buffer_for_neighbor_page_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
