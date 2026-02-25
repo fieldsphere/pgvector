@@ -176,6 +176,7 @@ static bool HnswShouldUseBuildBufferPath(bool building, bool useRust);
 static bool HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust);
 static bool HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust);
 static bool HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust);
+static bool HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1164,6 +1165,15 @@ HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasValidNorm);
 
 	return !hasValidNorm;
+}
+
+static bool
+HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, leftDistance, rightDistance);
+
+	return leftDistance < rightDistance;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2310,6 +2320,26 @@ vector_rust_hnsw_should_reject_invalid_norm(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectInvalidNorm(hasValidNorm != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prioritize_lower_distance);
+Datum
+vector_hnsw_should_prioritize_lower_distance(PG_FUNCTION_ARGS)
+{
+	float8		leftDistance = PG_GETARG_FLOAT8(0);
+	float8		rightDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeLowerDistance(leftDistance, rightDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prioritize_lower_distance);
+Datum
+vector_rust_hnsw_should_prioritize_lower_distance(PG_FUNCTION_ARGS)
+{
+	float8		leftDistance = PG_GETARG_FLOAT8(0);
+	float8		rightDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeLowerDistance(leftDistance, rightDistance, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -2409,10 +2439,12 @@ HnswEntryCandidate(char *base, HnswElement entryPoint, HnswQuery * q, Relation i
 static int
 CompareNearestCandidates(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 {
-	if (HnswGetSearchCandidateConst(c_node, a)->distance < HnswGetSearchCandidateConst(c_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(c_node, a)->distance,
+										  HnswGetSearchCandidateConst(c_node, b)->distance, true))
 		return 1;
 
-	if (HnswGetSearchCandidateConst(c_node, a)->distance > HnswGetSearchCandidateConst(c_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(c_node, b)->distance,
+										  HnswGetSearchCandidateConst(c_node, a)->distance, true))
 		return -1;
 
 	return 0;
@@ -2424,10 +2456,12 @@ CompareNearestCandidates(const pairingheap_node *a, const pairingheap_node *b, v
 static int
 CompareNearestDiscardedCandidates(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 {
-	if (HnswGetSearchCandidateConst(w_node, a)->distance < HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, a)->distance,
+										  HnswGetSearchCandidateConst(w_node, b)->distance, true))
 		return 1;
 
-	if (HnswGetSearchCandidateConst(w_node, a)->distance > HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, b)->distance,
+										  HnswGetSearchCandidateConst(w_node, a)->distance, true))
 		return -1;
 
 	return 0;
@@ -2439,10 +2473,12 @@ CompareNearestDiscardedCandidates(const pairingheap_node *a, const pairingheap_n
 static int
 CompareFurthestCandidates(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 {
-	if (HnswGetSearchCandidateConst(w_node, a)->distance < HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, a)->distance,
+										  HnswGetSearchCandidateConst(w_node, b)->distance, true))
 		return -1;
 
-	if (HnswGetSearchCandidateConst(w_node, a)->distance > HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, b)->distance,
+										  HnswGetSearchCandidateConst(w_node, a)->distance, true))
 		return 1;
 
 	return 0;
