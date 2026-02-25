@@ -155,6 +155,7 @@ static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust
 static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
 static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust);
 static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
+static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -951,6 +952,15 @@ HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
 	return hasPrunedOutput;
 }
 
+static bool
+HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNewCandidate);
+
+	return isNewCandidate;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1705,6 +1715,24 @@ vector_rust_hnsw_should_return_pruned_output(PG_FUNCTION_ARGS)
 	int32		hasPrunedOutput = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnPrunedOutput(hasPrunedOutput != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_new_candidate_branch);
+Datum
+vector_hnsw_should_process_new_candidate_branch(PG_FUNCTION_ARGS)
+{
+	int32		isNewCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessNewCandidateBranch(isNewCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_new_candidate_branch);
+Datum
+vector_rust_hnsw_should_process_new_candidate_branch(PG_FUNCTION_ARGS)
+{
+	int32		isNewCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessNewCandidateBranch(isNewCandidate != 0, true));
 }
 
 /*
@@ -2685,7 +2713,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 				}
 			}
 		}
-		else if (e == newCandidate)
+		else if (HnswShouldProcessNewCandidateBranch(e == newCandidate, true))
 		{
 			e->closer = CheckElementCloser(base, e, r, support);
 			if (HnswShouldAppendCloserCandidate(e->closer, true))
