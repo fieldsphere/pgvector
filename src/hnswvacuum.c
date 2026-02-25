@@ -271,6 +271,33 @@ vector_rust_hnsw_should_skip_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipInvalidVacuumNeighborTid(neighborTidValid != 0, true));
 }
 
+static bool
+HnswShouldFlagDeletedVacuumNeighbor(bool isDeletedNeighbor, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedNeighbor);
+
+	return isDeletedNeighbor;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flag_deleted_vacuum_neighbor);
+Datum
+vector_hnsw_should_flag_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFlagDeletedVacuumNeighbor(isDeletedNeighbor != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_flag_deleted_vacuum_neighbor);
+Datum
+vector_rust_hnsw_should_flag_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFlagDeletedVacuumNeighbor(isDeletedNeighbor != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -413,7 +440,7 @@ NeedsUpdated(HnswVacuumState * vacuumstate, HnswElement element)
 			continue;
 
 		/* Check if in deleted list */
-		if (DeletedContains(vacuumstate->deleted, indextid))
+		if (HnswShouldFlagDeletedVacuumNeighbor(DeletedContains(vacuumstate->deleted, indextid), true))
 		{
 			needsUpdated = true;
 			break;
