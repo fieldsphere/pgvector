@@ -143,6 +143,7 @@ static bool HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool use
 static bool HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust);
 static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
+static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -826,6 +827,15 @@ HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust)
 	return heaptidsLength != 0;
 }
 
+static bool
+HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
+
+	return heaptidsLength != 0;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1356,6 +1366,24 @@ vector_rust_hnsw_should_keep_element_with_heaptids(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldKeepElementWithHeapTids(heaptidsLength, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_count_candidate_with_heaptids);
+Datum
+vector_hnsw_should_count_candidate_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountCandidateWithHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_count_candidate_with_heaptids);
+Datum
+vector_rust_hnsw_should_count_candidate_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountCandidateWithHeapTids(heaptidsLength, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -1551,7 +1579,7 @@ CountElement(HnswElement skipElement, HnswElement e)
 	/* Keep scan-build happy on Mac x86-64 */
 	Assert(e);
 
-	return e->heaptidsLength != 0;
+	return HnswShouldCountCandidateWithHeapTids(e->heaptidsLength, true);
 }
 
 /*
