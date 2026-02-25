@@ -121,6 +121,7 @@ static bool HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRus
 static bool HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust);
 static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust);
 static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust);
+static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -606,6 +607,15 @@ HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust)
 	return !heaptidValid;
 }
 
+static bool
+HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
+
+	return !hasSkipElement;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -736,6 +746,24 @@ vector_rust_hnsw_should_stop_loading_element_heaptids(PG_FUNCTION_ARGS)
 	int32		heaptidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopLoadingElementHeapTids(heaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_count_without_skip_element);
+Datum
+vector_hnsw_should_count_without_skip_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountWithoutSkipElement(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_count_without_skip_element);
+Datum
+vector_rust_hnsw_should_count_without_skip_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountWithoutSkipElement(hasSkipElement != 0, true));
 }
 
 /*
@@ -924,7 +952,7 @@ AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMem
 static inline bool
 CountElement(HnswElement skipElement, HnswElement e)
 {
-	if (skipElement == NULL)
+	if (HnswShouldCountWithoutSkipElement(skipElement != NULL, true))
 		return true;
 
 	/* Ensure does not access heaptidsLength during in-memory build */
