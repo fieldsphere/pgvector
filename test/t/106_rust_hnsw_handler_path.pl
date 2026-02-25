@@ -120,6 +120,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_stop_returning_remaining_discarded(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_stop_returning_remaining_discarded'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_stop_returning_remaining_discarded(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_returning_remaining_discarded'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_strict_out_of_order(integer, double precision, double precision) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_strict_out_of_order'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2314,6 +2324,18 @@ my $return_remaining_discarded_parity = $node->safe_psql("postgres", q{
 	) AS t(discarded_is_empty);
 });
 is($return_remaining_discarded_parity, "t\nt\nt\nt");
+
+my $stop_returning_remaining_discarded_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_stop_returning_remaining_discarded(discarded_is_empty) =
+		   rust_hnsw_should_stop_returning_remaining_discarded(discarded_is_empty)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(discarded_is_empty);
+});
+is($stop_returning_remaining_discarded_parity, "t\nt\nt\nt");
 
 my $skip_strict_out_of_order_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_strict_out_of_order(iterative_scan_mode, distance, previous_distance) =
