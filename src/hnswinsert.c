@@ -52,6 +52,7 @@ static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust)
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
+static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
 
 /*
  * Get the insert page
@@ -103,7 +104,7 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 			Size		pageFree;
 			Size		npageFree;
 
-			if (!BlockNumberIsValid(*newInsertPage))
+			if (HnswShouldSetInsertPageWhenMissing(BlockNumberIsValid(*newInsertPage), true))
 				*newInsertPage = elementPage;
 
 			if (neighborPage == elementPage)
@@ -1733,6 +1734,33 @@ vector_rust_hnsw_should_reuse_deleted_ondisk_tuple(PG_FUNCTION_ARGS)
 	int32		isDeleted = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReuseDeletedOnDiskTuple(isDeleted != 0, true));
+}
+
+static bool
+HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust)
+{
+	if (useRust)
+		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasInsertPage);
+
+	return !hasInsertPage;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_insert_page_when_missing);
+Datum
+vector_hnsw_should_set_insert_page_when_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSetInsertPageWhenMissing(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_set_insert_page_when_missing);
+Datum
+vector_rust_hnsw_should_set_insert_page_when_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSetInsertPageWhenMissing(hasInsertPage != 0, true));
 }
 
 static bool
