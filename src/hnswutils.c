@@ -158,6 +158,7 @@ static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
 static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
 static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
 static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
+static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -981,6 +982,15 @@ HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 	return !hasPrunedCandidate;
 }
 
+static bool
+HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(countedCandidate);
+
+	return countedCandidate;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1791,6 +1801,24 @@ vector_rust_hnsw_should_abort_without_pruned_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldAbortWithoutPrunedCandidate(hasPrunedCandidate != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_enqueue_counted_candidate);
+Datum
+vector_hnsw_should_enqueue_counted_candidate(PG_FUNCTION_ARGS)
+{
+	int32		countedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldEnqueueCountedCandidate(countedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_enqueue_counted_candidate);
+Datum
+vector_rust_hnsw_should_enqueue_counted_candidate(PG_FUNCTION_ARGS)
+{
+	int32		countedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldEnqueueCountedCandidate(countedCandidate != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -2143,7 +2171,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		 * would be ideal to do this for inserts as well, but this could
 		 * affect insert performance.
 		 */
-		if (CountElement(skipElement, HnswPtrAccess(base, sc->element)))
+		if (HnswShouldEnqueueCountedCandidate(CountElement(skipElement, HnswPtrAccess(base, sc->element)), true))
 			wlen++;
 	}
 
@@ -2223,7 +2251,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			 * It would be ideal to do this for inserts as well, but this
 			 * could affect insert performance.
 			 */
-			if (CountElement(skipElement, eElement))
+			if (HnswShouldEnqueueCountedCandidate(CountElement(skipElement, eElement), true))
 			{
 				wlen++;
 
