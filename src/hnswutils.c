@@ -119,6 +119,7 @@ static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRu
 static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
 static bool HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust);
 static bool HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust);
+static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -511,7 +512,7 @@ HnswLoadElementFromTuple(HnswElement element, HnswElementTuple etup, bool loadHe
 	element->neighborOffno = ItemPointerGetOffsetNumber(&etup->neighbortid);
 	element->heaptidsLength = 0;
 
-	if (loadHeaptids)
+	if (HnswShouldLoadElementHeapTids(loadHeaptids, true))
 	{
 		for (int i = 0; i < HNSW_HEAPTIDS; i++)
 		{
@@ -584,6 +585,15 @@ HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadVector);
 
 	return shouldLoadVector;
+}
+
+static bool
+HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadHeaptids);
+
+	return shouldLoadHeaptids;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -680,6 +690,24 @@ vector_rust_hnsw_should_load_element_vector(PG_FUNCTION_ARGS)
 	int32		shouldLoadVector = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLoadElementVector(shouldLoadVector != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_heaptids);
+Datum
+vector_hnsw_should_load_element_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadHeaptids = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementHeapTids(shouldLoadHeaptids != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_element_heaptids);
+Datum
+vector_rust_hnsw_should_load_element_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadHeaptids = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementHeapTids(shouldLoadHeaptids != 0, true));
 }
 
 /*
