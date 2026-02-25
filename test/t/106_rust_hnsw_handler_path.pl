@@ -920,6 +920,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_stop_loading_disk_neighbor(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_stop_loading_disk_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_stop_loading_disk_neighbor(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_loading_disk_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_tid_visited_hash(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_tid_visited_hash'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2736,6 +2746,18 @@ my $append_unvisited_disk_neighbor_parity = $node->safe_psql("postgres", q{
 	) AS t(found);
 });
 is($append_unvisited_disk_neighbor_parity, "t\nt\nt\nt");
+
+my $stop_loading_disk_neighbor_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_stop_loading_disk_neighbor(is_valid_indextid) =
+		   rust_hnsw_should_stop_loading_disk_neighbor(is_valid_indextid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_valid_indextid);
+});
+is($stop_loading_disk_neighbor_parity, "t\nt\nt\nt");
 
 my $use_tid_visited_hash_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_tid_visited_hash(in_memory) =
