@@ -146,6 +146,7 @@ static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
+static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -861,6 +862,15 @@ HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust)
 	return !hasProcInfo;
 }
 
+static bool
+HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(nnz, maxNnz);
+
+	return nnz > maxNnz;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1451,6 +1461,26 @@ vector_rust_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
 	int32		hasProcInfo = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_sparsevec_excess_nnz);
+Datum
+vector_hnsw_should_reject_sparsevec_excess_nnz(PG_FUNCTION_ARGS)
+{
+	int32		nnz = PG_GETARG_INT32(0);
+	int32		maxNnz = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectSparsevecExcessNnz(nnz, maxNnz, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_sparsevec_excess_nnz);
+Datum
+vector_rust_hnsw_should_reject_sparsevec_excess_nnz(PG_FUNCTION_ARGS)
+{
+	int32		nnz = PG_GETARG_INT32(0);
+	int32		maxNnz = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectSparsevecExcessNnz(nnz, maxNnz, true));
 }
 
 /*
@@ -2668,7 +2698,7 @@ SparsevecCheckValue(Pointer v)
 {
 	SparseVector *vec = (SparseVector *) v;
 
-	if (vec->nnz > HNSW_MAX_NNZ)
+	if (HnswShouldRejectSparsevecExcessNnz(vec->nnz, HNSW_MAX_NNZ, true))
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("sparsevec cannot have more than %d non-zero elements for hnsw index", HNSW_MAX_NNZ)));
