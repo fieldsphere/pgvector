@@ -1000,6 +1000,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_probe_for_free_neighbor_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_probe_for_free_neighbor_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_probe_for_free_neighbor_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_probe_for_free_neighbor_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_empty_without_neighbor_tids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_neighbor_tids'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2222,6 +2232,18 @@ my $register_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($register_reused_neighbor_buffer_parity, "t\nt\nt\nt");
+
+my $probe_for_free_neighbor_slot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_probe_for_free_neighbor_slot(neighbor_count, layer_m) =
+		   rust_hnsw_should_probe_for_free_neighbor_slot(neighbor_count, layer_m)
+	FROM (VALUES
+		(0, 8),
+		(8, 8),
+		(7, 8),
+		(12, 8)
+	) AS t(neighbor_count, layer_m);
+});
+is($probe_for_free_neighbor_slot_parity, "t\nt\nt\nt");
 
 my $return_empty_without_neighbor_tids_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_empty_without_neighbor_tids(neighbor_tids_loaded) =
