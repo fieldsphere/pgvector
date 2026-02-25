@@ -101,6 +101,7 @@ static bool HnswShouldRejectUnexpectedItemOffset(int32 insertedOffset, int32 exp
 static bool HnswShouldRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust);
 static bool HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust);
 static bool HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust);
+static bool HnswShouldRejectInMemoryDuplicateHeapTid(int32 heaptidsLength, int32 maxHeaptids, bool useRust);
 
 /*
  * Create the metapage
@@ -721,6 +722,35 @@ vector_rust_hnsw_should_use_parallel_heap_scan(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseParallelHeapScan(hasLeader != 0, true));
 }
 
+static bool
+HnswShouldRejectInMemoryDuplicateHeapTid(int32 heaptidsLength, int32 maxHeaptids, bool useRust)
+{
+	if (useRust)
+		return !vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
+
+	return heaptidsLength >= maxHeaptids;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_inmemory_duplicate_heaptid);
+Datum
+vector_hnsw_should_reject_inmemory_duplicate_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectInMemoryDuplicateHeapTid(heaptidsLength, maxHeaptids, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_inmemory_duplicate_heaptid);
+Datum
+vector_rust_hnsw_should_reject_inmemory_duplicate_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectInMemoryDuplicateHeapTid(heaptidsLength, maxHeaptids, true));
+}
+
 /*
  * Add a heap TID to an existing element
  */
@@ -729,7 +759,7 @@ AddDuplicateInMemory(HnswElement element, HnswElement dup)
 {
 	LWLockAcquire(&dup->lock, LW_EXCLUSIVE);
 
-	if (!HnswCanAddDuplicateHeapTid(dup->heaptidsLength, HNSW_HEAPTIDS, true))
+	if (HnswShouldRejectInMemoryDuplicateHeapTid(dup->heaptidsLength, HNSW_HEAPTIDS, true))
 	{
 		LWLockRelease(&dup->lock);
 		return false;
