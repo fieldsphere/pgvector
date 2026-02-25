@@ -1220,6 +1220,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reset_markdeleted_version(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reset_markdeleted_version'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reset_markdeleted_version(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reset_markdeleted_version'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_deleted_ondisk_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_ondisk_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2866,6 +2876,18 @@ my $release_markdeleted_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($release_markdeleted_neighbor_buffer_parity, "t\nt\nt\nt");
+
+my $reset_markdeleted_version_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reset_markdeleted_version(version, max_version) =
+		   rust_hnsw_should_reset_markdeleted_version(version, max_version)
+	FROM (VALUES
+		(1, 15),
+		(15, 15),
+		(16, 15),
+		(22, 15)
+	) AS t(version, max_version);
+});
+is($reset_markdeleted_version_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
