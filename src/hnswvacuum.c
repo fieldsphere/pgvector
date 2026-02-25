@@ -853,6 +853,114 @@ vector_rust_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldRejectVacuumNeighborOverwrite(bool overwriteSucceeded, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
+
+	return !overwriteSucceeded;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_vacuum_neighbor_overwrite);
+Datum
+vector_hnsw_should_reject_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectVacuumNeighborOverwrite(overwriteSucceeded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_vacuum_neighbor_overwrite);
+Datum
+vector_rust_hnsw_should_reject_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectVacuumNeighborOverwrite(overwriteSucceeded != 0, true));
+}
+
+static bool
+HnswShouldInitVacuumStatsWhenMissing(bool hasStats, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasStats);
+
+	return !hasStats;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_init_vacuum_stats_when_missing);
+Datum
+vector_hnsw_should_init_vacuum_stats_when_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitVacuumStatsWhenMissing(hasStats != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_init_vacuum_stats_when_missing);
+Datum
+vector_rust_hnsw_should_init_vacuum_stats_when_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitVacuumStatsWhenMissing(hasStats != 0, true));
+}
+
+static bool
+HnswShouldSkipVacuumCleanupAnalyzeOnly(bool analyzeOnly, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(analyzeOnly);
+
+	return analyzeOnly;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_vacuum_cleanup_analyze_only);
+Datum
+vector_hnsw_should_skip_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
+{
+	int32		analyzeOnly = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipVacuumCleanupAnalyzeOnly(analyzeOnly != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_vacuum_cleanup_analyze_only);
+Datum
+vector_rust_hnsw_should_skip_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
+{
+	int32		analyzeOnly = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipVacuumCleanupAnalyzeOnly(analyzeOnly != 0, true));
+}
+
+static bool
+HnswShouldReturnNullVacuumCleanupStats(bool hasStats, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasStats);
+
+	return !hasStats;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_null_vacuum_cleanup_stats);
+Datum
+vector_hnsw_should_return_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnNullVacuumCleanupStats(hasStats != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_null_vacuum_cleanup_stats);
+Datum
+vector_rust_hnsw_should_return_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnNullVacuumCleanupStats(hasStats != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1093,7 +1201,7 @@ RepairGraphElement(HnswVacuumState * vacuumstate, HnswElement element, HnswEleme
 	page = GenericXLogRegisterBuffer(state, buf, 0);
 
 	/* Overwrite tuple */
-	if (!PageIndexTupleOverwrite(page, element->neighborOffno, (Item) ntup, ntupSize))
+	if (HnswShouldRejectVacuumNeighborOverwrite(PageIndexTupleOverwrite(page, element->neighborOffno, (Item) ntup, ntupSize), true))
 		elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 
 	/* Commit */
@@ -1446,7 +1554,7 @@ InitVacuumState(HnswVacuumState * vacuumstate, IndexVacuumInfo *info, IndexBulkD
 {
 	Relation	index = info->index;
 
-	if (stats == NULL)
+	if (HnswShouldInitVacuumStatsWhenMissing(stats != NULL, true))
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
 
 	vacuumstate->index = index;
@@ -1514,12 +1622,12 @@ hnswvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
 {
 	Relation	rel = info->index;
 
-	if (info->analyze_only)
+	if (HnswShouldSkipVacuumCleanupAnalyzeOnly(info->analyze_only, true))
 		return stats;
 
 	/* stats is NULL if ambulkdelete not called */
 	/* OK to return NULL if index not changed */
-	if (stats == NULL)
+	if (HnswShouldReturnNullVacuumCleanupStats(stats != NULL, true))
 		return NULL;
 
 	stats->num_pages = RelationGetNumberOfBlocks(rel);
