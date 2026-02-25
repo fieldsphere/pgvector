@@ -165,6 +165,7 @@ static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
 static bool HnswShouldUseIndexOptions(bool hasOptions, bool useRust);
 static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
 static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
+static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -370,7 +371,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 	if (unlikely(metap->magicNumber != HNSW_MAGIC_NUMBER))
 		elog(ERROR, "hnsw index is not valid");
 
-	if (m != NULL)
+	if (HnswShouldLoadMetaM(m != NULL, true))
 		*m = metap->m;
 
 	if (entryPoint != NULL)
@@ -1049,6 +1050,15 @@ HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
 
 	return hasAllocator;
+}
+
+static bool
+HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
+
+	return hasMOutputPointer;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -1989,6 +1999,24 @@ vector_rust_hnsw_should_use_custom_allocator(PG_FUNCTION_ARGS)
 	int32		hasAllocator = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseCustomAllocator(hasAllocator != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_meta_m);
+Datum
+vector_hnsw_should_load_meta_m(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadMetaM(hasMOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_meta_m);
+Datum
+vector_rust_hnsw_should_load_meta_m(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadMetaM(hasMOutputPointer != 0, true));
 }
 
 /*
