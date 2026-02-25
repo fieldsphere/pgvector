@@ -140,6 +140,7 @@ static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
 static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
 static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust);
 static bool HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust);
+static bool HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -796,6 +797,15 @@ HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust)
 	return !inMemory;
 }
 
+static bool
+HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_entry_point_kernel(false, level, entryLevel);
+
+	return level > entryLevel;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1268,6 +1278,26 @@ vector_rust_hnsw_should_remove_disk_only_elements_before_select(PG_FUNCTION_ARGS
 	int32		inMemory = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_clamp_neighbor_search_level);
+Datum
+vector_hnsw_should_clamp_neighbor_search_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldClampNeighborSearchLevel(level, entryLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_clamp_neighbor_search_level);
+Datum
+vector_rust_hnsw_should_clamp_neighbor_search_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldClampNeighborSearchLevel(level, entryLevel, true));
 }
 
 /*
@@ -2429,7 +2459,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 		ep = w;
 	}
 
-	if (level > entryLevel)
+	if (HnswShouldClampNeighborSearchLevel(level, entryLevel, true))
 		level = entryLevel;
 
 	/* Add one for existing element */
