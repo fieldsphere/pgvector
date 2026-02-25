@@ -1030,6 +1030,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_probe_undecided_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_probe_undecided_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_probe_undecided_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_probe_undecided_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_empty_without_neighbor_tids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_neighbor_tids'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2288,6 +2298,18 @@ my $apply_neighbor_update_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(update_idx, tuple_count);
 });
 is($apply_neighbor_update_slot_parity, "t\nt\nt\nt");
+
+my $probe_undecided_update_index_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_probe_undecided_update_index(update_idx) =
+		   rust_hnsw_should_probe_undecided_update_index(update_idx)
+	FROM (VALUES
+		(-2),
+		(-1),
+		(0),
+		(-2)
+	) AS t(update_idx);
+});
+is($probe_undecided_update_index_parity, "t\nt\nt\nt");
 
 my $return_empty_without_neighbor_tids_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_empty_without_neighbor_tids(neighbor_tids_loaded) =
