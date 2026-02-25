@@ -1470,6 +1470,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_invalid_meta_magic(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_invalid_meta_magic'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_invalid_meta_magic(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_invalid_meta_magic'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3913,6 +3923,18 @@ my $prioritize_offset_tiebreak_parity = $node->safe_psql("postgres", q{
 	) AS t(left_offset_precedes);
 });
 is($prioritize_offset_tiebreak_parity, "t\nt\nt\nt");
+
+my $reject_invalid_meta_magic_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_invalid_meta_magic(has_expected_magic) =
+		   rust_hnsw_should_reject_invalid_meta_magic(has_expected_magic)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_expected_magic);
+});
+is($reject_invalid_meta_magic_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
