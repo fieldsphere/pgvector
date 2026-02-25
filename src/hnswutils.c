@@ -156,6 +156,7 @@ static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
 static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust);
 static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
 static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
+static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -961,6 +962,15 @@ HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust)
 	return isNewCandidate;
 }
 
+static bool
+HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(matchesPrunedNeighbor);
+
+	return matchesPrunedNeighbor;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1733,6 +1743,24 @@ vector_rust_hnsw_should_process_new_candidate_branch(PG_FUNCTION_ARGS)
 	int32		isNewCandidate = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldProcessNewCandidateBranch(isNewCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_replace_pruned_neighbor);
+Datum
+vector_hnsw_should_replace_pruned_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		matchesPrunedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReplacePrunedNeighbor(matchesPrunedNeighbor != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_replace_pruned_neighbor);
+Datum
+vector_rust_hnsw_should_replace_pruned_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		matchesPrunedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReplacePrunedNeighbor(matchesPrunedNeighbor != 0, true));
 }
 
 /*
@@ -2801,7 +2829,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		/* Find and replace the pruned element */
 		for (int i = 0; i < neighbors->length; i++)
 		{
-			if (HnswPtrEqual(base, neighbors->items[i].element, pruned->element))
+			if (HnswShouldReplacePrunedNeighbor(HnswPtrEqual(base, neighbors->items[i].element, pruned->element), true))
 			{
 				neighbors->items[i] = newHc;
 
