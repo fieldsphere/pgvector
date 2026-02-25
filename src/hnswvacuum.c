@@ -82,6 +82,33 @@ vector_rust_hnsw_should_skip_non_element_vacuum_tuple(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipNonElementVacuumTuple(isElementTuple != 0, true));
 }
 
+static bool
+HnswShouldProcessVacuumHeapTids(bool firstHeaptidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(firstHeaptidValid);
+
+	return firstHeaptidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_vacuum_heaptids);
+Datum
+vector_hnsw_should_process_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessVacuumHeapTids(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_vacuum_heaptids);
+Datum
+vector_rust_hnsw_should_process_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessVacuumHeapTids(firstHeaptidValid != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -132,7 +159,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 			if (HnswShouldSkipNonElementVacuumTuple(HnswIsElementTuple(etup), true))
 				continue;
 
-			if (ItemPointerIsValid(&etup->heaptids[0]))
+			if (HnswShouldProcessVacuumHeapTids(ItemPointerIsValid(&etup->heaptids[0]), true))
 			{
 				for (int i = 0; i < HNSW_HEAPTIDS; i++)
 				{
