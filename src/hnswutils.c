@@ -173,6 +173,7 @@ static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
 static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust);
 static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust);
 static bool HnswShouldUseBuildBufferPath(bool building, bool useRust);
+static bool HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -478,7 +479,7 @@ HnswFormIndexValue(Datum *out, Datum *values, bool *isnull, const HnswTypeInfo *
 	Datum		value = PointerGetDatum(PG_DETOAST_DATUM(values[0]));
 
 	/* Check value */
-	if (typeInfo->checkValue != NULL)
+	if (HnswShouldCheckTypeValue(typeInfo->checkValue != NULL, true))
 		typeInfo->checkValue(DatumGetPointer(value));
 
 	/* Normalize if needed */
@@ -1134,6 +1135,15 @@ HnswShouldUseBuildBufferPath(bool building, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(building);
 
 	return building;
+}
+
+static bool
+HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
+
+	return hasCheckValueFunction;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2224,6 +2234,24 @@ vector_rust_hnsw_should_use_build_buffer_path(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildBufferPath(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_check_type_value);
+Datum
+vector_hnsw_should_check_type_value(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCheckTypeValue(hasCheckValueFunction != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_check_type_value);
+Datum
+vector_rust_hnsw_should_check_type_value(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCheckTypeValue(hasCheckValueFunction != 0, true));
 }
 
 /*
