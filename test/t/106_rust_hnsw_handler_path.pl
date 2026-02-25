@@ -1080,6 +1080,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_clamp_neighbor_search_level(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_clamp_neighbor_search_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_clamp_neighbor_search_level(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_clamp_neighbor_search_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3048,6 +3058,18 @@ my $remove_disk_only_elements_before_select_parity = $node->safe_psql("postgres"
 	) AS t(in_memory);
 });
 is($remove_disk_only_elements_before_select_parity, "t\nt\nt\nt");
+
+my $clamp_neighbor_search_level_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_clamp_neighbor_search_level(level, entry_level) =
+		   rust_hnsw_should_clamp_neighbor_search_level(level, entry_level)
+	FROM (VALUES
+		(1, 2),
+		(3, 2),
+		(4, 4),
+		(6, 5)
+	) AS t(level, entry_level);
+});
+is($clamp_neighbor_search_level_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
