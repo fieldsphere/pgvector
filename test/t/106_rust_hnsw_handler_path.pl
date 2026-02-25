@@ -1040,6 +1040,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_flag_deleted_vacuum_neighbor(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_flag_deleted_vacuum_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_flag_deleted_vacuum_neighbor(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_flag_deleted_vacuum_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_deleted_ondisk_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_ondisk_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2470,6 +2480,18 @@ my $skip_invalid_vacuum_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbor_tid_valid);
 });
 is($skip_invalid_vacuum_neighbor_tid_parity, "t\nt\nt\nt");
+
+my $flag_deleted_vacuum_neighbor_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_flag_deleted_vacuum_neighbor(is_deleted_neighbor) =
+		   rust_hnsw_should_flag_deleted_vacuum_neighbor(is_deleted_neighbor)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(is_deleted_neighbor);
+});
+is($flag_deleted_vacuum_neighbor_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
