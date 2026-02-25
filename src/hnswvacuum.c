@@ -823,6 +823,36 @@ vector_rust_hnsw_should_skip_deleted_repairgraph_element(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isHigherLevel) &&
+			vector_rust_hnsw_should_assign_new_lock_tranche_kernel(isEntryPoint);
+
+	return isHigherLevel && !isEntryPoint;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_vacuum_highest_non_entrypoint);
+Datum
+vector_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		isHigherLevel = PG_GETARG_INT32(0);
+	int32		isEntryPoint = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldTrackVacuumHighestNonEntrypoint(isHigherLevel != 0, isEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_vacuum_highest_non_entrypoint);
+Datum
+vector_rust_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		isHigherLevel = PG_GETARG_INT32(0);
+	int32		isEntryPoint = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldTrackVacuumHighestNonEntrypoint(isHigherLevel != 0, isEntryPoint != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -894,6 +924,9 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 			HnswElementTuple etup = (HnswElementTuple) PageGetItem(page, PageGetItemId(page, offno));
 			int			idx = 0;
 			bool		itemUpdated = false;
+			bool		isEntryPoint = entryPoint != NULL &&
+			blkno == entryPoint->blkno &&
+			offno == entryPoint->offno;
 
 			/* Skip neighbor tuples */
 			if (HnswShouldSkipNonElementVacuumTuple(HnswIsElementTuple(etup), true))
@@ -941,7 +974,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 				tidhash_insert(vacuumstate->deleted, ip, &found);
 				Assert(!found);
 			}
-			else if (etup->level > highestLevel && !(entryPoint != NULL && blkno == entryPoint->blkno && offno == entryPoint->offno))
+			else if (HnswShouldTrackVacuumHighestNonEntrypoint(etup->level > highestLevel, isEntryPoint, true))
 			{
 				/* Keep track of highest non-entry point */
 				highestPoint->blkno = blkno;
