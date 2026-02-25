@@ -54,6 +54,7 @@ static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
+static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust);
 
 /*
  * Get the insert page
@@ -147,7 +148,7 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 				*tupleVersion = etup->version;
 				return true;
 			}
-			else if (*nbuf != buf)
+			else if (HnswShouldReleaseReusedNeighborBuffer(*nbuf == buf, true))
 				UnlockReleaseBuffer(*nbuf);
 		}
 	}
@@ -1789,6 +1790,33 @@ vector_rust_hnsw_should_reuse_element_buffer_for_neighbor_page(PG_FUNCTION_ARGS)
 	int32		samePage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReuseElementBufferForNeighborPage(samePage != 0, true));
+}
+
+static bool
+HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
+
+	return !sameBuffer;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_reused_neighbor_buffer);
+Datum
+vector_hnsw_should_release_reused_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseReusedNeighborBuffer(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_release_reused_neighbor_buffer);
+Datum
+vector_rust_hnsw_should_release_reused_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseReusedNeighborBuffer(sameBuffer != 0, true));
 }
 
 static bool
