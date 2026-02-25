@@ -608,6 +608,33 @@ vector_rust_hnsw_should_process_nonnull_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldProcessNonnullVacuumEntrypoint(hasEntryPoint != 0, true));
 }
 
+static bool
+HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedTuple);
+
+	return isDeletedTuple;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_deleted_markdeleted_tuple);
+Datum
+vector_hnsw_should_skip_deleted_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipDeletedMarkDeletedTuple(isDeletedTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_deleted_markdeleted_tuple);
+Datum
+vector_rust_hnsw_should_skip_deleted_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipDeletedMarkDeletedTuple(isDeletedTuple != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -1087,7 +1114,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 				continue;
 
 			/* Skip deleted tuples */
-			if (etup->deleted)
+			if (HnswShouldSkipDeletedMarkDeletedTuple(etup->deleted, true))
 			{
 				/* Set to first free page */
 				if (!BlockNumberIsValid(insertPage))
