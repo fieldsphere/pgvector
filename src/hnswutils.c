@@ -157,6 +157,7 @@ static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust
 static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
 static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
 static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
+static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -971,6 +972,15 @@ HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust)
 	return matchesPrunedNeighbor;
 }
 
+static bool
+HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasPrunedCandidate);
+
+	return !hasPrunedCandidate;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1761,6 +1771,24 @@ vector_rust_hnsw_should_replace_pruned_neighbor(PG_FUNCTION_ARGS)
 	int32		matchesPrunedNeighbor = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReplacePrunedNeighbor(matchesPrunedNeighbor != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_without_pruned_candidate);
+Datum
+vector_hnsw_should_abort_without_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortWithoutPrunedCandidate(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_abort_without_pruned_candidate);
+Datum
+vector_rust_hnsw_should_abort_without_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortWithoutPrunedCandidate(hasPrunedCandidate != 0, true));
 }
 
 /*
@@ -2823,7 +2851,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		SelectNeighbors(base, c, lm, support, &neighbors->closerSet, &newHc, &pruned, true);
 
 		/* Should not happen */
-		if (!HnswShouldProcessPrunedCandidate(pruned != NULL, true))
+		if (HnswShouldAbortWithoutPrunedCandidate(pruned != NULL, true))
 			return;
 
 		/* Find and replace the pruned element */
