@@ -153,6 +153,7 @@ static bool HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust);
 static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
 static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
+static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -931,6 +932,15 @@ HnswShouldAppendCloserCandidate(bool isCloser, bool useRust)
 	return isCloser;
 }
 
+static bool
+HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(removedAny);
+
+	return removedAny;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1649,6 +1659,24 @@ vector_rust_hnsw_should_append_closer_candidate(PG_FUNCTION_ARGS)
 	int32		isCloser = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAppendCloserCandidate(isCloser != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_recheck_candidate_after_removal);
+Datum
+vector_hnsw_should_recheck_candidate_after_removal(PG_FUNCTION_ARGS)
+{
+	int32		removedAny = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRecheckCandidateAfterRemoval(removedAny != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_recheck_candidate_after_removal);
+Datum
+vector_rust_hnsw_should_recheck_candidate_after_removal(PG_FUNCTION_ARGS)
+{
+	int32		removedAny = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRecheckCandidateAfterRemoval(removedAny != 0, true));
 }
 
 /*
@@ -2621,7 +2649,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 				 * If we have removed any candidates from closer, a candidate
 				 * that was not closer earlier might now be.
 				 */
-				if (removedAny)
+				if (HnswShouldRecheckCandidateAfterRemoval(removedAny, true))
 				{
 					e->closer = CheckElementCloser(base, e, r, support);
 					if (HnswShouldAppendCloserCandidate(e->closer, true))
