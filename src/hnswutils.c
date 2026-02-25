@@ -179,6 +179,7 @@ static bool HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust);
 static bool HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust);
 static bool HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust);
 static bool HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust);
+static bool HnswShouldRejectInvalidMetaMagic(bool hasExpectedMagic, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -381,7 +382,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 	page = BufferGetPage(buf);
 	metap = HnswPageGetMeta(page);
 
-	if (unlikely(metap->magicNumber != HNSW_MAGIC_NUMBER))
+	if (unlikely(HnswShouldRejectInvalidMetaMagic(metap->magicNumber == HNSW_MAGIC_NUMBER, true)))
 		elog(ERROR, "hnsw index is not valid");
 
 	if (HnswShouldLoadMetaM(m != NULL, true))
@@ -1194,6 +1195,15 @@ HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftOffsetPrecedes);
 
 	return leftOffsetPrecedes;
+}
+
+static bool
+HnswShouldRejectInvalidMetaMagic(bool hasExpectedMagic, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedMagic);
+
+	return !hasExpectedMagic;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2394,6 +2404,24 @@ vector_rust_hnsw_should_prioritize_offset_tiebreak(PG_FUNCTION_ARGS)
 	int32		leftOffsetPrecedes = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldPrioritizeOffsetTiebreak(leftOffsetPrecedes != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_invalid_meta_magic);
+Datum
+vector_hnsw_should_reject_invalid_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidMetaMagic(hasExpectedMagic != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_invalid_meta_magic);
+Datum
+vector_rust_hnsw_should_reject_invalid_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidMetaMagic(hasExpectedMagic != 0, true));
 }
 
 /*
