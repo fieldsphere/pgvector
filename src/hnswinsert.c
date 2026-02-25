@@ -62,6 +62,7 @@ static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
+static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
 
 /*
  * Get the insert page
@@ -565,7 +566,9 @@ UpdateNeighborOnDisk(HnswElement element, HnswElement newElement, int idx, int m
 	startIdx = (element->level - lc) * m;
 
 	/* Check for existing connection */
-	if (checkExisting && ConnectionExists(newElement, ntup, startIdx, lm))
+	if (HnswShouldSkipExistingNeighborUpdate(checkExisting,
+											 ConnectionExists(newElement, ntup, startIdx, lm),
+											 true))
 		idx = -1;
 	else if (idx == -2)
 	{
@@ -2034,6 +2037,36 @@ vector_rust_hnsw_should_probe_for_free_neighbor_slot(PG_FUNCTION_ARGS)
 	int32		layerM = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldProbeForFreeNeighborSlot(neighborCount, layerM, true));
+}
+
+static bool
+HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(checkExisting) &&
+			vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(connectionExists);
+
+	return checkExisting && connectionExists;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_existing_neighbor_update);
+Datum
+vector_hnsw_should_skip_existing_neighbor_update(PG_FUNCTION_ARGS)
+{
+	int32		checkExisting = PG_GETARG_INT32(0);
+	int32		connectionExists = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSkipExistingNeighborUpdate(checkExisting != 0, connectionExists != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_existing_neighbor_update);
+Datum
+vector_rust_hnsw_should_skip_existing_neighbor_update(PG_FUNCTION_ARGS)
+{
+	int32		checkExisting = PG_GETARG_INT32(0);
+	int32		connectionExists = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSkipExistingNeighborUpdate(checkExisting != 0, connectionExists != 0, true));
 }
 
 static bool
