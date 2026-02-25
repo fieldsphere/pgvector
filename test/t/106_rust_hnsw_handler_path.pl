@@ -1060,6 +1060,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_increment_ef_for_existing_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_increment_ef_for_existing_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_increment_ef_for_existing_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_increment_ef_for_existing_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3004,6 +3014,18 @@ my $precompute_hash_for_neighbors_parity = $node->safe_psql("postgres", q{
 	) AS t(in_memory);
 });
 is($precompute_hash_for_neighbors_parity, "t\nt\nt\nt");
+
+my $increment_ef_for_existing_element_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_increment_ef_for_existing_element(existing_element) =
+		   rust_hnsw_should_increment_ef_for_existing_element(existing_element)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(existing_element);
+});
+is($increment_ef_for_existing_element_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
