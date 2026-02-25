@@ -1360,6 +1360,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_update_meta_entry_info(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_update_meta_entry_info'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_update_meta_entry_info(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_update_meta_entry_info'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3668,6 +3678,18 @@ my $use_meta_entry_block_parity = $node->safe_psql("postgres", q{
 	) AS t(has_valid_entry_block);
 });
 is($use_meta_entry_block_parity, "t\nt\nt\nt");
+
+my $update_meta_entry_info_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_update_meta_entry_info(update_entry_mode) =
+		   rust_hnsw_should_update_meta_entry_info(update_entry_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(1)
+	) AS t(update_entry_mode);
+});
+is($update_meta_entry_info_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
