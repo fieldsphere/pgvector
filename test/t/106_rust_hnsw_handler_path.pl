@@ -820,6 +820,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_follow_ondisk_next_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_follow_ondisk_next_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_follow_ondisk_next_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_follow_ondisk_next_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1806,6 +1816,18 @@ my $use_build_path_for_reused_ondisk_buffer_parity = $node->safe_psql("postgres"
 	) AS t(building);
 });
 is($use_build_path_for_reused_ondisk_buffer_parity, "t\nt\nt\nt");
+
+my $follow_ondisk_next_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_follow_ondisk_next_page(next_page_valid) =
+		   rust_hnsw_should_follow_ondisk_next_page(next_page_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(next_page_valid);
+});
+is($follow_ondisk_next_page_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
