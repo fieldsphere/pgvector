@@ -163,6 +163,7 @@ static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRu
 static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
 static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
 static bool HnswShouldUseIndexOptions(bool hasOptions, bool useRust);
+static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -198,7 +199,7 @@ HnswGetEfConstruction(Relation index)
 FmgrInfo *
 HnswOptionalProcInfo(Relation index, uint16 procnum)
 {
-	if (!OidIsValid(index_getprocid(index, 1, procnum)))
+	if (HnswShouldReturnMissingOptionalProc(OidIsValid(index_getprocid(index, 1, procnum)), true))
 		return NULL;
 
 	return index_getprocinfo(index, 1, procnum);
@@ -1029,6 +1030,15 @@ HnswShouldUseIndexOptions(bool hasOptions, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
 
 	return hasOptions;
+}
+
+static bool
+HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcOid);
+
+	return !hasProcOid;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -1933,6 +1943,24 @@ vector_rust_hnsw_should_use_index_options(PG_FUNCTION_ARGS)
 	int32		hasOptions = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseIndexOptions(hasOptions != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_missing_optional_proc);
+Datum
+vector_hnsw_should_return_missing_optional_proc(PG_FUNCTION_ARGS)
+{
+	int32		hasProcOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnMissingOptionalProc(hasProcOid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_missing_optional_proc);
+Datum
+vector_rust_hnsw_should_return_missing_optional_proc(PG_FUNCTION_ARGS)
+{
+	int32		hasProcOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnMissingOptionalProc(hasProcOid != 0, true));
 }
 
 /*
