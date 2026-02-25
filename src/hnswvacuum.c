@@ -217,6 +217,33 @@ vector_rust_hnsw_should_compact_vacuum_heaptids(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldCompactVacuumHeapTids(itemUpdated != 0, true));
 }
 
+static bool
+HnswShouldFinishVacuumPageUpdate(bool pageUpdated, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(pageUpdated);
+
+	return pageUpdated;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_finish_vacuum_page_update);
+Datum
+vector_hnsw_should_finish_vacuum_page_update(PG_FUNCTION_ARGS)
+{
+	int32		pageUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFinishVacuumPageUpdate(pageUpdated != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_finish_vacuum_page_update);
+Datum
+vector_rust_hnsw_should_finish_vacuum_page_update(PG_FUNCTION_ARGS)
+{
+	int32		pageUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFinishVacuumPageUpdate(pageUpdated != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -321,7 +348,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 
 		blkno = HnswPageGetOpaque(page)->nextblkno;
 
-		if (updated)
+		if (HnswShouldFinishVacuumPageUpdate(updated, true))
 			GenericXLogFinish(state);
 		else
 			GenericXLogAbort(state);
