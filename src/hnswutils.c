@@ -138,6 +138,7 @@ static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
 static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
 static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
+static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -776,6 +777,15 @@ HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust)
 	return inMemory;
 }
 
+static bool
+HnswShouldIncrementEfForExistingElement(bool existing, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
+
+	return existing;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1212,6 +1222,24 @@ vector_rust_hnsw_should_precompute_hash_for_neighbors(PG_FUNCTION_ARGS)
 	int32		inMemory = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldPrecomputeHashForNeighbors(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_increment_ef_for_existing_element);
+Datum
+vector_hnsw_should_increment_ef_for_existing_element(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldIncrementEfForExistingElement(existing != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_increment_ef_for_existing_element);
+Datum
+vector_rust_hnsw_should_increment_ef_for_existing_element(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldIncrementEfForExistingElement(existing != 0, true));
 }
 
 /*
@@ -2377,7 +2405,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 		level = entryLevel;
 
 	/* Add one for existing element */
-	if (existing)
+	if (HnswShouldIncrementEfForExistingElement(existing, true))
 		efConstruction++;
 
 	/* 2nd phase */
