@@ -122,6 +122,7 @@ static bool HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust);
 static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust);
 static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust);
 static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
+static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -616,6 +617,15 @@ HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
 	return !hasSkipElement;
 }
 
+static bool
+HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
+
+	return !found;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -764,6 +774,24 @@ vector_rust_hnsw_should_count_without_skip_element(PG_FUNCTION_ARGS)
 	int32		hasSkipElement = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldCountWithoutSkipElement(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_unvisited_neighbor);
+Datum
+vector_hnsw_should_append_unvisited_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedNeighbor(found != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_unvisited_neighbor);
+Datum
+vector_rust_hnsw_should_append_unvisited_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedNeighbor(found != 0, true));
 }
 
 /*
@@ -987,7 +1015,7 @@ HnswLoadUnvisitedFromMemory(char *base, HnswElement element, HnswUnvisited * unv
 
 		AddToVisited(base, v, hc->element, true, &found);
 
-		if (!found)
+		if (HnswShouldAppendUnvisitedNeighbor(found, true))
 			unvisited[(*unvisitedLength)++].element = HnswPtrAccess(base, hc->element);
 	}
 }
