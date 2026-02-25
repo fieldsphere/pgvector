@@ -549,6 +549,15 @@ HnswShouldZeroDistanceForNullQueryValue(bool hasQueryValue, bool useRust)
 	return !hasQueryValue;
 }
 
+static bool
+HnswShouldCalculateElementDistance(bool hasDistancePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasDistancePointer);
+
+	return hasDistancePointer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -565,6 +574,24 @@ vector_rust_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
 	int32		hasQueryValue = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldZeroDistanceForNullQueryValue(hasQueryValue != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_calculate_element_distance);
+Datum
+vector_hnsw_should_calculate_element_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateElementDistance(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_calculate_element_distance);
+Datum
+vector_rust_hnsw_should_calculate_element_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateElementDistance(hasDistancePointer != 0, true));
 }
 
 /*
@@ -587,7 +614,7 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	Assert(HnswIsElementTuple(etup));
 
 	/* Calculate distance */
-	if (distance != NULL)
+	if (HnswShouldCalculateElementDistance(distance != NULL, true))
 	{
 		if (HnswShouldZeroDistanceForNullQueryValue(DatumGetPointer(q->value) != NULL, true))
 			*distance = 0;
