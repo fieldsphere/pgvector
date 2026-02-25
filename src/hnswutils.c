@@ -125,6 +125,7 @@ static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
 static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
+static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -646,6 +647,15 @@ HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
 	return hasBasePointer;
 }
 
+static bool
+HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
+
+	return !hasBasePointer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -850,6 +860,24 @@ vector_rust_hnsw_should_use_offset_visited_hash(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseOffsetVisitedHash(hasBasePointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_pointer_visited_hash);
+Datum
+vector_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_pointer_visited_hash);
+Datum
+vector_rust_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -998,7 +1026,7 @@ InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 		v->tids = tidhash_create(CurrentMemoryContext, ef * m * 2, NULL);
 	else if (HnswShouldUseOffsetVisitedHash(base != NULL, true))
 		v->offsets = offsethash_create(CurrentMemoryContext, ef * m * 2, NULL);
-	else
+	else if (HnswShouldUsePointerVisitedHash(base != NULL, true))
 		v->pointers = pointerhash_create(CurrentMemoryContext, ef * m * 2, NULL);
 }
 
@@ -1022,7 +1050,7 @@ AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMem
 
 		offsethash_insert_hash(v->offsets, HnswPtrOffset(elementPtr), element->hash, found);
 	}
-	else
+	else if (HnswShouldUsePointerVisitedHash(base != NULL, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 
