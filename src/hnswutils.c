@@ -152,6 +152,7 @@ static bool HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust);
 static bool HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust);
 static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
 static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust);
+static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -921,6 +922,15 @@ HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust)
 	return hasBasePointer;
 }
 
+static bool
+HnswShouldAppendCloserCandidate(bool isCloser, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isCloser);
+
+	return isCloser;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1621,6 +1631,24 @@ vector_rust_hnsw_should_define_closer_state_for_base(PG_FUNCTION_ARGS)
 	int32		hasBasePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldDefineCloserStateForBase(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_closer_candidate);
+Datum
+vector_hnsw_should_append_closer_candidate(PG_FUNCTION_ARGS)
+{
+	int32		isCloser = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendCloserCandidate(isCloser != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_closer_candidate);
+Datum
+vector_rust_hnsw_should_append_closer_candidate(PG_FUNCTION_ARGS)
+{
+	int32		isCloser = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendCloserCandidate(isCloser != 0, true));
 }
 
 /*
@@ -2580,11 +2608,11 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 			 * If the current candidate was closer, we only need to compare it
 			 * with the other candidates that we have added.
 			 */
-			if (e->closer)
+			if (HnswShouldAppendCloserCandidate(e->closer, true))
 			{
 				e->closer = CheckElementCloser(base, e, added, support);
 
-				if (!e->closer)
+				if (!HnswShouldAppendCloserCandidate(e->closer, true))
 					removedAny = true;
 			}
 			else
@@ -2596,7 +2624,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 				if (removedAny)
 				{
 					e->closer = CheckElementCloser(base, e, r, support);
-					if (e->closer)
+					if (HnswShouldAppendCloserCandidate(e->closer, true))
 						added = lappend(added, e);
 				}
 			}
@@ -2604,7 +2632,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		else if (e == newCandidate)
 		{
 			e->closer = CheckElementCloser(base, e, r, support);
-			if (e->closer)
+			if (HnswShouldAppendCloserCandidate(e->closer, true))
 				added = lappend(added, e);
 		}
 
@@ -2612,7 +2640,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		if (HnswShouldDefineCloserStateForBase(base != NULL, true))
 			VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
-		if (e->closer)
+		if (HnswShouldAppendCloserCandidate(e->closer, true))
 			r = lappend(r, e);
 		else
 			wd[wdlen++] = e;
