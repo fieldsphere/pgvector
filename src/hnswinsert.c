@@ -61,6 +61,7 @@ static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementT
 static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
+static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
 
 /*
  * Get the insert page
@@ -490,7 +491,7 @@ GetUpdateIndex(HnswElement element, HnswElement newElement, float distance, int 
 	 * time.
 	 */
 
-	if (neighbors->length < lm)
+	if (HnswShouldProbeForFreeNeighborSlot(neighbors->length, lm, true))
 		idx = -2;
 	else
 	{
@@ -2004,6 +2005,35 @@ vector_rust_hnsw_should_prune_deleted_insert_element(PG_FUNCTION_ARGS)
 	int32		heaptidsLength = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldPruneDeletedInsertElement(heaptidsLength, true));
+}
+
+static bool
+HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) neighborCount, (int64) layerM);
+
+	return neighborCount < layerM;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_probe_for_free_neighbor_slot);
+Datum
+vector_hnsw_should_probe_for_free_neighbor_slot(PG_FUNCTION_ARGS)
+{
+	int32		neighborCount = PG_GETARG_INT32(0);
+	int32		layerM = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldProbeForFreeNeighborSlot(neighborCount, layerM, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_probe_for_free_neighbor_slot);
+Datum
+vector_rust_hnsw_should_probe_for_free_neighbor_slot(PG_FUNCTION_ARGS)
+{
+	int32		neighborCount = PG_GETARG_INT32(0);
+	int32		layerM = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldProbeForFreeNeighborSlot(neighborCount, layerM, true));
 }
 
 static bool
