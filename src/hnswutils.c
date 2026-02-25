@@ -130,6 +130,7 @@ static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRus
 static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
 static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
+static bool HnswShouldInitializeVisitedState(bool initVisited, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
@@ -701,6 +702,15 @@ HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust)
 }
 
 static bool
+HnswShouldInitializeVisitedState(bool initVisited, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(initVisited);
+
+	return initVisited;
+}
+
+static bool
 HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
@@ -1028,6 +1038,24 @@ vector_rust_hnsw_should_initialize_visited_hash(PG_FUNCTION_ARGS)
 	int32		hasVisitedHash = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitializeVisitedHash(hasVisitedHash != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_visited_state);
+Datum
+vector_hnsw_should_initialize_visited_state(PG_FUNCTION_ARGS)
+{
+	int32		initVisited = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedState(initVisited != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_visited_state);
+Datum
+vector_rust_hnsw_should_initialize_visited_state(PG_FUNCTION_ARGS)
+{
+	int32		initVisited = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedState(initVisited != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
@@ -1416,7 +1444,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		initVisited = true;
 	}
 
-	if (initVisited)
+	if (HnswShouldInitializeVisitedState(initVisited, true))
 	{
 		InitVisited(base, v, inMemory, ef, m);
 
@@ -1437,7 +1465,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		HnswSearchCandidate *sc = (HnswSearchCandidate *) lfirst(lc2);
 		bool		found;
 
-		if (initVisited)
+		if (HnswShouldInitializeVisitedState(initVisited, true))
 		{
 			AddToVisited(base, v, sc->element, inMemory, &found);
 
