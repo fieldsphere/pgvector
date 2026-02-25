@@ -177,6 +177,8 @@ static bool HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust);
 static bool HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust);
 static bool HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust);
 static bool HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust);
+static bool HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust);
+static bool HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -1174,6 +1176,24 @@ HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, boo
 		return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, leftDistance, rightDistance);
 
 	return leftDistance < rightDistance;
+}
+
+static bool
+HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftPointerPrecedes);
+
+	return leftPointerPrecedes;
+}
+
+static bool
+HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftOffsetPrecedes);
+
+	return leftOffsetPrecedes;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2340,6 +2360,42 @@ vector_rust_hnsw_should_prioritize_lower_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldPrioritizeLowerDistance(leftDistance, rightDistance, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prioritize_pointer_tiebreak);
+Datum
+vector_hnsw_should_prioritize_pointer_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftPointerPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizePointerTiebreak(leftPointerPrecedes != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prioritize_pointer_tiebreak);
+Datum
+vector_rust_hnsw_should_prioritize_pointer_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftPointerPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizePointerTiebreak(leftPointerPrecedes != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prioritize_offset_tiebreak);
+Datum
+vector_hnsw_should_prioritize_offset_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftOffsetPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeOffsetTiebreak(leftOffsetPrecedes != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prioritize_offset_tiebreak);
+Datum
+vector_rust_hnsw_should_prioritize_offset_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftOffsetPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeOffsetTiebreak(leftOffsetPrecedes != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -2814,16 +2870,16 @@ CompareCandidateDistances(const ListCell *a, const ListCell *b)
 	HnswCandidate *hca = lfirst(a);
 	HnswCandidate *hcb = lfirst(b);
 
-	if (hca->distance < hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hca->distance, hcb->distance, true))
 		return 1;
 
-	if (hca->distance > hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hcb->distance, hca->distance, true))
 		return -1;
 
-	if (HnswPtrPointer(hca->element) < HnswPtrPointer(hcb->element))
+	if (HnswShouldPrioritizePointerTiebreak(HnswPtrPointer(hca->element) < HnswPtrPointer(hcb->element), true))
 		return 1;
 
-	if (HnswPtrPointer(hca->element) > HnswPtrPointer(hcb->element))
+	if (HnswShouldPrioritizePointerTiebreak(HnswPtrPointer(hcb->element) < HnswPtrPointer(hca->element), true))
 		return -1;
 
 	return 0;
@@ -2838,16 +2894,16 @@ CompareCandidateDistancesOffset(const ListCell *a, const ListCell *b)
 	HnswCandidate *hca = lfirst(a);
 	HnswCandidate *hcb = lfirst(b);
 
-	if (hca->distance < hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hca->distance, hcb->distance, true))
 		return 1;
 
-	if (hca->distance > hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hcb->distance, hca->distance, true))
 		return -1;
 
-	if (HnswPtrOffset(hca->element) < HnswPtrOffset(hcb->element))
+	if (HnswShouldPrioritizeOffsetTiebreak(HnswPtrOffset(hca->element) < HnswPtrOffset(hcb->element), true))
 		return 1;
 
-	if (HnswPtrOffset(hca->element) > HnswPtrOffset(hcb->element))
+	if (HnswShouldPrioritizeOffsetTiebreak(HnswPtrOffset(hcb->element) < HnswPtrOffset(hca->element), true))
 		return -1;
 
 	return 0;
