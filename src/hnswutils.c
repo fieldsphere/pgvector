@@ -137,6 +137,7 @@ static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
 static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
+static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -766,6 +767,15 @@ HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust)
 	return !hasEntryPoint;
 }
 
+static bool
+HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+
+	return inMemory;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1184,6 +1194,24 @@ vector_rust_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnWithoutEntryPoint(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_precompute_hash_for_neighbors);
+Datum
+vector_hnsw_should_precompute_hash_for_neighbors(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrecomputeHashForNeighbors(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_precompute_hash_for_neighbors);
+Datum
+vector_rust_hnsw_should_precompute_hash_for_neighbors(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrecomputeHashForNeighbors(inMemory != 0, true));
 }
 
 /*
@@ -2327,7 +2355,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 	q.value = HnswGetValue(base, element);
 
 	/* Precompute hash */
-	if (inMemory)
+	if (HnswShouldPrecomputeHashForNeighbors(inMemory, true))
 		PrecomputeHash(base, element);
 
 	/* No neighbors if no entry point */
