@@ -50,6 +50,7 @@ static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool use
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
 static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
+static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 
 /*
  * Get the insert page
@@ -89,7 +90,7 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 		HnswElementTuple etup = (HnswElementTuple) PageGetItem(page, eitemid);
 
 		/* Skip neighbor tuples */
-		if (!HnswIsElementTuple(etup))
+		if (HnswShouldSkipNonElementTuple(HnswIsElementTuple(etup), true))
 			continue;
 
 		if (etup->deleted)
@@ -1677,6 +1678,33 @@ vector_rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
 	int32		neighborTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopOnInvalidOnDiskNeighborTid(neighborTidValid != 0, true));
+}
+
+static bool
+HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
+
+	return !isElementTuple;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_tuple);
+Datum
+vector_hnsw_should_skip_non_element_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNonElementTuple(isElementTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_non_element_tuple);
+Datum
+vector_rust_hnsw_should_skip_non_element_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNonElementTuple(isElementTuple != 0, true));
 }
 
 static bool
