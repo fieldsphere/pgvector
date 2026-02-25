@@ -960,6 +960,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_distinct_neighbor_page_space(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_distinct_neighbor_page_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_distinct_neighbor_page_space(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_distinct_neighbor_page_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2114,6 +2124,18 @@ my $release_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($release_reused_neighbor_buffer_parity, "t\nt\nt\nt");
+
+my $use_distinct_neighbor_page_space_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_distinct_neighbor_page_space(same_page) =
+		   rust_hnsw_should_use_distinct_neighbor_page_space(same_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(same_page);
+});
+is($use_distinct_neighbor_page_space_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
