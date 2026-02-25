@@ -419,6 +419,33 @@ vector_rust_hnsw_should_promote_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldPromoteVacuumEntryPoint(entryPointIsNull != 0, elementLevel, entryPointLevel, true));
 }
 
+static bool
+HnswShouldResetVacuumHighestPoint(bool highestPointValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(highestPointValid);
+
+	return !highestPointValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_vacuum_highest_point);
+Datum
+vector_hnsw_should_reset_vacuum_highest_point(PG_FUNCTION_ARGS)
+{
+	int32		highestPointValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResetVacuumHighestPoint(highestPointValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reset_vacuum_highest_point);
+Datum
+vector_rust_hnsw_should_reset_vacuum_highest_point(PG_FUNCTION_ARGS)
+{
+	int32		highestPointValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResetVacuumHighestPoint(highestPointValid != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -653,7 +680,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 	HnswElement entryPoint;
 	MemoryContext oldCtx = MemoryContextSwitchTo(vacuumstate->tmpCtx);
 
-	if (!BlockNumberIsValid(highestPoint->blkno))
+	if (HnswShouldResetVacuumHighestPoint(BlockNumberIsValid(highestPoint->blkno), true))
 		highestPoint = NULL;
 
 	/*
