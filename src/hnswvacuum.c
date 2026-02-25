@@ -663,6 +663,33 @@ vector_rust_hnsw_should_skip_live_markdeleted_tuple(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldSetVacuumInsertPageWhenMissing(bool hasInsertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasInsertPage);
+
+	return !hasInsertPage;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_vacuum_insert_page_when_missing);
+Datum
+vector_hnsw_should_set_vacuum_insert_page_when_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSetVacuumInsertPageWhenMissing(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_set_vacuum_insert_page_when_missing);
+Datum
+vector_rust_hnsw_should_set_vacuum_insert_page_when_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSetVacuumInsertPageWhenMissing(hasInsertPage != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1171,7 +1198,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			if (HnswShouldSkipDeletedMarkDeletedTuple(etup->deleted, true))
 			{
 				/* Set to first free page */
-				if (!BlockNumberIsValid(insertPage))
+				if (HnswShouldSetVacuumInsertPageWhenMissing(BlockNumberIsValid(insertPage), true))
 					insertPage = blkno;
 
 				continue;
@@ -1227,7 +1254,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 				UnlockReleaseBuffer(nbuf);
 
 			/* Set to first free page */
-			if (!BlockNumberIsValid(insertPage))
+			if (HnswShouldSetVacuumInsertPageWhenMissing(BlockNumberIsValid(insertPage), true))
 				insertPage = blkno;
 
 			/* Prepare new xlog */
