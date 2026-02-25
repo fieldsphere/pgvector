@@ -170,6 +170,7 @@ static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool u
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
 static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
+static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -421,7 +422,7 @@ HnswUpdateMetaPageInfo(Page page, int updateEntry, HnswElement entryPoint, Block
 			metap->entryOffno = InvalidOffsetNumber;
 			metap->entryLevel = -1;
 		}
-		else if (entryPoint->level > metap->entryLevel || updateEntry == HNSW_UPDATE_ENTRY_ALWAYS)
+		else if (HnswShouldWriteMetaEntrypoint(entryPoint != NULL, entryPoint->level, metap->entryLevel, updateEntry, true))
 		{
 			metap->entryBlkno = entryPoint->blkno;
 			metap->entryOffno = entryPoint->offno;
@@ -1099,6 +1100,20 @@ HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntrypoint);
 
 	return !hasEntrypoint;
+}
+
+static bool
+HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust)
+{
+	if (useRust)
+	{
+		if (vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry == HNSW_UPDATE_ENTRY_ALWAYS))
+			return true;
+
+		return vector_rust_hnsw_should_update_entry_point_kernel(!hasEntrypoint, entryLevel, currentEntryLevel);
+	}
+
+	return !hasEntrypoint || entryLevel > currentEntryLevel || updateEntry == HNSW_UPDATE_ENTRY_ALWAYS;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2129,6 +2144,30 @@ vector_rust_hnsw_should_reset_meta_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntrypoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldResetMetaEntrypoint(hasEntrypoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_meta_entrypoint);
+Datum
+vector_hnsw_should_write_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+	int32		currentEntryLevel = PG_GETARG_INT32(2);
+	int32		updateEntry = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaEntrypoint(hasEntrypoint != 0, entryLevel, currentEntryLevel, updateEntry, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_write_meta_entrypoint);
+Datum
+vector_rust_hnsw_should_write_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+	int32		currentEntryLevel = PG_GETARG_INT32(2);
+	int32		updateEntry = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaEntrypoint(hasEntrypoint != 0, entryLevel, currentEntryLevel, updateEntry, true));
 }
 
 /*
