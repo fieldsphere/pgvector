@@ -1170,6 +1170,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_calculate_neighbor_closer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_calculate_neighbor_closer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_calculate_neighbor_closer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_calculate_neighbor_closer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3246,6 +3256,18 @@ my $sort_pointer_candidates_parity = $node->safe_psql("postgres", q{
 	) AS t(has_base_pointer);
 });
 is($sort_pointer_candidates_parity, "t\nt\nt\nt");
+
+my $calculate_neighbor_closer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_calculate_neighbor_closer(must_calculate) =
+		   rust_hnsw_should_calculate_neighbor_closer(must_calculate)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(must_calculate);
+});
+is($calculate_neighbor_closer_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
