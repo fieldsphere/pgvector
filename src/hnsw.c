@@ -40,6 +40,7 @@ double		hnsw_scan_mem_multiplier;
 int			hnsw_lock_tranche_id;
 static relopt_kind hnsw_relopt_kind;
 static bool HnswShouldInitLockTranche(bool preloadInProgress, bool useRust);
+static bool HnswShouldAssignNewLockTranche(bool found, bool useRust);
 
 /*
  * Assign a tranche ID for our LWLocks. This only needs to be done by one
@@ -60,7 +61,7 @@ HnswInitLockTranche(void)
 	tranche_ids = ShmemInitStruct("hnsw LWLock ids",
 								  sizeof(int) * 1,
 								  &found);
-	if (!found)
+	if (HnswShouldAssignNewLockTranche(found, true))
 	{
 #if PG_VERSION_NUM >= 190000
 		tranche_ids[0] = LWLockNewTrancheId("HnswBuild");
@@ -155,6 +156,33 @@ vector_rust_hnsw_should_init_lock_tranche(PG_FUNCTION_ARGS)
 	int32		preloadInProgress = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitLockTranche(preloadInProgress != 0, true));
+}
+
+static bool
+HnswShouldAssignNewLockTranche(bool found, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(found);
+
+	return !found;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_assign_new_lock_tranche);
+Datum
+vector_hnsw_should_assign_new_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAssignNewLockTranche(found != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_assign_new_lock_tranche);
+Datum
+vector_rust_hnsw_should_assign_new_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAssignNewLockTranche(found != 0, true));
 }
 
 static bool

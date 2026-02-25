@@ -317,6 +317,11 @@ pub extern "C" fn vector_rust_hnsw_should_init_lock_tranche_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_assign_new_lock_tranche_kernel(found: bool) -> bool {
+    !found
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(
     entry_point_is_null: bool,
 ) -> bool {
