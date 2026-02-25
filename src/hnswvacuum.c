@@ -298,6 +298,33 @@ vector_rust_hnsw_should_flag_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFlagDeletedVacuumNeighbor(isDeletedNeighbor != 0, true));
 }
 
+static bool
+HnswShouldCheckVacuumUnderfilledLayer0(bool needsUpdated, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
+
+	return !needsUpdated;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_check_vacuum_underfilled_layer0);
+Datum
+vector_hnsw_should_check_vacuum_underfilled_layer0(PG_FUNCTION_ARGS)
+{
+	int32		needsUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCheckVacuumUnderfilledLayer0(needsUpdated != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_check_vacuum_underfilled_layer0);
+Datum
+vector_rust_hnsw_should_check_vacuum_underfilled_layer0(PG_FUNCTION_ARGS)
+{
+	int32		needsUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCheckVacuumUnderfilledLayer0(needsUpdated != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -449,7 +476,7 @@ NeedsUpdated(HnswVacuumState * vacuumstate, HnswElement element)
 
 	/* Also update if layer 0 is not full */
 	/* This could indicate too many candidates being deleted during insert */
-	if (!needsUpdated)
+	if (HnswShouldCheckVacuumUnderfilledLayer0(needsUpdated, true))
 	{
 		bool		lastItemValid;
 
