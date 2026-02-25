@@ -1010,6 +1010,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_prune_deleted_insert_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_prune_deleted_insert_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_prune_deleted_insert_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_prune_deleted_insert_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2224,6 +2234,18 @@ my $return_empty_without_neighbor_tids_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbor_tids_loaded);
 });
 is($return_empty_without_neighbor_tids_parity, "t\nt\nt\nt");
+
+my $prune_deleted_insert_element_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_prune_deleted_insert_element(heaptids_length) =
+		   rust_hnsw_should_prune_deleted_insert_element(heaptids_length)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(0)
+	) AS t(heaptids_length);
+});
+is($prune_deleted_insert_element_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
