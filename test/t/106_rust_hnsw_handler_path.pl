@@ -910,6 +910,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_non_element_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_non_element_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_non_element_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_non_element_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2004,6 +2014,18 @@ my $stop_on_invalid_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbor_tid_valid);
 });
 is($stop_on_invalid_ondisk_neighbor_tid_parity, "t\nt\nt\nt");
+
+my $skip_non_element_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_non_element_tuple(is_element_tuple) =
+		   rust_hnsw_should_skip_non_element_tuple(is_element_tuple)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_element_tuple);
+});
+is($skip_non_element_tuple_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
