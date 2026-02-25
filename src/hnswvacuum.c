@@ -636,6 +636,33 @@ vector_rust_hnsw_should_skip_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldSkipLiveMarkDeletedTuple(bool isLiveTuple, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isLiveTuple);
+
+	return isLiveTuple;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_live_markdeleted_tuple);
+Datum
+vector_hnsw_should_skip_live_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isLiveTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipLiveMarkDeletedTuple(isLiveTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_live_markdeleted_tuple);
+Datum
+vector_rust_hnsw_should_skip_live_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isLiveTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipLiveMarkDeletedTuple(isLiveTuple != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1151,7 +1178,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			}
 
 			/* Skip live tuples */
-			if (ItemPointerIsValid(&etup->heaptids[0]))
+			if (HnswShouldSkipLiveMarkDeletedTuple(ItemPointerIsValid(&etup->heaptids[0]), true))
 				continue;
 
 			/* Get neighbor page */
