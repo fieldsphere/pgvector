@@ -1000,6 +1000,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_return_empty_without_neighbor_tids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_neighbor_tids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_return_empty_without_neighbor_tids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_return_empty_without_neighbor_tids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2202,6 +2212,18 @@ my $register_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($register_reused_neighbor_buffer_parity, "t\nt\nt\nt");
+
+my $return_empty_without_neighbor_tids_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_return_empty_without_neighbor_tids(neighbor_tids_loaded) =
+		   rust_hnsw_should_return_empty_without_neighbor_tids(neighbor_tids_loaded)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(neighbor_tids_loaded);
+});
+is($return_empty_without_neighbor_tids_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
