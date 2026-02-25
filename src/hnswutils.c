@@ -136,6 +136,7 @@ static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
+static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -756,6 +757,15 @@ HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust)
 	return inMemory;
 }
 
+static bool
+HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
+
+	return !hasEntryPoint;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1156,6 +1166,24 @@ vector_rust_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
 	int32		inMemory = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_without_entrypoint);
+Datum
+vector_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnWithoutEntryPoint(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_without_entrypoint);
+Datum
+vector_rust_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnWithoutEntryPoint(hasEntryPoint != 0, true));
 }
 
 /*
@@ -2303,7 +2331,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 		PrecomputeHash(base, element);
 
 	/* No neighbors if no entry point */
-	if (entryPoint == NULL)
+	if (HnswShouldReturnWithoutEntryPoint(entryPoint != NULL, true))
 		return;
 
 	/* Get entry point and level */
