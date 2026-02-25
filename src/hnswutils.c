@@ -127,6 +127,7 @@ static bool HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust);
 static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust);
 static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
+static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
@@ -671,6 +672,15 @@ HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust)
 }
 
 static bool
+HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDiscardedHeap);
+
+	return hasDiscardedHeap;
+}
+
+static bool
 HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
@@ -944,6 +954,24 @@ vector_rust_hnsw_should_reject_stale_neighbor_tuple(PG_FUNCTION_ARGS)
 	int32		tupleConsistent = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectStaleNeighborTuple(tupleConsistent != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_discarded_heap);
+Datum
+vector_hnsw_should_initialize_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeDiscardedHeap(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_discarded_heap);
+Datum
+vector_rust_hnsw_should_initialize_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeDiscardedHeap(hasDiscardedHeap != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
@@ -1336,7 +1364,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	{
 		InitVisited(base, v, inMemory, ef, m);
 
-		if (discarded != NULL)
+		if (HnswShouldInitializeDiscardedHeap(discarded != NULL, true))
 			*discarded = pairingheap_allocate(CompareNearestDiscardedCandidates, NULL);
 	}
 
