@@ -60,6 +60,7 @@ static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageF
 static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust);
 static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
+static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 
 /*
  * Get the insert page
@@ -456,7 +457,7 @@ LoadElementsForInsert(HnswNeighborArray * neighbors, HnswQuery * q, int *idx, Re
 		hc->distance = distance;
 
 		/* Prune element if being deleted */
-		if (element->heaptidsLength == 0)
+		if (HnswShouldPruneDeletedInsertElement(element->heaptidsLength, true))
 		{
 			*idx = i;
 			break;
@@ -1976,6 +1977,33 @@ vector_rust_hnsw_should_return_empty_without_neighbor_tids(PG_FUNCTION_ARGS)
 	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutNeighborTids(neighborTidsLoaded != 0, true));
+}
+
+static bool
+HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
+
+	return heaptidsLength == 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prune_deleted_insert_element);
+Datum
+vector_hnsw_should_prune_deleted_insert_element(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPruneDeletedInsertElement(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prune_deleted_insert_element);
+Datum
+vector_rust_hnsw_should_prune_deleted_insert_element(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPruneDeletedInsertElement(heaptidsLength, true));
 }
 
 static bool
