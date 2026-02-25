@@ -930,6 +930,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_pointer_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_pointer_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_pointer_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_pointer_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2718,6 +2728,18 @@ my $use_offset_visited_hash_parity = $node->safe_psql("postgres", q{
 	) AS t(has_base_pointer);
 });
 is($use_offset_visited_hash_parity, "t\nt\nt\nt");
+
+my $use_pointer_visited_hash_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_pointer_visited_hash(has_base_pointer) =
+		   rust_hnsw_should_use_pointer_visited_hash(has_base_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_base_pointer);
+});
+is($use_pointer_visited_hash_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
