@@ -45,6 +45,7 @@ static bool HnswShouldFollowOnDiskNextPage(bool nextPageValid, bool useRust);
 static bool HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpace, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool useRust);
+static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
 
 /*
  * Get the insert page
@@ -634,7 +635,7 @@ AddDuplicateOnDisk(Relation index, HnswElement element, HnswElement dup, bool bu
 	/* Read page */
 	buf = ReadBuffer(index, dup->blkno);
 	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
-	if (building)
+	if (HnswShouldUseBuildPathForOnDiskDuplicatePage(building, true))
 	{
 		state = NULL;
 		page = BufferGetPage(buf);
@@ -1537,6 +1538,33 @@ vector_rust_hnsw_should_use_build_path_for_ondisk_neighbor_update(PG_FUNCTION_AR
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildPathForOnDiskNeighborUpdate(building != 0, true));
+}
+
+static bool
+HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
+
+	return building;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_build_path_for_ondisk_duplicate_page);
+Datum
+vector_hnsw_should_use_build_path_for_ondisk_duplicate_page(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseBuildPathForOnDiskDuplicatePage(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_build_path_for_ondisk_duplicate_page);
+Datum
+vector_rust_hnsw_should_use_build_path_for_ondisk_duplicate_page(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseBuildPathForOnDiskDuplicatePage(building != 0, true));
 }
 
 static bool
