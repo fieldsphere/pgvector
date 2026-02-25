@@ -244,6 +244,33 @@ vector_rust_hnsw_should_finish_vacuum_page_update(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFinishVacuumPageUpdate(pageUpdated != 0, true));
 }
 
+static bool
+HnswShouldSkipInvalidVacuumNeighborTid(bool neighborTidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
+
+	return !neighborTidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_invalid_vacuum_neighbor_tid);
+Datum
+vector_hnsw_should_skip_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipInvalidVacuumNeighborTid(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_invalid_vacuum_neighbor_tid);
+Datum
+vector_rust_hnsw_should_skip_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipInvalidVacuumNeighborTid(neighborTidValid != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -382,7 +409,7 @@ NeedsUpdated(HnswVacuumState * vacuumstate, HnswElement element)
 	{
 		ItemPointer indextid = &ntup->indextids[i];
 
-		if (!ItemPointerIsValid(indextid))
+		if (HnswShouldSkipInvalidVacuumNeighborTid(ItemPointerIsValid(indextid), true))
 			continue;
 
 		/* Check if in deleted list */
