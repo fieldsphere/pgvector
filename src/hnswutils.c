@@ -126,6 +126,7 @@ static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
+static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -656,6 +657,15 @@ HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
 	return !hasBasePointer;
 }
 
+static bool
+HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+
+	return inMemory;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -878,6 +888,24 @@ vector_rust_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_memory_entry_distance);
+Datum
+vector_hnsw_should_use_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMemoryEntryDistance(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_memory_entry_distance);
+Datum
+vector_rust_hnsw_should_use_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMemoryEntryDistance(inMemory != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -963,7 +991,7 @@ HnswEntryCandidate(char *base, HnswElement entryPoint, HnswQuery * q, Relation i
 	bool		inMemory = index == NULL;
 	double		distance;
 
-	if (inMemory)
+	if (HnswShouldUseMemoryEntryDistance(inMemory, true))
 		distance = GetElementDistance(base, entryPoint, q, support);
 	else
 		HnswLoadElement(entryPoint, &distance, q, index, support, loadVec, NULL);
