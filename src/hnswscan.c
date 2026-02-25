@@ -221,6 +221,15 @@ HnswShouldStopWhenIterativeScanOff(int iterativeScanMode, bool useRust)
 	return iterativeScanMode == HNSW_ITERATIVE_SCAN_OFF;
 }
 
+static bool
+HnswShouldTrackScanDiscarded(int iterativeScanMode, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
+
+	return iterativeScanMode != HNSW_ITERATIVE_SCAN_OFF;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_when_iterative_scan_off);
 Datum
 vector_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
@@ -237,6 +246,24 @@ vector_rust_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
 	int32		iterativeScanMode = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopWhenIterativeScanOff(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_scan_discarded);
+Datum
+vector_hnsw_should_track_scan_discarded(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackScanDiscarded(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_scan_discarded);
+Datum
+vector_rust_hnsw_should_track_scan_discarded(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackScanDiscarded(iterativeScanMode, true));
 }
 
 static bool
@@ -586,6 +613,7 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	HnswElement entryPoint;
 	char	   *base = NULL;
 	HnswQuery  *q = &so->q;
+	pairingheap **discarded = NULL;
 
 	/* Get m and entry point */
 	HnswGetMetaPageInfo(index, &m, &entryPoint);
@@ -604,7 +632,10 @@ GetScanItems(IndexScanDesc scan, Datum value)
 		ep = w;
 	}
 
-	return HnswSearchLayer(base, q, ep, hnsw_ef_search, 0, index, support, m, false, NULL, &so->v, hnsw_iterative_scan != HNSW_ITERATIVE_SCAN_OFF ? &so->discarded : NULL, true, &so->tuples);
+	if (HnswShouldTrackScanDiscarded(hnsw_iterative_scan, true))
+		discarded = &so->discarded;
+
+	return HnswSearchLayer(base, q, ep, hnsw_ef_search, 0, index, support, m, false, NULL, &so->v, discarded, true, &so->tuples);
 }
 
 /*
