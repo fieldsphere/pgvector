@@ -190,6 +190,33 @@ vector_rust_hnsw_should_remove_vacuum_heaptid(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRemoveVacuumHeapTid(callbackRemove != 0, true));
 }
 
+static bool
+HnswShouldCompactVacuumHeapTids(bool itemUpdated, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemUpdated);
+
+	return itemUpdated;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_compact_vacuum_heaptids);
+Datum
+vector_hnsw_should_compact_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		itemUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCompactVacuumHeapTids(itemUpdated != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_compact_vacuum_heaptids);
+Datum
+vector_rust_hnsw_should_compact_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		itemUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCompactVacuumHeapTids(itemUpdated != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -261,7 +288,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 					}
 				}
 
-				if (itemUpdated)
+				if (HnswShouldCompactVacuumHeapTids(itemUpdated, true))
 				{
 					/* Mark rest as invalid */
 					for (int i = idx; i < HNSW_HEAPTIDS; i++)
