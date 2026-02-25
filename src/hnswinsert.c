@@ -51,6 +51,7 @@ static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust
 static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
+static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 
 /*
  * Get the insert page
@@ -93,7 +94,7 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 		if (HnswShouldSkipNonElementTuple(HnswIsElementTuple(etup), true))
 			continue;
 
-		if (etup->deleted)
+		if (HnswShouldReuseDeletedOnDiskTuple(etup->deleted, true))
 		{
 			BlockNumber elementPage = BufferGetBlockNumber(buf);
 			BlockNumber neighborPage = ItemPointerGetBlockNumber(&etup->neighbortid);
@@ -1705,6 +1706,33 @@ vector_rust_hnsw_should_skip_non_element_tuple(PG_FUNCTION_ARGS)
 	int32		isElementTuple = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipNonElementTuple(isElementTuple != 0, true));
+}
+
+static bool
+HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(isDeleted);
+
+	return isDeleted;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_deleted_ondisk_tuple);
+Datum
+vector_hnsw_should_reuse_deleted_ondisk_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isDeleted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReuseDeletedOnDiskTuple(isDeleted != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reuse_deleted_ondisk_tuple);
+Datum
+vector_rust_hnsw_should_reuse_deleted_ondisk_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isDeleted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReuseDeletedOnDiskTuple(isDeleted != 0, true));
 }
 
 static bool
