@@ -500,6 +500,33 @@ vector_rust_hnsw_should_repair_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRepairVacuumEntryPoint(needsUpdated != 0, true));
 }
 
+static bool
+HnswShouldResetVacuumEntryPointNeighbors(bool hasHighestPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasHighestPoint);
+
+	return hasHighestPoint;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_vacuum_entrypoint_neighbors);
+Datum
+vector_hnsw_should_reset_vacuum_entrypoint_neighbors(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResetVacuumEntryPointNeighbors(hasHighestPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reset_vacuum_entrypoint_neighbors);
+Datum
+vector_rust_hnsw_should_reset_vacuum_entrypoint_neighbors(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResetVacuumEntryPointNeighbors(hasHighestPoint != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -790,7 +817,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 			if (HnswShouldRepairVacuumEntryPoint(NeedsUpdated(vacuumstate, entryPoint), true))
 			{
 				/* Reset neighbors from previous update */
-				if (highestPoint != NULL)
+				if (HnswShouldResetVacuumEntryPointNeighbors(highestPoint != NULL, true))
 					HnswPtrStore((char *) NULL, highestPoint->neighbors, (HnswNeighborArrayPtr *) NULL);
 
 				RepairGraphElement(vacuumstate, entryPoint, highestPoint);
