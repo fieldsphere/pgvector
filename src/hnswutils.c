@@ -159,6 +159,7 @@ static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRus
 static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
 static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust);
+static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -991,6 +992,15 @@ HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust)
 	return countedCandidate;
 }
 
+static bool
+HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSearchElement);
+
+	return !hasSearchElement;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1819,6 +1829,24 @@ vector_rust_hnsw_should_enqueue_counted_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldEnqueueCountedCandidate(countedCandidate != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_missing_search_element);
+Datum
+vector_hnsw_should_skip_missing_search_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipMissingSearchElement(hasSearchElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_missing_search_element);
+Datum
+vector_rust_hnsw_should_skip_missing_search_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipMissingSearchElement(hasSearchElement != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -2221,7 +2249,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				trackDiscarded = HnswShouldTrackDiscardedCandidates(discarded != NULL, true);
 				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, alwaysAdd || trackDiscarded ? NULL : &f->distance, &eElement);
 
-				if (eElement == NULL)
+				if (HnswShouldSkipMissingSearchElement(eElement != NULL, true))
 					continue;
 			}
 
