@@ -86,6 +86,7 @@ bool		vector_rust_hnsw_should_reject_low_ef_construction_kernel(int32 ef_constru
 bool		vector_rust_hnsw_should_write_wal_page_kernel(bool needs_wal, bool is_init_fork);
 bool		vector_rust_hnsw_should_skip_null_build_tuple_kernel(bool is_null);
 bool		vector_rust_hnsw_should_update_progress_after_insert_kernel(bool tuple_inserted);
+bool		vector_rust_hnsw_should_update_element_max_distance_kernel(bool has_distance_pointer, bool has_max_distance_pointer, double distance_value, double max_distance_value);
 bool		vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(int64 combined_size, int64 max_size);
 bool		vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(int64 tuple_size, int64 alloc_size);
 bool		vector_rust_hnsw_should_append_neighbor_page_kernel(int64 free_space, int64 neighbor_tuple_size);

@@ -613,6 +613,18 @@ pub extern "C" fn vector_rust_hnsw_should_update_progress_after_insert_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_update_element_max_distance_kernel(
+    has_distance_pointer: bool,
+    has_max_distance_pointer: bool,
+    distance_value: f64,
+    max_distance_value: f64,
+) -> bool {
+    !has_distance_pointer
+        || !has_max_distance_pointer
+        || distance_value < max_distance_value
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(
     combined_size: i64,
     max_size: i64,

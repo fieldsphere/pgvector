@@ -558,6 +558,15 @@ HnswShouldCalculateElementDistance(bool hasDistancePointer, bool useRust)
 	return hasDistancePointer;
 }
 
+static bool
+HnswShouldUpdateElementMaxDistance(bool hasDistancePointer, bool hasMaxDistancePointer, double distanceValue, double maxDistanceValue, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_element_max_distance_kernel(hasDistancePointer, hasMaxDistancePointer, distanceValue, maxDistanceValue);
+
+	return !hasDistancePointer || !hasMaxDistancePointer || distanceValue < maxDistanceValue;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -594,6 +603,30 @@ vector_rust_hnsw_should_calculate_element_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldCalculateElementDistance(hasDistancePointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_element_max_distance);
+Datum
+vector_hnsw_should_update_element_max_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(1);
+	float8		distanceValue = PG_GETARG_FLOAT8(2);
+	float8		maxDistanceValue = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(HnswShouldUpdateElementMaxDistance(hasDistancePointer != 0, hasMaxDistancePointer != 0, distanceValue, maxDistanceValue, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_element_max_distance);
+Datum
+vector_rust_hnsw_should_update_element_max_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(1);
+	float8		distanceValue = PG_GETARG_FLOAT8(2);
+	float8		maxDistanceValue = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(HnswShouldUpdateElementMaxDistance(hasDistancePointer != 0, hasMaxDistancePointer != 0, distanceValue, maxDistanceValue, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -623,7 +656,10 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	}
 
 	/* Load element */
-	if (distance == NULL || maxDistance == NULL || *distance < *maxDistance)
+	if (HnswShouldUpdateElementMaxDistance(distance != NULL, maxDistance != NULL,
+										   distance != NULL ? *distance : 0,
+										   maxDistance != NULL ? *maxDistance : 0,
+										   true))
 	{
 		if (*element == NULL)
 			*element = HnswInitElementFromBlock(blkno, offno);
