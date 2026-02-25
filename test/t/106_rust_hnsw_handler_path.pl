@@ -1070,6 +1070,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_remove_disk_only_elements_before_select(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_remove_disk_only_elements_before_select'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_remove_disk_only_elements_before_select(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_remove_disk_only_elements_before_select'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3026,6 +3036,18 @@ my $increment_ef_for_existing_element_parity = $node->safe_psql("postgres", q{
 	) AS t(existing_element);
 });
 is($increment_ef_for_existing_element_parity, "t\nt\nt\nt");
+
+my $remove_disk_only_elements_before_select_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_remove_disk_only_elements_before_select(in_memory) =
+		   rust_hnsw_should_remove_disk_only_elements_before_select(in_memory)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(in_memory);
+});
+is($remove_disk_only_elements_before_select_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
