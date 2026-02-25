@@ -950,6 +950,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_release_reused_neighbor_buffer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_release_reused_neighbor_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_release_reused_neighbor_buffer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_release_reused_neighbor_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2092,6 +2102,18 @@ my $reuse_element_buffer_for_neighbor_page_parity = $node->safe_psql("postgres",
 	) AS t(same_page);
 });
 is($reuse_element_buffer_for_neighbor_page_parity, "t\nt\nt\nt");
+
+my $release_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_release_reused_neighbor_buffer(same_buffer) =
+		   rust_hnsw_should_release_reused_neighbor_buffer(same_buffer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(same_buffer);
+});
+is($release_reused_neighbor_buffer_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
