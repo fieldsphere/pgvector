@@ -63,6 +63,7 @@ static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bo
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
+static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
 
 /*
  * Get the insert page
@@ -587,7 +588,7 @@ UpdateNeighborOnDisk(HnswElement element, HnswElement newElement, int idx, int m
 		idx += startIdx;
 
 	/* Make robust to issues */
-	if (idx >= 0 && idx < ntup->count)
+	if (HnswShouldApplyNeighborUpdateSlot(idx, ntup->count, true))
 	{
 		ItemPointer indextid = &ntup->indextids[idx];
 
@@ -2067,6 +2068,35 @@ vector_rust_hnsw_should_skip_existing_neighbor_update(PG_FUNCTION_ARGS)
 	int32		connectionExists = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSkipExistingNeighborUpdate(checkExisting != 0, connectionExists != 0, true));
+}
+
+static bool
+HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_apply_neighbor_update_slot_kernel(updateIndex, tupleCount);
+
+	return updateIndex >= 0 && updateIndex < tupleCount;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_apply_neighbor_update_slot);
+Datum
+vector_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+	int32		tupleCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldApplyNeighborUpdateSlot(updateIndex, tupleCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_apply_neighbor_update_slot);
+Datum
+vector_rust_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+	int32		tupleCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldApplyNeighborUpdateSlot(updateIndex, tupleCount, true));
 }
 
 static bool

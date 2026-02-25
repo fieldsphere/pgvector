@@ -22,6 +22,7 @@ bool		vector_rust_hnsw_should_update_ondisk_insert_page_kernel(bool has_new_inse
 bool		vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot_kernel(int32 free_slot_index, int32 max_heaptids);
 bool		vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(bool building);
 bool		vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(int32 update_index);
+bool		vector_rust_hnsw_should_apply_neighbor_update_slot_kernel(int32 update_index, int32 tuple_count);
 bool		vector_rust_hnsw_should_append_ondisk_element_page_kernel(int64 combined_size, int64 max_size, int64 free_space, int64 element_tuple_size, bool has_next_page);
 bool		vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(bool same_buffer);
 bool		vector_rust_hnsw_should_add_search_candidate_kernel(double candidate_distance, double frontier_distance, bool always_add);
