@@ -160,6 +160,7 @@ static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool use
 static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust);
 static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust);
+static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -496,7 +497,7 @@ HnswSetElementTuple(char *base, HnswElementTuple etup, HnswElement element)
 	etup->version = element->version;
 	for (int i = 0; i < HNSW_HEAPTIDS; i++)
 	{
-		if (i < element->heaptidsLength)
+		if (HnswShouldCopyTupleSlotByIndex(i, element->heaptidsLength, true))
 			etup->heaptids[i] = element->heaptids[i];
 		else
 			ItemPointerSetInvalid(&etup->heaptids[i]);
@@ -523,7 +524,7 @@ HnswSetNeighborTuple(char *base, HnswNeighborTuple ntup, HnswElement e, int m)
 		{
 			ItemPointer indextid = &ntup->indextids[idx++];
 
-			if (i < neighbors->length)
+			if (HnswShouldCopyTupleSlotByIndex(i, neighbors->length, true))
 			{
 				HnswCandidate *hc = &neighbors->items[i];
 				HnswElement hce = HnswPtrAccess(base, hc->element);
@@ -999,6 +1000,15 @@ HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSearchElement);
 
 	return !hasSearchElement;
+}
+
+static bool
+HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(slotIndex < slotLimit);
+
+	return slotIndex < slotLimit;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -1845,6 +1855,26 @@ vector_rust_hnsw_should_skip_missing_search_element(PG_FUNCTION_ARGS)
 	int32		hasSearchElement = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipMissingSearchElement(hasSearchElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_tuple_slot_by_index);
+Datum
+vector_hnsw_should_copy_tuple_slot_by_index(PG_FUNCTION_ARGS)
+{
+	int32		slotIndex = PG_GETARG_INT32(0);
+	int32		slotLimit = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyTupleSlotByIndex(slotIndex, slotLimit, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_copy_tuple_slot_by_index);
+Datum
+vector_rust_hnsw_should_copy_tuple_slot_by_index(PG_FUNCTION_ARGS)
+{
+	int32		slotIndex = PG_GETARG_INT32(0);
+	int32		slotLimit = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyTupleSlotByIndex(slotIndex, slotLimit, true));
 }
 
 /*
