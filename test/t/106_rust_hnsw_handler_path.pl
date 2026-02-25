@@ -1020,6 +1020,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_apply_neighbor_update_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_apply_neighbor_update_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_apply_neighbor_update_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_apply_neighbor_update_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_empty_without_neighbor_tids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_neighbor_tids'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2266,6 +2276,18 @@ my $skip_existing_neighbor_update_parity = $node->safe_psql("postgres", q{
 	) AS t(check_existing, connection_exists);
 });
 is($skip_existing_neighbor_update_parity, "t\nt\nt\nt");
+
+my $apply_neighbor_update_slot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_apply_neighbor_update_slot(update_idx, tuple_count) =
+		   rust_hnsw_should_apply_neighbor_update_slot(update_idx, tuple_count)
+	FROM (VALUES
+		(0, 8),
+		(7, 8),
+		(8, 8),
+		(-1, 8)
+	) AS t(update_idx, tuple_count);
+});
+is($apply_neighbor_update_slot_parity, "t\nt\nt\nt");
 
 my $return_empty_without_neighbor_tids_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_empty_without_neighbor_tids(neighbor_tids_loaded) =
