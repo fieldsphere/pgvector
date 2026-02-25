@@ -1230,6 +1230,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_process_new_candidate_branch(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_process_new_candidate_branch'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_process_new_candidate_branch(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_process_new_candidate_branch'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3378,6 +3388,18 @@ my $return_pruned_output_parity = $node->safe_psql("postgres", q{
 	) AS t(has_pruned_output);
 });
 is($return_pruned_output_parity, "t\nt\nt\nt");
+
+my $process_new_candidate_branch_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_process_new_candidate_branch(is_new_candidate) =
+		   rust_hnsw_should_process_new_candidate_branch(is_new_candidate)
+	FROM (VALUES
+		(1),
+		(0),
+		(1),
+		(0)
+	) AS t(is_new_candidate);
+});
+is($process_new_candidate_branch_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
