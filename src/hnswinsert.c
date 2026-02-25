@@ -43,6 +43,7 @@ static bool HnswShouldUseBuildPathForAppendedOnDiskBuffer(bool building, bool us
 static bool HnswShouldUseBuildPathForReusedOnDiskBuffer(bool building, bool useRust);
 static bool HnswShouldFollowOnDiskNextPage(bool nextPageValid, bool useRust);
 static bool HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpace, bool useRust);
+static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRust);
 
 /*
  * Get the insert page
@@ -156,7 +157,7 @@ HnswInsertAppendPage(Relation index, Buffer *nbuf, Page *npage, GenericXLogState
 	UnlockRelationForExtension(index, ExclusiveLock);
 
 	/* Init new page */
-	if (building)
+	if (HnswShouldUseBuildPathForOnDiskAppendPage(building, true))
 		*npage = BufferGetPage(*nbuf);
 	else
 		*npage = GenericXLogRegisterBuffer(state, *nbuf, GENERIC_XLOG_FULL_IMAGE);
@@ -1481,6 +1482,33 @@ vector_rust_hnsw_should_use_build_path_for_reused_ondisk_buffer(PG_FUNCTION_ARGS
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildPathForReusedOnDiskBuffer(building != 0, true));
+}
+
+static bool
+HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
+
+	return building;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_build_path_for_ondisk_append_page);
+Datum
+vector_hnsw_should_use_build_path_for_ondisk_append_page(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseBuildPathForOnDiskAppendPage(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_build_path_for_ondisk_append_page);
+Datum
+vector_rust_hnsw_should_use_build_path_for_ondisk_append_page(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseBuildPathForOnDiskAppendPage(building != 0, true));
 }
 
 static bool
