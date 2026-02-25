@@ -142,6 +142,7 @@ static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust)
 static bool HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust);
 static bool HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust);
 static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
+static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -816,6 +817,15 @@ HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust)
 	return !hasBasePointer;
 }
 
+static bool
+HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
+
+	return heaptidsLength != 0;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1326,6 +1336,24 @@ vector_rust_hnsw_should_use_pointer_hash_for_base(PG_FUNCTION_ARGS)
 	int32		hasBasePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUsePointerHashForBase(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_keep_element_with_heaptids);
+Datum
+vector_hnsw_should_keep_element_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldKeepElementWithHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_keep_element_with_heaptids);
+Datum
+vector_rust_hnsw_should_keep_element_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldKeepElementWithHeapTids(heaptidsLength, true));
 }
 
 /*
@@ -2429,7 +2457,7 @@ RemoveElements(char *base, List *w, HnswElement skipElement)
 		if (skipElement != NULL && hce->blkno == skipElement->blkno && hce->offno == skipElement->offno)
 			continue;
 
-		if (hce->heaptidsLength != 0)
+		if (HnswShouldKeepElementWithHeapTids(hce->heaptidsLength, true))
 			w2 = lappend(w2, hc);
 	}
 
