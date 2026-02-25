@@ -1080,6 +1080,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_promote_vacuum_entrypoint(integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_promote_vacuum_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_promote_vacuum_entrypoint(integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_promote_vacuum_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_deleted_ondisk_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_ondisk_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2558,6 +2568,18 @@ my $skip_vacuum_element_without_updates_parity = $node->safe_psql("postgres", q{
 	) AS t(needs_updated);
 });
 is($skip_vacuum_element_without_updates_parity, "t\nt\nt\nt");
+
+my $promote_vacuum_entrypoint_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_promote_vacuum_entrypoint(entry_point_is_null, element_level, entry_level) =
+		   rust_hnsw_should_promote_vacuum_entrypoint(entry_point_is_null, element_level, entry_level)
+	FROM (VALUES
+		(0, 1, 2),
+		(1, 0, 5),
+		(0, 6, 5),
+		(0, 2, 2)
+	) AS t(entry_point_is_null, element_level, entry_level);
+});
+is($promote_vacuum_entrypoint_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
