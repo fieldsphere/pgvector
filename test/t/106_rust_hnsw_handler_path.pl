@@ -1030,6 +1030,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_in_memory_search_path(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_in_memory_search_path'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_in_memory_search_path(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_in_memory_search_path'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2938,6 +2948,18 @@ my $use_memory_entry_distance_parity = $node->safe_psql("postgres", q{
 	) AS t(in_memory);
 });
 is($use_memory_entry_distance_parity, "t\nt\nt\nt");
+
+my $use_in_memory_search_path_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_in_memory_search_path(in_memory) =
+		   rust_hnsw_should_use_in_memory_search_path(in_memory)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(in_memory);
+});
+is($use_in_memory_search_path_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
