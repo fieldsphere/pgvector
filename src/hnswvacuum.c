@@ -554,6 +554,33 @@ vector_rust_hnsw_should_replace_deleted_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldReplaceDeletedVacuumEntryPoint(isDeletedEntrypoint != 0, true));
 }
 
+static bool
+HnswShouldRepairNonnullVacuumHighestPoint(bool hasHighestPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasHighestPoint);
+
+	return hasHighestPoint;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_nonnull_vacuum_highest_point);
+Datum
+vector_hnsw_should_repair_nonnull_vacuum_highest_point(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRepairNonnullVacuumHighestPoint(hasHighestPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_repair_nonnull_vacuum_highest_point);
+Datum
+vector_rust_hnsw_should_repair_nonnull_vacuum_highest_point(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRepairNonnullVacuumHighestPoint(hasHighestPoint != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -795,7 +822,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 	 * Repair graph for highest non-entry point. Highest point may be outdated
 	 * due to inserts that happen during and after RemoveHeapTids.
 	 */
-	if (highestPoint != NULL)
+	if (HnswShouldRepairNonnullVacuumHighestPoint(highestPoint != NULL, true))
 	{
 		/* Get a shared lock */
 		LockPage(index, HNSW_UPDATE_LOCK, ShareLock);
