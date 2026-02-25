@@ -325,6 +325,42 @@ vector_rust_hnsw_should_check_vacuum_underfilled_layer0(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldCheckVacuumUnderfilledLayer0(needsUpdated != 0, true));
 }
 
+static bool
+HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint) &&
+			vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, entryBlkno, entryOffno);
+
+	return hasEntryPoint && elementBlkno == entryBlkno && elementOffno == entryOffno;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_vacuum_entrypoint_element);
+Datum
+vector_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	int32		elementBlkno = PG_GETARG_INT32(1);
+	int32		elementOffno = PG_GETARG_INT32(2);
+	int32		entryBlkno = PG_GETARG_INT32(3);
+	int32		entryOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldSkipVacuumEntryPointElement(hasEntryPoint != 0, elementBlkno, elementOffno, entryBlkno, entryOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_vacuum_entrypoint_element);
+Datum
+vector_rust_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	int32		elementBlkno = PG_GETARG_INT32(1);
+	int32		elementOffno = PG_GETARG_INT32(2);
+	int32		entryBlkno = PG_GETARG_INT32(3);
+	int32		entryOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldSkipVacuumEntryPointElement(hasEntryPoint != 0, elementBlkno, elementOffno, entryBlkno, entryOffno, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -510,7 +546,9 @@ RepairGraphElement(HnswVacuumState * vacuumstate, HnswElement element, HnswEleme
 	char	   *base = NULL;
 
 	/* Skip if element is entry point */
-	if (entryPoint != NULL && element->blkno == entryPoint->blkno && element->offno == entryPoint->offno)
+	if (HnswShouldSkipVacuumEntryPointElement(entryPoint != NULL, (int32) element->blkno, (int32) element->offno,
+											  entryPoint != NULL ? (int32) entryPoint->blkno : -1,
+											  entryPoint != NULL ? (int32) entryPoint->offno : -1, true))
 		return;
 
 	/* Init fields */
