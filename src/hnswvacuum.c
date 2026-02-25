@@ -717,6 +717,33 @@ vector_rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(PG_FUNCTION_A
 }
 
 static bool
+HnswShouldReleaseMarkDeletedNeighborBuffer(bool sameBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
+
+	return !sameBuffer;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_markdeleted_neighbor_buffer);
+Datum
+vector_hnsw_should_release_markdeleted_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseMarkDeletedNeighborBuffer(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_release_markdeleted_neighbor_buffer);
+Datum
+vector_rust_hnsw_should_release_markdeleted_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseMarkDeletedNeighborBuffer(sameBuffer != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1277,7 +1304,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 
 			/* Commit */
 			GenericXLogFinish(state);
-			if (nbuf != buf)
+			if (HnswShouldReleaseMarkDeletedNeighborBuffer(nbuf == buf, true))
 				UnlockReleaseBuffer(nbuf);
 
 			/* Set to first free page */
