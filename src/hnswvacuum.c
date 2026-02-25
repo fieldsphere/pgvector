@@ -163,6 +163,33 @@ vector_rust_hnsw_should_stop_vacuum_heaptid_scan(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldStopVacuumHeapTidScan(heapTidValid != 0, true));
 }
 
+static bool
+HnswShouldRemoveVacuumHeapTid(bool callbackRemove, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(callbackRemove);
+
+	return callbackRemove;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_remove_vacuum_heaptid);
+Datum
+vector_hnsw_should_remove_vacuum_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		callbackRemove = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRemoveVacuumHeapTid(callbackRemove != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_remove_vacuum_heaptid);
+Datum
+vector_rust_hnsw_should_remove_vacuum_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		callbackRemove = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRemoveVacuumHeapTid(callbackRemove != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -221,7 +248,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 					if (HnswShouldStopVacuumHeapTidScan(ItemPointerIsValid(&etup->heaptids[i]), true))
 						break;
 
-					if (vacuumstate->callback(&etup->heaptids[i], vacuumstate->callback_state))
+					if (HnswShouldRemoveVacuumHeapTid(vacuumstate->callback(&etup->heaptids[i], vacuumstate->callback_state), true))
 					{
 						itemUpdated = true;
 						stats->tuples_removed++;
