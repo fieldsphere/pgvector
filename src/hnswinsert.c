@@ -49,6 +49,7 @@ static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool us
 static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
 static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
+static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
 
 /*
  * Get the insert page
@@ -409,7 +410,7 @@ HnswLoadNeighbors(HnswElement element, Relation index, int m, int lm, int lc)
 		HnswElement e;
 		HnswCandidate *hc;
 
-		if (!ItemPointerIsValid(indextid))
+		if (HnswShouldStopOnInvalidOnDiskNeighborTid(ItemPointerIsValid(indextid), true))
 			break;
 
 		e = HnswInitElementFromBlock(ItemPointerGetBlockNumber(indextid), ItemPointerGetOffsetNumber(indextid));
@@ -501,7 +502,7 @@ ConnectionExists(HnswElement e, HnswNeighborTuple ntup, int startIdx, int lm)
 	{
 		ItemPointer indextid = &ntup->indextids[startIdx + i];
 
-		if (!ItemPointerIsValid(indextid))
+		if (HnswShouldStopOnInvalidOnDiskNeighborTid(ItemPointerIsValid(indextid), true))
 			break;
 
 		if (ItemPointerGetBlockNumber(indextid) == e->blkno && ItemPointerGetOffsetNumber(indextid) == e->offno)
@@ -1649,6 +1650,33 @@ vector_rust_hnsw_should_use_free_ondisk_neighbor_slot(PG_FUNCTION_ARGS)
 	int32		slotTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskNeighborSlot(slotTidValid != 0, true));
+}
+
+static bool
+HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
+
+	return !neighborTidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_on_invalid_ondisk_neighbor_tid);
+Datum
+vector_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopOnInvalidOnDiskNeighborTid(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid);
+Datum
+vector_rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopOnInvalidOnDiskNeighborTid(neighborTidValid != 0, true));
 }
 
 static bool
