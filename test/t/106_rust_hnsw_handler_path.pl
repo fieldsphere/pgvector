@@ -870,6 +870,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_abort_ondisk_duplicate_slot_reject(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_abort_ondisk_duplicate_slot_reject'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_abort_ondisk_duplicate_slot_reject(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_abort_ondisk_duplicate_slot_reject'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1916,6 +1926,18 @@ my $use_build_path_for_ondisk_duplicate_page_parity = $node->safe_psql("postgres
 	) AS t(building);
 });
 is($use_build_path_for_ondisk_duplicate_page_parity, "t\nt\nt\nt");
+
+my $abort_ondisk_duplicate_slot_reject_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_abort_ondisk_duplicate_slot_reject(building) =
+		   rust_hnsw_should_abort_ondisk_duplicate_slot_reject(building)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(building);
+});
+is($abort_ondisk_duplicate_slot_reject_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
