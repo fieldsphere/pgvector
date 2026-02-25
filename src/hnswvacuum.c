@@ -744,6 +744,37 @@ vector_rust_hnsw_should_release_markdeleted_neighbor_buffer(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldResetMarkDeletedVersion(int32 version, int32 maxVersion, bool useRust)
+{
+	bool		versionWithinRange = version <= maxVersion;
+
+	if (useRust)
+		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(versionWithinRange);
+
+	return version > maxVersion;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_markdeleted_version);
+Datum
+vector_hnsw_should_reset_markdeleted_version(PG_FUNCTION_ARGS)
+{
+	int32		version = PG_GETARG_INT32(0);
+	int32		maxVersion = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldResetMarkDeletedVersion(version, maxVersion, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reset_markdeleted_version);
+Datum
+vector_rust_hnsw_should_reset_markdeleted_version(PG_FUNCTION_ARGS)
+{
+	int32		version = PG_GETARG_INT32(0);
+	int32		maxVersion = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldResetMarkDeletedVersion(version, maxVersion, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1293,7 +1324,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			/* This is used to avoid incorrect reads for iterative scans */
 			/* Reserve some bits for future use */
 			etup->version++;
-			if (etup->version > 15)
+			if (HnswShouldResetMarkDeletedVersion(etup->version, 15, true))
 				etup->version = 1;
 			ntup->version = etup->version;
 
