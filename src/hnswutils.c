@@ -175,6 +175,7 @@ static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust)
 static bool HnswShouldUseBuildBufferPath(bool building, bool useRust);
 static bool HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust);
 static bool HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust);
+static bool HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -486,7 +487,7 @@ HnswFormIndexValue(Datum *out, Datum *values, bool *isnull, const HnswTypeInfo *
 	/* Normalize if needed */
 	if (HnswShouldNormalizeIndexValue(support->normprocinfo != NULL, true))
 	{
-		if (!HnswCheckNorm(support, value))
+		if (HnswShouldRejectInvalidNorm(HnswCheckNorm(support, value), true))
 			return false;
 
 		value = HnswNormValue(typeInfo, support->collation, value);
@@ -1154,6 +1155,15 @@ HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
 
 	return hasNormProcInfo;
+}
+
+static bool
+HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasValidNorm);
+
+	return !hasValidNorm;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2280,6 +2290,24 @@ vector_rust_hnsw_should_normalize_index_value(PG_FUNCTION_ARGS)
 	int32		hasNormProcInfo = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldNormalizeIndexValue(hasNormProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_invalid_norm);
+Datum
+vector_hnsw_should_reject_invalid_norm(PG_FUNCTION_ARGS)
+{
+	int32		hasValidNorm = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidNorm(hasValidNorm != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_invalid_norm);
+Datum
+vector_rust_hnsw_should_reject_invalid_norm(PG_FUNCTION_ARGS)
+{
+	int32		hasValidNorm = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidNorm(hasValidNorm != 0, true));
 }
 
 /*
