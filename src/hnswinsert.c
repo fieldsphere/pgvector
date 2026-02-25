@@ -50,6 +50,7 @@ static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool use
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
 static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
+static bool HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indextidOffno, int32 elementBlkno, int32 elementOffno, bool useRust);
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
@@ -533,7 +534,7 @@ ConnectionExists(HnswElement e, HnswNeighborTuple ntup, int startIdx, int lm)
 		if (HnswShouldStopOnInvalidOnDiskNeighborTid(ItemPointerIsValid(indextid), true))
 			break;
 
-		if (ItemPointerGetBlockNumber(indextid) == e->blkno && ItemPointerGetOffsetNumber(indextid) == e->offno)
+		if (HnswShouldMatchNeighborConnection((int32) ItemPointerGetBlockNumber(indextid), (int32) ItemPointerGetOffsetNumber(indextid), (int32) e->blkno, (int32) e->offno, true))
 			return true;
 	}
 
@@ -1707,6 +1708,39 @@ vector_rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
 	int32		neighborTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopOnInvalidOnDiskNeighborTid(neighborTidValid != 0, true));
+}
+
+static bool
+HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indextidOffno, int32 elementBlkno, int32 elementOffno, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(indextidBlkno, indextidOffno, elementBlkno, elementOffno);
+
+	return indextidBlkno == elementBlkno && indextidOffno == elementOffno;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_neighbor_connection);
+Datum
+vector_hnsw_should_match_neighbor_connection(PG_FUNCTION_ARGS)
+{
+	int32		indextidBlkno = PG_GETARG_INT32(0);
+	int32		indextidOffno = PG_GETARG_INT32(1);
+	int32		elementBlkno = PG_GETARG_INT32(2);
+	int32		elementOffno = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldMatchNeighborConnection(indextidBlkno, indextidOffno, elementBlkno, elementOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_match_neighbor_connection);
+Datum
+vector_rust_hnsw_should_match_neighbor_connection(PG_FUNCTION_ARGS)
+{
+	int32		indextidBlkno = PG_GETARG_INT32(0);
+	int32		indextidOffno = PG_GETARG_INT32(1);
+	int32		elementBlkno = PG_GETARG_INT32(2);
+	int32		elementOffno = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldMatchNeighborConnection(indextidBlkno, indextidOffno, elementBlkno, elementOffno, true));
 }
 
 static bool

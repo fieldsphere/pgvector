@@ -150,6 +150,16 @@ pub extern "C" fn vector_rust_hnsw_should_apply_neighbor_update_slot_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_match_neighbor_connection_kernel(
+    indextid_blkno: i32,
+    indextid_offno: i32,
+    element_blkno: i32,
+    element_offno: i32,
+) -> bool {
+    indextid_blkno == element_blkno && indextid_offno == element_offno
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_append_ondisk_element_page_kernel(
     combined_size: i64,
     max_size: i64,
