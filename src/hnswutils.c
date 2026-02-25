@@ -174,6 +174,7 @@ static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, in
 static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust);
 static bool HnswShouldUseBuildBufferPath(bool building, bool useRust);
 static bool HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust);
+static bool HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -483,7 +484,7 @@ HnswFormIndexValue(Datum *out, Datum *values, bool *isnull, const HnswTypeInfo *
 		typeInfo->checkValue(DatumGetPointer(value));
 
 	/* Normalize if needed */
-	if (support->normprocinfo != NULL)
+	if (HnswShouldNormalizeIndexValue(support->normprocinfo != NULL, true))
 	{
 		if (!HnswCheckNorm(support, value))
 			return false;
@@ -1144,6 +1145,15 @@ HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
 
 	return hasCheckValueFunction;
+}
+
+static bool
+HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
+
+	return hasNormProcInfo;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2252,6 +2262,24 @@ vector_rust_hnsw_should_check_type_value(PG_FUNCTION_ARGS)
 	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldCheckTypeValue(hasCheckValueFunction != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_normalize_index_value);
+Datum
+vector_hnsw_should_normalize_index_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeIndexValue(hasNormProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_normalize_index_value);
+Datum
+vector_rust_hnsw_should_normalize_index_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeIndexValue(hasNormProcInfo != 0, true));
 }
 
 /*
