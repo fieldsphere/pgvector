@@ -39,6 +39,7 @@ int			hnsw_max_scan_tuples;
 double		hnsw_scan_mem_multiplier;
 int			hnsw_lock_tranche_id;
 static relopt_kind hnsw_relopt_kind;
+static bool HnswShouldInitLockTranche(bool preloadInProgress, bool useRust);
 
 /*
  * Assign a tranche ID for our LWLocks. This only needs to be done by one
@@ -82,7 +83,7 @@ HnswInitLockTranche(void)
 void
 HnswInit(void)
 {
-	if (!process_shared_preload_libraries_in_progress)
+	if (HnswShouldInitLockTranche(process_shared_preload_libraries_in_progress, true))
 		HnswInitLockTranche();
 
 	hnsw_relopt_kind = add_reloption_kind();
@@ -127,6 +128,33 @@ hnswbuildphasename(int64 phasenum)
 		default:
 			return NULL;
 	}
+}
+
+static bool
+HnswShouldInitLockTranche(bool preloadInProgress, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_init_lock_tranche_kernel(preloadInProgress);
+
+	return !preloadInProgress;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_init_lock_tranche);
+Datum
+vector_hnsw_should_init_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		preloadInProgress = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitLockTranche(preloadInProgress != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_init_lock_tranche);
+Datum
+vector_rust_hnsw_should_init_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		preloadInProgress = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitLockTranche(preloadInProgress != 0, true));
 }
 
 static bool
