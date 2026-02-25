@@ -1110,6 +1110,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_count_candidate_with_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_count_candidate_with_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_count_candidate_with_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_count_candidate_with_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3114,6 +3124,18 @@ my $keep_element_with_heaptids_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptids_length);
 });
 is($keep_element_with_heaptids_parity, "t\nt\nt\nt");
+
+my $count_candidate_with_heaptids_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_count_candidate_with_heaptids(heaptids_length) =
+		   rust_hnsw_should_count_candidate_with_heaptids(heaptids_length)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(-1)
+	) AS t(heaptids_length);
+});
+is($count_candidate_with_heaptids_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
