@@ -151,6 +151,7 @@ static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
 static bool HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust);
 static bool HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust);
 static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
+static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -911,6 +912,15 @@ HnswShouldReuseAddedCandidates(int addedCount, bool useRust)
 	return addedCount > 0;
 }
 
+static bool
+HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
+
+	return hasBasePointer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1593,6 +1603,24 @@ vector_rust_hnsw_should_reuse_added_candidates(PG_FUNCTION_ARGS)
 	int32		addedCount = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReuseAddedCandidates(addedCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_define_closer_state_for_base);
+Datum
+vector_hnsw_should_define_closer_state_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDefineCloserStateForBase(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_define_closer_state_for_base);
+Datum
+vector_rust_hnsw_should_define_closer_state_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDefineCloserStateForBase(hasBasePointer != 0, true));
 }
 
 /*
@@ -2545,7 +2573,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		else if (HnswShouldReuseAddedCandidates(list_length(added), true))
 		{
 			/* Keep Valgrind happy for in-memory, parallel builds */
-			if (base != NULL)
+			if (HnswShouldDefineCloserStateForBase(base != NULL, true))
 				VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
 			/*
@@ -2581,7 +2609,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		}
 
 		/* Keep Valgrind happy for in-memory, parallel builds */
-		if (base != NULL)
+		if (HnswShouldDefineCloserStateForBase(base != NULL, true))
 			VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
 		if (e->closer)
