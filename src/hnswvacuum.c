@@ -361,6 +361,33 @@ vector_rust_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipVacuumEntryPointElement(hasEntryPoint != 0, elementBlkno, elementOffno, entryBlkno, entryOffno, true));
 }
 
+static bool
+HnswShouldSkipVacuumElementWithoutUpdates(bool needsUpdated, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
+
+	return !needsUpdated;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_vacuum_element_without_updates);
+Datum
+vector_hnsw_should_skip_vacuum_element_without_updates(PG_FUNCTION_ARGS)
+{
+	int32		needsUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipVacuumElementWithoutUpdates(needsUpdated != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_vacuum_element_without_updates);
+Datum
+vector_rust_hnsw_should_skip_vacuum_element_without_updates(PG_FUNCTION_ARGS)
+{
+	int32		needsUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipVacuumElementWithoutUpdates(needsUpdated != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -739,7 +766,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 			LOCKMODE	lockmode = ShareLock;
 
 			/* Check if any neighbors point to deleted values */
-			if (!NeedsUpdated(vacuumstate, element))
+			if (HnswShouldSkipVacuumElementWithoutUpdates(NeedsUpdated(vacuumstate, element), true))
 				continue;
 
 			/* Get a shared lock */
