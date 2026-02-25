@@ -50,6 +50,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_compute_scan_ratio_from_tuples(double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_compute_scan_ratio_from_tuples'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_compute_scan_ratio_from_tuples(double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_compute_scan_ratio_from_tuples'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_empty_without_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1160,6 +1170,18 @@ my $adjust_startup_cost_parity = $node->safe_psql("postgres", q{
 	) AS t(startup_pages, rel_pages, ratio);
 });
 is($adjust_startup_cost_parity, "t\nt\nt\nt");
+
+my $compute_scan_ratio_from_tuples_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_compute_scan_ratio_from_tuples(tuple_count) =
+		   rust_hnsw_should_compute_scan_ratio_from_tuples(tuple_count)
+	FROM (VALUES
+		(-1.0::double precision),
+		(0.0::double precision),
+		(0.01::double precision),
+		(200.0::double precision)
+	) AS t(tuple_count);
+});
+is($compute_scan_ratio_from_tuples_parity, "t\nt\nt\nt");
 
 my $return_empty_without_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_empty_without_entrypoint(entry_point_is_null) =
