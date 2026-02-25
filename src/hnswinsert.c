@@ -42,6 +42,7 @@ static bool HnswShouldCommitOnDiskPageAppendWithBufferDirty(bool building, bool 
 static bool HnswShouldUseBuildPathForAppendedOnDiskBuffer(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForReusedOnDiskBuffer(bool building, bool useRust);
 static bool HnswShouldFollowOnDiskNextPage(bool nextPageValid, bool useRust);
+static bool HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpace, bool useRust);
 
 /*
  * Get the insert page
@@ -224,7 +225,9 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		}
 
 		/* Keep track of first page where element at level 0 can fit */
-		if (!BlockNumberIsValid(newInsertPage) && PageGetFreeSpace(page) >= minCombinedSize)
+		if (HnswShouldSetInitialOnDiskInsertPage(BlockNumberIsValid(newInsertPage),
+												 PageGetFreeSpace(page) >= minCombinedSize,
+												 true))
 			newInsertPage = currentPage;
 
 		/* First, try the fastest path */
@@ -1505,6 +1508,36 @@ vector_rust_hnsw_should_follow_ondisk_next_page(PG_FUNCTION_ARGS)
 	int32		nextPageValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFollowOnDiskNextPage(nextPageValid != 0, true));
+}
+
+static bool
+HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpace, bool useRust)
+{
+	if (useRust)
+		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasInsertPage) &&
+			vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasSpace);
+
+	return !hasInsertPage && hasSpace;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_initial_ondisk_insert_page);
+Datum
+vector_hnsw_should_set_initial_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+	int32		hasSpace = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSetInitialOnDiskInsertPage(hasInsertPage != 0, hasSpace != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_set_initial_ondisk_insert_page);
+Datum
+vector_rust_hnsw_should_set_initial_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+	int32		hasSpace = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSetInitialOnDiskInsertPage(hasInsertPage != 0, hasSpace != 0, true));
 }
 
 static bool
