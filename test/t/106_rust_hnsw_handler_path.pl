@@ -980,6 +980,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_borrow_same_page_neighbor_space(bigint, bigint, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_borrow_same_page_neighbor_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_borrow_same_page_neighbor_space(bigint, bigint, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_borrow_same_page_neighbor_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2158,6 +2168,18 @@ my $reuse_deleted_tuple_space_parity = $node->safe_psql("postgres", q{
 	) AS t(page_free, npage_free, etup_size, ntup_size);
 });
 is($reuse_deleted_tuple_space_parity, "t\nt\nt\nt");
+
+my $borrow_same_page_neighbor_space_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_borrow_same_page_neighbor_space(page_free, etup_size, same_page) =
+		   rust_hnsw_should_borrow_same_page_neighbor_space(page_free, etup_size, same_page)
+	FROM (VALUES
+		(96::bigint, 32::bigint, 1),
+		(31::bigint, 32::bigint, 1),
+		(96::bigint, 32::bigint, 0),
+		(32::bigint, 32::bigint, 1)
+	) AS t(page_free, etup_size, same_page);
+});
+is($borrow_same_page_neighbor_space_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
