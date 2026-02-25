@@ -1440,6 +1440,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_prioritize_lower_distance(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_prioritize_lower_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_prioritize_lower_distance(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_prioritize_lower_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3846,6 +3856,19 @@ my $reject_invalid_norm_parity = $node->safe_psql("postgres", q{
 	) AS t(has_valid_norm);
 });
 is($reject_invalid_norm_parity, "t\nt\nt\nt");
+
+my $prioritize_lower_distance_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_prioritize_lower_distance(left_distance, right_distance) =
+		   rust_hnsw_should_prioritize_lower_distance(left_distance, right_distance)
+	FROM (VALUES
+		(0.00::float8, 0.00::float8),
+		(0.10::float8, 0.20::float8),
+		(0.20::float8, 0.10::float8),
+		(-1.00::float8, 0.00::float8),
+		(4.00::float8, 4.00::float8)
+	) AS t(left_distance, right_distance);
+});
+is($prioritize_lower_distance_parity, "t\nt\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
