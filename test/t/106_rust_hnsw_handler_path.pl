@@ -1320,6 +1320,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_custom_allocator(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_custom_allocator'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_custom_allocator(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_custom_allocator'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3580,6 +3590,18 @@ my $return_missing_optional_proc_parity = $node->safe_psql("postgres", q{
 	) AS t(has_proc_oid);
 });
 is($return_missing_optional_proc_parity, "t\nt\nt\nt");
+
+my $use_custom_allocator_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_custom_allocator(has_allocator) =
+		   rust_hnsw_should_use_custom_allocator(has_allocator)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_allocator);
+});
+is($use_custom_allocator_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
