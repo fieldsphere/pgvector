@@ -620,6 +620,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_default_entry_level(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_default_entry_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_default_entry_level(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_entry_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_null_insert_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_null_insert_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2936,6 +2946,18 @@ my $skip_update_graph_for_duplicate_parity = $node->safe_psql("postgres", q{
 	) AS t(duplicate_found);
 });
 is($skip_update_graph_for_duplicate_parity, "t\nt\nt\nt");
+
+my $use_default_entry_level_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_default_entry_level(has_entrypoint) =
+		   rust_hnsw_should_use_default_entry_level(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($use_default_entry_level_parity, "t\nt\nt\nt");
 
 my $skip_null_insert_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_null_insert_tuple(is_null) =
