@@ -123,6 +123,7 @@ static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust)
 static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust);
 static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
 static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
+static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -626,6 +627,15 @@ HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust)
 	return !found;
 }
 
+static bool
+HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
+
+	return !inMemory;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -794,6 +804,24 @@ vector_rust_hnsw_should_append_unvisited_neighbor(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldAppendUnvisitedNeighbor(found != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
+Datum
+vector_hnsw_should_use_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseTidVisitedHash(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_tid_visited_hash);
+Datum
+vector_rust_hnsw_should_use_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseTidVisitedHash(inMemory != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -938,7 +966,7 @@ CompareFurthestCandidates(const pairingheap_node *a, const pairingheap_node *b, 
 static inline void
 InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 {
-	if (!inMemory)
+	if (HnswShouldUseTidVisitedHash(inMemory, true))
 		v->tids = tidhash_create(CurrentMemoryContext, ef * m * 2, NULL);
 	else if (base != NULL)
 		v->offsets = offsethash_create(CurrentMemoryContext, ef * m * 2, NULL);
@@ -952,7 +980,7 @@ InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 static inline void
 AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMemory, bool *found)
 {
-	if (!inMemory)
+	if (HnswShouldUseTidVisitedHash(inMemory, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 		ItemPointerData indextid;
