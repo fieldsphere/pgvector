@@ -70,6 +70,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_assign_new_lock_tranche(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_assign_new_lock_tranche'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_assign_new_lock_tranche(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_assign_new_lock_tranche'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_empty_without_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1204,6 +1214,18 @@ my $init_lock_tranche_parity = $node->safe_psql("postgres", q{
 	) AS t(preload_in_progress);
 });
 is($init_lock_tranche_parity, "t\nt\nt\nt");
+
+my $assign_new_lock_tranche_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_assign_new_lock_tranche(found) =
+		   rust_hnsw_should_assign_new_lock_tranche(found)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(found);
+});
+is($assign_new_lock_tranche_parity, "t\nt\nt\nt");
 
 my $return_empty_without_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_empty_without_entrypoint(entry_point_is_null) =
