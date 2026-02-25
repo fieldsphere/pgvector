@@ -167,6 +167,7 @@ static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
 static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
 static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
 static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
+static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -377,7 +378,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 
 	if (HnswShouldLoadMetaEntrypoint(entryPoint != NULL, true))
 	{
-		if (BlockNumberIsValid(metap->entryBlkno))
+		if (HnswShouldUseMetaEntryBlock(BlockNumberIsValid(metap->entryBlkno), true))
 		{
 			*entryPoint = HnswInitElementFromBlock(metap->entryBlkno, metap->entryOffno);
 			(*entryPoint)->level = metap->entryLevel;
@@ -1069,6 +1070,15 @@ HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
 
 	return hasEntrypointOutputPointer;
+}
+
+static bool
+HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidEntryBlock);
+
+	return hasValidEntryBlock;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2045,6 +2055,24 @@ vector_rust_hnsw_should_load_meta_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLoadMetaEntrypoint(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_meta_entry_block);
+Datum
+vector_hnsw_should_use_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMetaEntryBlock(hasValidEntryBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_meta_entry_block);
+Datum
+vector_rust_hnsw_should_use_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMetaEntryBlock(hasValidEntryBlock != 0, true));
 }
 
 /*
