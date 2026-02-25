@@ -1180,6 +1180,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reuse_added_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reuse_added_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reuse_added_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reuse_added_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3268,6 +3278,18 @@ my $calculate_neighbor_closer_parity = $node->safe_psql("postgres", q{
 	) AS t(must_calculate);
 });
 is($calculate_neighbor_closer_parity, "t\nt\nt\nt");
+
+my $reuse_added_candidates_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reuse_added_candidates(added_count) =
+		   rust_hnsw_should_reuse_added_candidates(added_count)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(0)
+	) AS t(added_count);
+});
+is($reuse_added_candidates_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
