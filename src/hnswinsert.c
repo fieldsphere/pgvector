@@ -66,6 +66,7 @@ static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
 static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
+static bool HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust);
 static bool HnswShouldRejectOnDiskUnexpectedOffset(int32 insertedOffset, int32 expectedOffset, bool useRust);
 
@@ -511,7 +512,7 @@ GetUpdateIndex(HnswElement element, HnswElement newElement, float distance, int 
 
 		LoadElementsForInsert(neighbors, &q, &idx, index, support);
 
-		if (idx == -1)
+		if (HnswShouldUpdateConnectionFromCandidateIndex(idx, true))
 			HnswUpdateConnection(base, neighbors, newElement, distance, lm, &idx, index, support);
 	}
 
@@ -2147,6 +2148,15 @@ HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useR
 	return updateIndex >= 0 && updateIndex < tupleCount;
 }
 
+static bool
+HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(updateIndex);
+
+	return updateIndex == -1;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_apply_neighbor_update_slot);
 Datum
 vector_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
@@ -2165,6 +2175,24 @@ vector_rust_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
 	int32		tupleCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldApplyNeighborUpdateSlot(updateIndex, tupleCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_connection_from_candidate_index);
+Datum
+vector_hnsw_should_update_connection_from_candidate_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdateConnectionFromCandidateIndex(updateIndex, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_connection_from_candidate_index);
+Datum
+vector_rust_hnsw_should_update_connection_from_candidate_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdateConnectionFromCandidateIndex(updateIndex, true));
 }
 
 static bool
