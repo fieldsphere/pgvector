@@ -220,6 +220,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_inmemory_duplicate_heaptid(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_inmemory_duplicate_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_inmemory_duplicate_heaptid(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_inmemory_duplicate_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_handle_empty_work_list(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_handle_empty_work_list'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1394,6 +1404,18 @@ my $use_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 	) AS t(has_leader);
 });
 is($use_parallel_heap_scan_parity, "t\nt\nt\nt");
+
+my $reject_inmemory_duplicate_heaptid_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_inmemory_duplicate_heaptid(heaptids_length, max_heaptids) =
+		   rust_hnsw_should_reject_inmemory_duplicate_heaptid(heaptids_length, max_heaptids)
+	FROM (VALUES
+		(0, 10),
+		(9, 10),
+		(10, 10),
+		(11, 10)
+	) AS t(heaptids_length, max_heaptids);
+});
+is($reject_inmemory_duplicate_heaptid_parity, "t\nt\nt\nt");
 
 my $handle_empty_work_list_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_handle_empty_work_list(work_list_length) =
