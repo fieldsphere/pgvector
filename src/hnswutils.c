@@ -118,6 +118,7 @@ static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
 static bool HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust);
+static bool HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -522,7 +523,7 @@ HnswLoadElementFromTuple(HnswElement element, HnswElementTuple etup, bool loadHe
 		}
 	}
 
-	if (loadVec)
+	if (HnswShouldLoadElementVector(loadVec, true))
 	{
 		char	   *base = NULL;
 		Datum		value = datumCopy(PointerGetDatum(&etup->data), false, -1);
@@ -574,6 +575,15 @@ HnswShouldInitializeLoadedElement(bool hasElement, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasElement);
 
 	return !hasElement;
+}
+
+static bool
+HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadVector);
+
+	return shouldLoadVector;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -652,6 +662,24 @@ vector_rust_hnsw_should_initialize_loaded_element(PG_FUNCTION_ARGS)
 	int32		hasElement = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitializeLoadedElement(hasElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_vector);
+Datum
+vector_hnsw_should_load_element_vector(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadVector = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementVector(shouldLoadVector != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_element_vector);
+Datum
+vector_rust_hnsw_should_load_element_vector(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadVector = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementVector(shouldLoadVector != 0, true));
 }
 
 /*
