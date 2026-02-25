@@ -162,6 +162,7 @@ static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRus
 static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust);
 static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
 static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
+static bool HnswShouldUseIndexOptions(bool hasOptions, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -171,7 +172,7 @@ HnswGetM(Relation index)
 {
 	HnswOptions *opts = (HnswOptions *) index->rd_options;
 
-	if (opts)
+	if (HnswShouldUseIndexOptions(opts != NULL, true))
 		return opts->m;
 
 	return HNSW_DEFAULT_M;
@@ -185,7 +186,7 @@ HnswGetEfConstruction(Relation index)
 {
 	HnswOptions *opts = (HnswOptions *) index->rd_options;
 
-	if (opts)
+	if (HnswShouldUseIndexOptions(opts != NULL, true))
 		return opts->efConstruction;
 
 	return HNSW_DEFAULT_EF_CONSTRUCTION;
@@ -1019,6 +1020,15 @@ HnswShouldCapElementLevel(int level, int maxLevel, bool useRust)
 		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(level, maxLevel);
 
 	return level > maxLevel;
+}
+
+static bool
+HnswShouldUseIndexOptions(bool hasOptions, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
+
+	return hasOptions;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -1905,6 +1915,24 @@ vector_rust_hnsw_should_cap_element_level(PG_FUNCTION_ARGS)
 	int32		maxLevel = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldCapElementLevel(level, maxLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_index_options);
+Datum
+vector_hnsw_should_use_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseIndexOptions(hasOptions != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_index_options);
+Datum
+vector_rust_hnsw_should_use_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseIndexOptions(hasOptions != 0, true));
 }
 
 /*
