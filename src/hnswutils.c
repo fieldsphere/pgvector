@@ -567,6 +567,15 @@ HnswShouldUpdateElementMaxDistance(bool hasDistancePointer, bool hasMaxDistanceP
 	return !hasDistancePointer || !hasMaxDistancePointer || distanceValue < maxDistanceValue;
 }
 
+static bool
+HnswShouldInitializeLoadedElement(bool hasElement, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasElement);
+
+	return !hasElement;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -627,6 +636,24 @@ vector_rust_hnsw_should_update_element_max_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUpdateElementMaxDistance(hasDistancePointer != 0, hasMaxDistancePointer != 0, distanceValue, maxDistanceValue, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_loaded_element);
+Datum
+vector_hnsw_should_initialize_loaded_element(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeLoadedElement(hasElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_loaded_element);
+Datum
+vector_rust_hnsw_should_initialize_loaded_element(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeLoadedElement(hasElement != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -661,7 +688,7 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 										   maxDistance != NULL ? *maxDistance : 0,
 										   true))
 	{
-		if (*element == NULL)
+		if (HnswShouldInitializeLoadedElement(*element != NULL, true))
 			*element = HnswInitElementFromBlock(blkno, offno);
 
 		HnswLoadElementFromTuple(*element, etup, true, loadVec);
