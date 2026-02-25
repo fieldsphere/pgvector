@@ -145,6 +145,7 @@ static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
+static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -851,6 +852,15 @@ HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int ele
 	return hasSkipElement && elementBlkno == skipBlkno && elementOffno == skipOffno;
 }
 
+static bool
+HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcInfo);
+
+	return !hasProcInfo;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1423,6 +1433,24 @@ vector_rust_hnsw_should_skip_self_for_vacuum_update(PG_FUNCTION_ARGS)
 	int32		skipOffno = PG_GETARG_INT32(4);
 
 	PG_RETURN_BOOL(HnswShouldSkipSelfForVacuumUpdate(hasSkipElement != 0, elementBlkno, elementOffno, skipBlkno, skipOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_type_info);
+Datum
+vector_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_type_info);
+Datum
+vector_rust_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, true));
 }
 
 /*
@@ -2654,7 +2682,7 @@ HnswGetTypeInfo(Relation index)
 {
 	FmgrInfo   *procinfo = HnswOptionalProcInfo(index, HNSW_TYPE_INFO_PROC);
 
-	if (procinfo == NULL)
+	if (HnswShouldUseDefaultTypeInfo(procinfo != NULL, true))
 	{
 		static const HnswTypeInfo typeInfo = {
 			.maxDimensions = HNSW_MAX_DIM,
