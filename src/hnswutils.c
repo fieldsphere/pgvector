@@ -129,6 +129,7 @@ static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRu
 static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
 static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
+static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
@@ -691,6 +692,15 @@ HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
 }
 
 static bool
+HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasVisitedHash);
+
+	return !hasVisitedHash;
+}
+
+static bool
 HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
@@ -1000,6 +1010,24 @@ vector_rust_hnsw_should_track_tuple_counter(PG_FUNCTION_ARGS)
 	int32		hasTupleCounter = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldTrackTupleCounter(hasTupleCounter != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_visited_hash);
+Datum
+vector_hnsw_should_initialize_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedHash(hasVisitedHash != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_visited_hash);
+Datum
+vector_rust_hnsw_should_initialize_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedHash(hasVisitedHash != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
@@ -1382,7 +1410,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	int			unvisitedLength;
 	bool		inMemory = index == NULL;
 
-	if (v == NULL)
+	if (HnswShouldInitializeVisitedHash(v != NULL, true))
 	{
 		v = &vh;
 		initVisited = true;
