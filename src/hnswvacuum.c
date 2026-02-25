@@ -690,6 +690,33 @@ vector_rust_hnsw_should_set_vacuum_insert_page_when_missing(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldReuseMarkDeletedBufferForNeighborPage(bool samePage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
+
+	return samePage;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page);
+Datum
+vector_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		samePage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReuseMarkDeletedBufferForNeighborPage(samePage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page);
+Datum
+vector_rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		samePage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReuseMarkDeletedBufferForNeighborPage(samePage != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1212,7 +1239,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			neighborPage = ItemPointerGetBlockNumber(&etup->neighbortid);
 			neighborOffno = ItemPointerGetOffsetNumber(&etup->neighbortid);
 
-			if (neighborPage == blkno)
+			if (HnswShouldReuseMarkDeletedBufferForNeighborPage(neighborPage == blkno, true))
 			{
 				nbuf = buf;
 				npage = page;
