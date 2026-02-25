@@ -41,6 +41,7 @@ static bool HnswShouldUseBuildPathForOnDiskAddElement(bool building, bool useRus
 static bool HnswShouldCommitOnDiskPageAppendWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForAppendedOnDiskBuffer(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForReusedOnDiskBuffer(bool building, bool useRust);
+static bool HnswShouldFollowOnDiskNextPage(bool nextPageValid, bool useRust);
 
 /*
  * Get the insert page
@@ -269,7 +270,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 
 		currentPage = HnswPageGetOpaque(page)->nextblkno;
 
-		if (BlockNumberIsValid(currentPage))
+		if (HnswShouldFollowOnDiskNextPage(BlockNumberIsValid(currentPage), true))
 		{
 			/* Move to next page */
 			if (HnswShouldAbortOnDiskElementMoveNext(building, true))
@@ -1477,6 +1478,33 @@ vector_rust_hnsw_should_use_build_path_for_reused_ondisk_buffer(PG_FUNCTION_ARGS
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildPathForReusedOnDiskBuffer(building != 0, true));
+}
+
+static bool
+HnswShouldFollowOnDiskNextPage(bool nextPageValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(nextPageValid);
+
+	return nextPageValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_follow_ondisk_next_page);
+Datum
+vector_hnsw_should_follow_ondisk_next_page(PG_FUNCTION_ARGS)
+{
+	int32		nextPageValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFollowOnDiskNextPage(nextPageValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_follow_ondisk_next_page);
+Datum
+vector_rust_hnsw_should_follow_ondisk_next_page(PG_FUNCTION_ARGS)
+{
+	int32		nextPageValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldFollowOnDiskNextPage(nextPageValid != 0, true));
 }
 
 static bool
