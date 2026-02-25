@@ -135,6 +135,7 @@ static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
+static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -746,6 +747,15 @@ HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust)
 	return inMemory;
 }
 
+static bool
+HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+
+	return inMemory;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1130,6 +1140,24 @@ vector_rust_hnsw_should_use_memory_entry_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseMemoryEntryDistance(inMemory != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_in_memory_search_path);
+Datum
+vector_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_in_memory_search_path);
+Datum
+vector_rust_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -1453,7 +1481,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	}
 
 	/* Create local memory for neighborhood if needed */
-	if (inMemory)
+	if (HnswShouldUseInMemorySearchPath(inMemory, true))
 	{
 		neighborhoodSize = HNSW_NEIGHBOR_ARRAY_SIZE(lm);
 		localNeighborhood = palloc(neighborhoodSize);
@@ -1497,7 +1525,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 
 		cElement = HnswPtrAccess(base, c->element);
 
-		if (inMemory)
+		if (HnswShouldUseInMemorySearchPath(inMemory, true))
 			HnswLoadUnvisitedFromMemory(base, cElement, unvisited, &unvisitedLength, v, lc, localNeighborhood, neighborhoodSize);
 		else
 			HnswLoadUnvisitedFromDisk(cElement, unvisited, &unvisitedLength, v, index, m, lm, lc);
@@ -1515,7 +1543,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 
 			f = HnswGetSearchCandidate(w_node, pairingheap_first(W));
 
-			if (inMemory)
+			if (HnswShouldUseInMemorySearchPath(inMemory, true))
 			{
 				eElement = unvisited[i].element;
 				eDistance = GetElementDistance(base, eElement, q, support);
