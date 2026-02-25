@@ -970,6 +970,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reuse_deleted_tuple_space(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_tuple_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reuse_deleted_tuple_space(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reuse_deleted_tuple_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2136,6 +2146,18 @@ my $use_distinct_neighbor_page_space_parity = $node->safe_psql("postgres", q{
 	) AS t(same_page);
 });
 is($use_distinct_neighbor_page_space_parity, "t\nt\nt\nt");
+
+my $reuse_deleted_tuple_space_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reuse_deleted_tuple_space(page_free, npage_free, etup_size, ntup_size) =
+		   rust_hnsw_should_reuse_deleted_tuple_space(page_free, npage_free, etup_size, ntup_size)
+	FROM (VALUES
+		(96::bigint, 64::bigint, 32::bigint, 16::bigint),
+		(31::bigint, 64::bigint, 32::bigint, 16::bigint),
+		(96::bigint, 15::bigint, 32::bigint, 16::bigint),
+		(32::bigint, 16::bigint, 32::bigint, 16::bigint)
+	) AS t(page_free, npage_free, etup_size, ntup_size);
+});
+is($reuse_deleted_tuple_space_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
