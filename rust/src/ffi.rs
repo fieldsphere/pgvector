@@ -135,6 +135,13 @@ pub extern "C" fn vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_probe_undecided_update_index_kernel(
+    update_index: i32,
+) -> bool {
+    update_index == -2
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_apply_neighbor_update_slot_kernel(
     update_index: i32,
     tuple_count: i32,

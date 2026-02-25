@@ -63,6 +63,7 @@ static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bo
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
+static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
 
 /*
@@ -571,7 +572,7 @@ UpdateNeighborOnDisk(HnswElement element, HnswElement newElement, int idx, int m
 											 ConnectionExists(newElement, ntup, startIdx, lm),
 											 true))
 		idx = -1;
-	else if (idx == -2)
+	else if (HnswShouldProbeUndecidedUpdateIndex(idx, true))
 	{
 		/* Find free offset if still exists */
 		/* TODO Retry updating connections if not */
@@ -2068,6 +2069,33 @@ vector_rust_hnsw_should_skip_existing_neighbor_update(PG_FUNCTION_ARGS)
 	int32		connectionExists = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSkipExistingNeighborUpdate(checkExisting != 0, connectionExists != 0, true));
+}
+
+static bool
+HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_probe_undecided_update_index_kernel(updateIndex);
+
+	return updateIndex == -2;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_probe_undecided_update_index);
+Datum
+vector_hnsw_should_probe_undecided_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProbeUndecidedUpdateIndex(updateIndex, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_probe_undecided_update_index);
+Datum
+vector_rust_hnsw_should_probe_undecided_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProbeUndecidedUpdateIndex(updateIndex, true));
 }
 
 static bool
