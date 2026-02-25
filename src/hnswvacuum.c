@@ -609,6 +609,33 @@ vector_rust_hnsw_should_process_nonnull_vacuum_entrypoint(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldSkipNonElementMarkDeletedTuple(bool isElementTuple, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
+
+	return !isElementTuple;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_markdeleted_tuple);
+Datum
+vector_hnsw_should_skip_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNonElementMarkDeletedTuple(isElementTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_non_element_markdeleted_tuple);
+Datum
+vector_rust_hnsw_should_skip_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNonElementMarkDeletedTuple(isElementTuple != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1110,7 +1137,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			OffsetNumber neighborOffno;
 
 			/* Skip neighbor tuples */
-			if (!HnswIsElementTuple(etup))
+			if (HnswShouldSkipNonElementMarkDeletedTuple(HnswIsElementTuple(etup), true))
 				continue;
 
 			/* Skip deleted tuples */
