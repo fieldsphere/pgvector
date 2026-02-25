@@ -65,6 +65,7 @@ static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
 static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
+static bool HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust);
 
 /*
  * Get the insert page
@@ -378,10 +379,10 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	/* Add element and neighbors */
 	if (HnswShouldUseFreeOnDiskOffsets(OffsetNumberIsValid(freeOffno), true))
 	{
-		if (!PageIndexTupleOverwrite(page, e->offno, (Item) etup, etupSize))
+		if (HnswShouldRejectOnDiskElementOverwrite(PageIndexTupleOverwrite(page, e->offno, (Item) etup, etupSize), true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 
-		if (!PageIndexTupleOverwrite(npage, e->neighborOffno, (Item) ntup, ntupSize))
+		if (HnswShouldRejectOnDiskElementOverwrite(PageIndexTupleOverwrite(npage, e->neighborOffno, (Item) ntup, ntupSize), true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 	}
 	else
@@ -2125,6 +2126,33 @@ vector_rust_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
 	int32		tupleCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldApplyNeighborUpdateSlot(updateIndex, tupleCount, true));
+}
+
+static bool
+HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
+
+	return !overwriteSucceeded;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_ondisk_element_overwrite);
+Datum
+vector_hnsw_should_reject_ondisk_element_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskElementOverwrite(overwriteSucceeded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_ondisk_element_overwrite);
+Datum
+vector_rust_hnsw_should_reject_ondisk_element_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskElementOverwrite(overwriteSucceeded != 0, true));
 }
 
 static bool
