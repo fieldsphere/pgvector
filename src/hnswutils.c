@@ -161,6 +161,7 @@ static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool 
 static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust);
 static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust);
 static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
+static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -305,7 +306,7 @@ HnswInitElement(char *base, ItemPointer heaptid, int m, double ml, int maxLevel,
 	int			level = (int) (-log(RandomDouble()) * ml);
 
 	/* Cap level */
-	if (level > maxLevel)
+	if (HnswShouldCapElementLevel(level, maxLevel, true))
 		level = maxLevel;
 
 	element->heaptidsLength = 0;
@@ -1009,6 +1010,15 @@ HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(slotIndex < slotLimit);
 
 	return slotIndex < slotLimit;
+}
+
+static bool
+HnswShouldCapElementLevel(int level, int maxLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(level, maxLevel);
+
+	return level > maxLevel;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -1875,6 +1885,26 @@ vector_rust_hnsw_should_copy_tuple_slot_by_index(PG_FUNCTION_ARGS)
 	int32		slotLimit = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldCopyTupleSlotByIndex(slotIndex, slotLimit, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_cap_element_level);
+Datum
+vector_hnsw_should_cap_element_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		maxLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCapElementLevel(level, maxLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_cap_element_level);
+Datum
+vector_rust_hnsw_should_cap_element_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		maxLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCapElementLevel(level, maxLevel, true));
 }
 
 /*
