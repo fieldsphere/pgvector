@@ -1140,6 +1140,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_sparsevec_excess_nnz(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_sparsevec_excess_nnz'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_sparsevec_excess_nnz(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_sparsevec_excess_nnz'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3180,6 +3190,18 @@ my $use_default_type_info_parity = $node->safe_psql("postgres", q{
 	) AS t(has_procinfo);
 });
 is($use_default_type_info_parity, "t\nt\nt\nt");
+
+my $reject_sparsevec_excess_nnz_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_sparsevec_excess_nnz(nnz, max_nnz) =
+		   rust_hnsw_should_reject_sparsevec_excess_nnz(nnz, max_nnz)
+	FROM (VALUES
+		(0, 100),
+		(100, 100),
+		(101, 100),
+		(200, 199)
+	) AS t(nnz, max_nnz);
+});
+is($reject_sparsevec_excess_nnz_parity, "t\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
