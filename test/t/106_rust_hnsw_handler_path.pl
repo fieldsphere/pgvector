@@ -1290,6 +1290,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_cap_element_level(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_cap_element_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_cap_element_level(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_cap_element_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fit_ondisk_combined_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fit_ondisk_combined_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3512,6 +3522,20 @@ my $copy_tuple_slot_by_index_parity = $node->safe_psql("postgres", q{
 	) AS t(slot_index, slot_limit);
 });
 is($copy_tuple_slot_by_index_parity, "t\nt\nt\nt\nt\nt");
+
+my $cap_element_level_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_cap_element_level(level_value, max_level) =
+		   rust_hnsw_should_cap_element_level(level_value, max_level)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(2, 2),
+		(3, 2),
+		(-1, 0),
+		(5, 7)
+	) AS t(level_value, max_level);
+});
+is($cap_element_level_parity, "t\nt\nt\nt\nt\nt");
 
 my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fit_ondisk_combined_tuple(free_space, combined_size) =
