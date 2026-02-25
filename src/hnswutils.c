@@ -125,6 +125,7 @@ static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
 static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
 static bool HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust);
 static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust);
+static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
@@ -651,6 +652,15 @@ HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust)
 }
 
 static bool
+HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
+
+	return !neighborTidsLoaded;
+}
+
+static bool
 HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
@@ -888,6 +898,24 @@ vector_rust_hnsw_should_stop_loading_disk_neighbor(PG_FUNCTION_ARGS)
 	int32		isValidIndexTid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopLoadingDiskNeighbor(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_unvisited_disk_load);
+Datum
+vector_hnsw_should_abort_unvisited_disk_load(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortUnvisitedDiskLoad(neighborTidsLoaded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_abort_unvisited_disk_load);
+Datum
+vector_rust_hnsw_should_abort_unvisited_disk_load(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortUnvisitedDiskLoad(neighborTidsLoaded != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
@@ -1233,7 +1261,7 @@ HnswLoadUnvisitedFromDisk(HnswElement element, HnswUnvisited * unvisited, int *u
 
 	*unvisitedLength = 0;
 
-	if (!HnswLoadNeighborTids(element, indextids, index, m, lm, lc))
+	if (HnswShouldAbortUnvisitedDiskLoad(HnswLoadNeighborTids(element, indextids, index, m, lm, lc), true))
 		return;
 
 	for (int i = 0; i < lm; i++)
