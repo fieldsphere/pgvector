@@ -141,6 +141,7 @@ static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
 static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust);
 static bool HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust);
 static bool HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust);
+static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -806,6 +807,15 @@ HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust)
 	return level > entryLevel;
 }
 
+static bool
+HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
+
+	return !hasBasePointer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1298,6 +1308,24 @@ vector_rust_hnsw_should_clamp_neighbor_search_level(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldClampNeighborSearchLevel(level, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_pointer_hash_for_base);
+Datum
+vector_hnsw_should_use_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerHashForBase(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_pointer_hash_for_base);
+Datum
+vector_rust_hnsw_should_use_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerHashForBase(hasBasePointer != 0, true));
 }
 
 /*
@@ -2418,7 +2446,7 @@ PrecomputeHash(char *base, HnswElement element)
 
 	HnswPtrStore(base, ptr, element);
 
-	if (base == NULL)
+	if (HnswShouldUsePointerHashForBase(base != NULL, true))
 		element->hash = hash_pointer((uintptr_t) HnswPtrPointer(ptr));
 	else
 		element->hash = hash_offset(HnswPtrOffset(ptr));
