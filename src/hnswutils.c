@@ -123,6 +123,7 @@ static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust)
 static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust);
 static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
 static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
+static bool HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
@@ -631,6 +632,15 @@ HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust)
 }
 
 static bool
+HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
+
+	return !found;
+}
+
+static bool
 HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
@@ -832,6 +842,24 @@ vector_rust_hnsw_should_append_unvisited_neighbor(PG_FUNCTION_ARGS)
 	int32		found = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAppendUnvisitedNeighbor(found != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_unvisited_disk_neighbor);
+Datum
+vector_hnsw_should_append_unvisited_disk_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedDiskNeighbor(found != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_unvisited_disk_neighbor);
+Datum
+vector_rust_hnsw_should_append_unvisited_disk_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedDiskNeighbor(found != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
@@ -1190,7 +1218,7 @@ HnswLoadUnvisitedFromDisk(HnswElement element, HnswUnvisited * unvisited, int *u
 
 		tidhash_insert(v->tids, *indextid, &found);
 
-		if (!found)
+		if (HnswShouldAppendUnvisitedDiskNeighbor(found, true))
 			unvisited[(*unvisitedLength)++].indextid = *indextid;
 	}
 }
