@@ -109,6 +109,33 @@ vector_rust_hnsw_should_process_vacuum_heaptids(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldProcessVacuumHeapTids(firstHeaptidValid != 0, true));
 }
 
+static bool
+HnswShouldMarkVacuumTupleDeleted(bool firstHeaptidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(firstHeaptidValid);
+
+	return !firstHeaptidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_mark_vacuum_tuple_deleted);
+Datum
+vector_hnsw_should_mark_vacuum_tuple_deleted(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldMarkVacuumTupleDeleted(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_mark_vacuum_tuple_deleted);
+Datum
+vector_rust_hnsw_should_mark_vacuum_tuple_deleted(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldMarkVacuumTupleDeleted(firstHeaptidValid != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -190,7 +217,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 				}
 			}
 
-			if (!ItemPointerIsValid(&etup->heaptids[0]))
+			if (HnswShouldMarkVacuumTupleDeleted(ItemPointerIsValid(&etup->heaptids[0]), true))
 			{
 				ItemPointerData ip;
 				bool		found;
