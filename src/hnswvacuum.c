@@ -581,6 +581,33 @@ vector_rust_hnsw_should_repair_nonnull_vacuum_highest_point(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRepairNonnullVacuumHighestPoint(hasHighestPoint != 0, true));
 }
 
+static bool
+HnswShouldProcessNonnullVacuumEntrypoint(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_nonnull_vacuum_entrypoint);
+Datum
+vector_hnsw_should_process_nonnull_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessNonnullVacuumEntrypoint(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_nonnull_vacuum_entrypoint);
+Datum
+vector_rust_hnsw_should_process_nonnull_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessNonnullVacuumEntrypoint(hasEntryPoint != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -844,7 +871,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 	/* Get latest entry point */
 	entryPoint = HnswGetEntryPoint(index);
 
-	if (entryPoint != NULL)
+	if (HnswShouldProcessNonnullVacuumEntrypoint(entryPoint != NULL, true))
 	{
 		ItemPointerData epData;
 
