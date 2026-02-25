@@ -1230,6 +1230,46 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_vacuum_neighbor_overwrite(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_vacuum_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_vacuum_neighbor_overwrite(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_vacuum_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_init_vacuum_stats_when_missing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_init_vacuum_stats_when_missing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_init_vacuum_stats_when_missing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_init_vacuum_stats_when_missing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_vacuum_cleanup_analyze_only(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_vacuum_cleanup_analyze_only'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_vacuum_cleanup_analyze_only(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_vacuum_cleanup_analyze_only'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_return_null_vacuum_cleanup_stats(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_return_null_vacuum_cleanup_stats'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_return_null_vacuum_cleanup_stats(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_return_null_vacuum_cleanup_stats'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2918,6 +2958,54 @@ my $track_vacuum_highest_non_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(is_higher_level, is_entrypoint);
 });
 is($track_vacuum_highest_non_entrypoint_parity, "t\nt\nt\nt");
+
+my $reject_vacuum_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_vacuum_neighbor_overwrite(overwrite_succeeded) =
+		   rust_hnsw_should_reject_vacuum_neighbor_overwrite(overwrite_succeeded)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(overwrite_succeeded);
+});
+is($reject_vacuum_neighbor_overwrite_parity, "t\nt\nt\nt");
+
+my $init_vacuum_stats_when_missing_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_init_vacuum_stats_when_missing(has_stats) =
+		   rust_hnsw_should_init_vacuum_stats_when_missing(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_stats);
+});
+is($init_vacuum_stats_when_missing_parity, "t\nt\nt\nt");
+
+my $skip_vacuum_cleanup_analyze_only_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_vacuum_cleanup_analyze_only(analyze_only) =
+		   rust_hnsw_should_skip_vacuum_cleanup_analyze_only(analyze_only)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(analyze_only);
+});
+is($skip_vacuum_cleanup_analyze_only_parity, "t\nt\nt\nt");
+
+my $return_null_vacuum_cleanup_stats_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_return_null_vacuum_cleanup_stats(has_stats) =
+		   rust_hnsw_should_return_null_vacuum_cleanup_stats(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_stats);
+});
+is($return_null_vacuum_cleanup_stats_parity, "t\nt\nt\nt");
 
 my $reuse_markdeleted_buffer_for_neighbor_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(same_page) =
