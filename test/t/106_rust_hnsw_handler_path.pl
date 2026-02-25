@@ -900,6 +900,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_stop_on_invalid_ondisk_neighbor_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1982,6 +1992,18 @@ my $use_free_ondisk_neighbor_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(slot_tid_valid);
 });
 is($use_free_ondisk_neighbor_slot_parity, "t\nt\nt\nt");
+
+my $stop_on_invalid_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(neighbor_tid_valid) =
+		   rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(neighbor_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(neighbor_tid_valid);
+});
+is($stop_on_invalid_ondisk_neighbor_tid_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
