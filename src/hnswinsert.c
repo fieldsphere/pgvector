@@ -22,6 +22,7 @@ static bool HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, b
 static bool HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust);
 static bool HnswShouldUpdateOnDiskInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust);
+static bool HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRust);
 static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
@@ -651,7 +652,7 @@ AddDuplicateOnDisk(Relation index, HnswElement element, HnswElement dup, bool bu
 	etup = (HnswElementTuple) PageGetItem(page, PageGetItemId(page, dup->offno));
 	for (i = 0; i < HNSW_HEAPTIDS; i++)
 	{
-		if (!ItemPointerIsValid(&etup->heaptids[i]))
+		if (HnswShouldBreakOnInvalidOnDiskHeapTid(ItemPointerIsValid(&etup->heaptids[i]), true))
 			break;
 	}
 
@@ -996,6 +997,33 @@ vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot(PG_FUNCTION_ARGS)
 	int32		maxHeaptids = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true));
+}
+
+static bool
+HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
+
+	return !heapTidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_break_on_invalid_ondisk_heaptid);
+Datum
+vector_hnsw_should_break_on_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldBreakOnInvalidOnDiskHeapTid(heapTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_break_on_invalid_ondisk_heaptid);
+Datum
+vector_rust_hnsw_should_break_on_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldBreakOnInvalidOnDiskHeapTid(heapTidValid != 0, true));
 }
 
 static bool
