@@ -164,6 +164,7 @@ static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool us
 static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
 static bool HnswShouldUseIndexOptions(bool hasOptions, bool useRust);
 static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
+static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -291,7 +292,7 @@ HnswInitNeighbors(char *base, HnswElement element, int m, HnswAllocator * alloca
 void *
 HnswAlloc(HnswAllocator * allocator, Size size)
 {
-	if (allocator)
+	if (HnswShouldUseCustomAllocator(allocator != NULL, true))
 		return (*(allocator)->alloc) (size, (allocator)->state);
 
 	return palloc(size);
@@ -1039,6 +1040,15 @@ HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcOid);
 
 	return !hasProcOid;
+}
+
+static bool
+HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
+
+	return hasAllocator;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -1961,6 +1971,24 @@ vector_rust_hnsw_should_return_missing_optional_proc(PG_FUNCTION_ARGS)
 	int32		hasProcOid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnMissingOptionalProc(hasProcOid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_custom_allocator);
+Datum
+vector_hnsw_should_use_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseCustomAllocator(hasAllocator != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_custom_allocator);
+Datum
+vector_rust_hnsw_should_use_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseCustomAllocator(hasAllocator != 0, true));
 }
 
 /*
