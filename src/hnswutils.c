@@ -148,6 +148,7 @@ static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBl
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
+static bool HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -881,6 +882,15 @@ HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust)
 	return sortCandidates;
 }
 
+static bool
+HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
+
+	return !hasBasePointer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1509,6 +1519,24 @@ vector_rust_hnsw_should_sort_neighbor_candidates(PG_FUNCTION_ARGS)
 	int32		sortCandidates = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSortNeighborCandidates(sortCandidates != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_sort_pointer_candidates);
+Datum
+vector_hnsw_should_sort_pointer_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortPointerCandidates(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_sort_pointer_candidates);
+Datum
+vector_rust_hnsw_should_sort_pointer_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortPointerCandidates(hasBasePointer != 0, true));
 }
 
 /*
@@ -2442,7 +2470,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	/* Ensure order of candidates is deterministic for closer caching */
 	if (HnswShouldSortNeighborCandidates(sortCandidates, true))
 	{
-		if (base == NULL)
+		if (HnswShouldSortPointerCandidates(base != NULL, true))
 			list_sort(w, CompareCandidateDistances);
 		else
 			list_sort(w, CompareCandidateDistancesOffset);
