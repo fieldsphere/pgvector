@@ -527,6 +527,33 @@ vector_rust_hnsw_should_reset_vacuum_entrypoint_neighbors(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldResetVacuumEntryPointNeighbors(hasHighestPoint != 0, true));
 }
 
+static bool
+HnswShouldReplaceDeletedVacuumEntryPoint(bool isDeletedEntrypoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedEntrypoint);
+
+	return isDeletedEntrypoint;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_replace_deleted_vacuum_entrypoint);
+Datum
+vector_hnsw_should_replace_deleted_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReplaceDeletedVacuumEntryPoint(isDeletedEntrypoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_replace_deleted_vacuum_entrypoint);
+Datum
+vector_rust_hnsw_should_replace_deleted_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReplaceDeletedVacuumEntryPoint(isDeletedEntrypoint != 0, true));
+}
+
 /*
  * Remove deleted heap TIDs
  *
@@ -796,7 +823,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 
 		ItemPointerSet(&epData, entryPoint->blkno, entryPoint->offno);
 
-		if (DeletedContains(vacuumstate->deleted, &epData))
+		if (HnswShouldReplaceDeletedVacuumEntryPoint(DeletedContains(vacuumstate->deleted, &epData), true))
 		{
 			/*
 			 * Replace the entry point with the highest point. If highest
