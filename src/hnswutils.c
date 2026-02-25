@@ -147,6 +147,7 @@ static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRus
 static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
+static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -871,6 +872,15 @@ HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust)
 	return nnz > maxNnz;
 }
 
+static bool
+HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(sortCandidates);
+
+	return sortCandidates;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1481,6 +1491,24 @@ vector_rust_hnsw_should_reject_sparsevec_excess_nnz(PG_FUNCTION_ARGS)
 	int32		maxNnz = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectSparsevecExcessNnz(nnz, maxNnz, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_sort_neighbor_candidates);
+Datum
+vector_hnsw_should_sort_neighbor_candidates(PG_FUNCTION_ARGS)
+{
+	int32		sortCandidates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortNeighborCandidates(sortCandidates != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_sort_neighbor_candidates);
+Datum
+vector_rust_hnsw_should_sort_neighbor_candidates(PG_FUNCTION_ARGS)
+{
+	int32		sortCandidates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortNeighborCandidates(sortCandidates != 0, true));
 }
 
 /*
@@ -2412,7 +2440,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	wd = palloc(sizeof(HnswCandidate *) * list_length(w));
 
 	/* Ensure order of candidates is deterministic for closer caching */
-	if (sortCandidates)
+	if (HnswShouldSortNeighborCandidates(sortCandidates, true))
 	{
 		if (base == NULL)
 			list_sort(w, CompareCandidateDistances);
