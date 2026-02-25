@@ -128,6 +128,7 @@ static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust
 static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
 static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
@@ -681,6 +682,15 @@ HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
 }
 
 static bool
+HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasTupleCounter);
+
+	return hasTupleCounter;
+}
+
+static bool
 HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
@@ -972,6 +982,24 @@ vector_rust_hnsw_should_initialize_discarded_heap(PG_FUNCTION_ARGS)
 	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitializeDiscardedHeap(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_tuple_counter);
+Datum
+vector_hnsw_should_track_tuple_counter(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackTupleCounter(hasTupleCounter != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_tuple_counter);
+Datum
+vector_rust_hnsw_should_track_tuple_counter(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackTupleCounter(hasTupleCounter != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
@@ -1386,7 +1414,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			AddToVisited(base, v, sc->element, inMemory, &found);
 
 			/* OK to count elements instead of tuples */
-			if (tuples != NULL)
+			if (HnswShouldTrackTupleCounter(tuples != NULL, true))
 				(*tuples)++;
 		}
 
@@ -1419,7 +1447,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			HnswLoadUnvisitedFromDisk(cElement, unvisited, &unvisitedLength, v, index, m, lm, lc);
 
 		/* OK to count elements instead of tuples */
-		if (tuples != NULL)
+		if (HnswShouldTrackTupleCounter(tuples != NULL, true))
 			(*tuples) += unvisitedLength;
 
 		for (int i = 0; i < unvisitedLength; i++)
