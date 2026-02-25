@@ -1120,6 +1120,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reset_vacuum_entrypoint_neighbors(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reset_vacuum_entrypoint_neighbors'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reset_vacuum_entrypoint_neighbors(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reset_vacuum_entrypoint_neighbors'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_deleted_ondisk_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_ondisk_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2646,6 +2656,18 @@ my $repair_vacuum_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(needs_updated);
 });
 is($repair_vacuum_entrypoint_parity, "t\nt\nt\nt");
+
+my $reset_vacuum_entrypoint_neighbors_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reset_vacuum_entrypoint_neighbors(has_highest_point) =
+		   rust_hnsw_should_reset_vacuum_entrypoint_neighbors(has_highest_point)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_highest_point);
+});
+is($reset_vacuum_entrypoint_neighbors_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
