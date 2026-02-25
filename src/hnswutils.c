@@ -171,6 +171,7 @@ static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
 static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
 static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust);
+static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -430,7 +431,7 @@ HnswUpdateMetaPageInfo(Page page, int updateEntry, HnswElement entryPoint, Block
 		}
 	}
 
-	if (BlockNumberIsValid(insertPage))
+	if (HnswShouldWriteMetaInsertPage(BlockNumberIsValid(insertPage), true))
 		metap->insertPage = insertPage;
 }
 
@@ -1114,6 +1115,15 @@ HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEnt
 	}
 
 	return !hasEntrypoint || entryLevel > currentEntryLevel || updateEntry == HNSW_UPDATE_ENTRY_ALWAYS;
+}
+
+static bool
+HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidInsertPage);
+
+	return hasValidInsertPage;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
@@ -2168,6 +2178,24 @@ vector_rust_hnsw_should_write_meta_entrypoint(PG_FUNCTION_ARGS)
 	int32		updateEntry = PG_GETARG_INT32(3);
 
 	PG_RETURN_BOOL(HnswShouldWriteMetaEntrypoint(hasEntrypoint != 0, entryLevel, currentEntryLevel, updateEntry, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_meta_insert_page);
+Datum
+vector_hnsw_should_write_meta_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasValidInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaInsertPage(hasValidInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_write_meta_insert_page);
+Datum
+vector_rust_hnsw_should_write_meta_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasValidInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaInsertPage(hasValidInsertPage != 0, true));
 }
 
 /*
