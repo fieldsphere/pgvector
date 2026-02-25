@@ -170,6 +170,7 @@ static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool u
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
 static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
+static bool HnswShouldForceMetaEntryUpdate(int updateEntry, bool useRust);
 static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust);
 static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust);
 static bool HnswShouldUseBuildBufferPath(bool building, bool useRust);
@@ -1112,17 +1113,26 @@ HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust)
 }
 
 static bool
+HnswShouldForceMetaEntryUpdate(int updateEntry, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry == HNSW_UPDATE_ENTRY_ALWAYS);
+
+	return updateEntry == HNSW_UPDATE_ENTRY_ALWAYS;
+}
+
+static bool
 HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust)
 {
 	if (useRust)
 	{
-		if (vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry == HNSW_UPDATE_ENTRY_ALWAYS))
+		if (HnswShouldForceMetaEntryUpdate(updateEntry, true))
 			return true;
 
 		return vector_rust_hnsw_should_update_entry_point_kernel(!hasEntrypoint, entryLevel, currentEntryLevel);
 	}
 
-	return !hasEntrypoint || entryLevel > currentEntryLevel || updateEntry == HNSW_UPDATE_ENTRY_ALWAYS;
+	return !hasEntrypoint || entryLevel > currentEntryLevel || HnswShouldForceMetaEntryUpdate(updateEntry, false);
 }
 
 static bool
@@ -2422,6 +2432,24 @@ vector_rust_hnsw_should_reject_invalid_meta_magic(PG_FUNCTION_ARGS)
 	int32		hasExpectedMagic = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectInvalidMetaMagic(hasExpectedMagic != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_force_meta_entry_update);
+Datum
+vector_hnsw_should_force_meta_entry_update(PG_FUNCTION_ARGS)
+{
+	int32		updateEntry = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldForceMetaEntryUpdate(updateEntry, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_force_meta_entry_update);
+Datum
+vector_rust_hnsw_should_force_meta_entry_update(PG_FUNCTION_ARGS)
+{
+	int32		updateEntry = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldForceMetaEntryUpdate(updateEntry, true));
 }
 
 /*
