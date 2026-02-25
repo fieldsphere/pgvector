@@ -55,6 +55,15 @@ HnswShouldResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
 	return !discardedIsEmpty;
 }
 
+static bool
+HnswShouldStopResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
+
+	return discardedIsEmpty;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_resume_from_discarded);
 Datum
 vector_hnsw_should_resume_from_discarded(PG_FUNCTION_ARGS)
@@ -71,6 +80,24 @@ vector_rust_hnsw_should_resume_from_discarded(PG_FUNCTION_ARGS)
 	int32		discardedIsEmpty = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldResumeFromDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_resume_from_discarded);
+Datum
+vector_hnsw_should_stop_resume_from_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopResumeFromDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_resume_from_discarded);
+Datum
+vector_rust_hnsw_should_stop_resume_from_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopResumeFromDiscarded(discardedIsEmpty != 0, true));
 }
 
 static bool
@@ -565,7 +592,7 @@ ResumeScanItems(IndexScanDesc scan)
 	char	   *base = NULL;
 	int			batch_size = hnsw_ef_search;
 
-	if (!HnswShouldResumeFromDiscarded(pairingheap_is_empty(so->discarded), true))
+	if (HnswShouldStopResumeFromDiscarded(pairingheap_is_empty(so->discarded), true))
 		return NIL;
 
 	/* Get next batch of candidates */
@@ -573,7 +600,7 @@ ResumeScanItems(IndexScanDesc scan)
 	{
 		HnswSearchCandidate *sc;
 
-		if (!HnswShouldResumeFromDiscarded(pairingheap_is_empty(so->discarded), true))
+		if (HnswShouldStopResumeFromDiscarded(pairingheap_is_empty(so->discarded), true))
 			break;
 
 		sc = HnswGetSearchCandidate(w_node, pairingheap_remove_first(so->discarded));
