@@ -109,6 +109,15 @@ HnswShouldReturnRemainingDiscarded(bool discardedIsEmpty, bool useRust)
 	return !discardedIsEmpty;
 }
 
+static bool
+HnswShouldStopReturningRemainingDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
+
+	return discardedIsEmpty;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_remaining_discarded);
 Datum
 vector_hnsw_should_return_remaining_discarded(PG_FUNCTION_ARGS)
@@ -125,6 +134,24 @@ vector_rust_hnsw_should_return_remaining_discarded(PG_FUNCTION_ARGS)
 	int32		discardedIsEmpty = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnRemainingDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_returning_remaining_discarded);
+Datum
+vector_hnsw_should_stop_returning_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopReturningRemainingDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_returning_remaining_discarded);
+Datum
+vector_rust_hnsw_should_stop_returning_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopReturningRemainingDiscarded(discardedIsEmpty != 0, true));
 }
 
 static bool
@@ -783,7 +810,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 			/* Reached max number of tuples or memory limit */
 			if (HnswShouldLimitScanByResources(so->tuples, (int64) hnsw_max_scan_tuples, (int64) MemoryContextMemAllocated(so->tmpCtx, false), (int64) so->maxMemory, true))
 			{
-				if (!HnswShouldReturnRemainingDiscarded(pairingheap_is_empty(so->discarded), true))
+				if (HnswShouldStopReturningRemainingDiscarded(pairingheap_is_empty(so->discarded), true))
 					break;
 
 				/* Return remaining tuples */
