@@ -930,6 +930,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_set_insert_page_when_missing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_set_insert_page_when_missing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_set_insert_page_when_missing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_set_insert_page_when_missing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2048,6 +2058,18 @@ my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	) AS t(is_deleted);
 });
 is($reuse_deleted_ondisk_tuple_parity, "t\nt\nt\nt");
+
+my $set_insert_page_when_missing_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_set_insert_page_when_missing(has_insert_page) =
+		   rust_hnsw_should_set_insert_page_when_missing(has_insert_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_insert_page);
+});
+is($set_insert_page_when_missing_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
