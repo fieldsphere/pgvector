@@ -214,6 +214,33 @@ vector_rust_hnsw_should_adjust_startup_cost(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldAdjustStartupCost(startupPages, relPages, ratio, true));
 }
 
+static bool
+HnswShouldComputeScanRatioFromTuples(double tupleCount, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_compute_scan_ratio_from_tuples_kernel(tupleCount);
+
+	return tupleCount > 0;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_compute_scan_ratio_from_tuples);
+Datum
+vector_hnsw_should_compute_scan_ratio_from_tuples(PG_FUNCTION_ARGS)
+{
+	float8		tupleCount = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldComputeScanRatioFromTuples(tupleCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_compute_scan_ratio_from_tuples);
+Datum
+vector_rust_hnsw_should_compute_scan_ratio_from_tuples(PG_FUNCTION_ARGS)
+{
+	float8		tupleCount = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldComputeScanRatioFromTuples(tupleCount, true));
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -280,7 +307,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	 * at L0, accounting for previously visited tuples, multiplied by the
 	 * "scalingFactor" (currently hardcoded).
 	 */
-	if (path->indexinfo->tuples > 0)
+	if (HnswShouldComputeScanRatioFromTuples(path->indexinfo->tuples, true))
 	{
 		double		scalingFactor = 0.55;
 		int			entryLevel = (int) (log(path->indexinfo->tuples) * HnswGetMl(m));

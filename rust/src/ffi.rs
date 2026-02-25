@@ -303,6 +303,13 @@ pub extern "C" fn vector_rust_hnsw_should_adjust_startup_cost_kernel(
 }
 
 #[no_mangle]
+pub extern "C" fn vector_rust_hnsw_should_compute_scan_ratio_from_tuples_kernel(
+    tuple_count: c_double,
+) -> bool {
+    tuple_count > 0.0
+}
+
+#[no_mangle]
 pub extern "C" fn vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(
     entry_point_is_null: bool,
 ) -> bool {

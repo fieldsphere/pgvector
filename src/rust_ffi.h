@@ -43,6 +43,7 @@ bool		vector_rust_hnsw_should_flush_pages_in_build_kernel(bool graph_flushed);
 bool		vector_rust_hnsw_should_disable_without_order_kernel(int32 orderby_count);
 double		vector_rust_hnsw_clamp_ratio_kernel(double ratio);
 bool		vector_rust_hnsw_should_adjust_startup_cost_kernel(double startup_pages, double rel_pages, double ratio);
+bool		vector_rust_hnsw_should_compute_scan_ratio_from_tuples_kernel(double tuple_count);
 bool		vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(bool entry_point_is_null);
 bool		vector_rust_hnsw_should_resume_from_discarded_kernel(bool discarded_is_empty);
 bool		vector_rust_hnsw_should_return_remaining_discarded_kernel(bool discarded_is_empty);
