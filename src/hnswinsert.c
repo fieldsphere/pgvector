@@ -48,6 +48,7 @@ static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRus
 static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
+static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
 
 /*
  * Get the insert page
@@ -552,7 +553,7 @@ UpdateNeighborOnDisk(HnswElement element, HnswElement newElement, int idx, int m
 		/* TODO Retry updating connections if not */
 		for (int j = 0; j < lm; j++)
 		{
-			if (!ItemPointerIsValid(&ntup->indextids[startIdx + j]))
+			if (HnswShouldUseFreeOnDiskNeighborSlot(ItemPointerIsValid(&ntup->indextids[startIdx + j]), true))
 			{
 				idx = startIdx + j;
 				break;
@@ -1621,6 +1622,33 @@ vector_rust_hnsw_should_abort_ondisk_duplicate_slot_reject(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAbortOnDiskDuplicateSlotReject(building != 0, true));
+}
+
+static bool
+HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(slotTidValid);
+
+	return !slotTidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_free_ondisk_neighbor_slot);
+Datum
+vector_hnsw_should_use_free_ondisk_neighbor_slot(PG_FUNCTION_ARGS)
+{
+	int32		slotTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskNeighborSlot(slotTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_free_ondisk_neighbor_slot);
+Datum
+vector_rust_hnsw_should_use_free_ondisk_neighbor_slot(PG_FUNCTION_ARGS)
+{
+	int32		slotTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskNeighborSlot(slotTidValid != 0, true));
 }
 
 static bool
