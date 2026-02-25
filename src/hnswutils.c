@@ -540,6 +540,33 @@ HnswGetDistance(Datum a, Datum b, HnswSupport * support)
 	return DatumGetFloat8(FunctionCall2Coll(support->procinfo, support->collation, a, b));
 }
 
+static bool
+HnswShouldZeroDistanceForNullQueryValue(bool hasQueryValue, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasQueryValue);
+
+	return !hasQueryValue;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
+Datum
+vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldZeroDistanceForNullQueryValue(hasQueryValue != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_zero_distance_for_null_query_value);
+Datum
+vector_rust_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldZeroDistanceForNullQueryValue(hasQueryValue != 0, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -562,7 +589,7 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	/* Calculate distance */
 	if (distance != NULL)
 	{
-		if (DatumGetPointer(q->value) == NULL)
+		if (HnswShouldZeroDistanceForNullQueryValue(DatumGetPointer(q->value) != NULL, true))
 			*distance = 0;
 		else
 			*distance = HnswGetDistance(q->value, PointerGetDatum(&etup->data), support);
