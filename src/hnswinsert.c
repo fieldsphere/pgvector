@@ -37,6 +37,7 @@ static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
 static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
+static bool HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust);
 static bool HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskAddElement(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskPageAppendWithBufferDirty(bool building, bool useRust);
@@ -274,7 +275,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		}
 
 		/* Next, try space from a deleted element */
-		if (HnswFreeOffset(index, buf, page, e, etupSize, ntupSize, &nbuf, &npage, &freeOffno, &freeNeighborOffno, &newInsertPage, &tupleVersion))
+		if (HnswShouldProcessFreeOffsetResult(HnswFreeOffset(index, buf, page, e, etupSize, ntupSize, &nbuf, &npage, &freeOffno, &freeNeighborOffno, &newInsertPage, &tupleVersion), true))
 		{
 			if (HnswShouldRegisterReusedNeighborBuffer(nbuf == buf, true))
 			{
@@ -1394,6 +1395,15 @@ HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
 	return freeOffsetValid;
 }
 
+static bool
+HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(freeOffsetResult);
+
+	return freeOffsetResult;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_free_ondisk_offsets);
 Datum
 vector_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
@@ -1410,6 +1420,24 @@ vector_rust_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
 	int32		freeOffsetValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskOffsets(freeOffsetValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_free_offset_result);
+Datum
+vector_hnsw_should_process_free_offset_result(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetResult = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessFreeOffsetResult(freeOffsetResult != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_free_offset_result);
+Datum
+vector_rust_hnsw_should_process_free_offset_result(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetResult = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessFreeOffsetResult(freeOffsetResult != 0, true));
 }
 
 static bool
