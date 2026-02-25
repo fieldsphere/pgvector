@@ -58,6 +58,7 @@ static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust)
 static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
 static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust);
 static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust);
+static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
 
 /*
  * Get the insert page
@@ -265,7 +266,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		/* Next, try space from a deleted element */
 		if (HnswFreeOffset(index, buf, page, e, etupSize, ntupSize, &nbuf, &npage, &freeOffno, &freeNeighborOffno, &newInsertPage, &tupleVersion))
 		{
-			if (nbuf != buf)
+			if (HnswShouldRegisterReusedNeighborBuffer(nbuf == buf, true))
 			{
 				if (HnswShouldUseBuildPathForReusedOnDiskBuffer(building, true))
 					npage = BufferGetPage(nbuf);
@@ -1920,6 +1921,33 @@ vector_rust_hnsw_should_borrow_same_page_neighbor_space(PG_FUNCTION_ARGS)
 	int32		samePage = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldBorrowSamePageNeighborSpace(pageFree, elementTupleSize, samePage != 0, true));
+}
+
+static bool
+HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
+
+	return !sameBuffer;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_register_reused_neighbor_buffer);
+Datum
+vector_hnsw_should_register_reused_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRegisterReusedNeighborBuffer(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_register_reused_neighbor_buffer);
+Datum
+vector_rust_hnsw_should_register_reused_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRegisterReusedNeighborBuffer(sameBuffer != 0, true));
 }
 
 static bool
