@@ -154,6 +154,7 @@ static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
 static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
 static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust);
+static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -941,6 +942,15 @@ HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust)
 	return removedAny;
 }
 
+static bool
+HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPrunedOutput);
+
+	return hasPrunedOutput;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1677,6 +1687,24 @@ vector_rust_hnsw_should_recheck_candidate_after_removal(PG_FUNCTION_ARGS)
 	int32		removedAny = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRecheckCandidateAfterRemoval(removedAny != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_pruned_output);
+Datum
+vector_hnsw_should_return_pruned_output(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnPrunedOutput(hasPrunedOutput != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_pruned_output);
+Datum
+vector_rust_hnsw_should_return_pruned_output(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnPrunedOutput(hasPrunedOutput != 0, true));
 }
 
 /*
@@ -2682,7 +2710,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		r = lappend(r, wd[wdoff++]);
 
 	/* Return pruned for update connections */
-	if (pruned != NULL)
+	if (HnswShouldReturnPrunedOutput(pruned != NULL, true))
 	{
 		if (HnswShouldSetPrunedFromArray(wdoff, wdlen, true))
 			*pruned = wd[wdoff];
