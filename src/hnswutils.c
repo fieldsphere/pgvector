@@ -144,6 +144,7 @@ static bool HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool u
 static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
+static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -836,6 +837,20 @@ HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust)
 	return heaptidsLength != 0;
 }
 
+static bool
+HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust)
+{
+	if (useRust)
+	{
+		bool		hasElementToSkip = vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
+		bool		matchesSkipElement = vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, skipBlkno, skipOffno);
+
+		return hasElementToSkip && matchesSkipElement;
+	}
+
+	return hasSkipElement && elementBlkno == skipBlkno && elementOffno == skipOffno;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1382,6 +1397,32 @@ vector_rust_hnsw_should_count_candidate_with_heaptids(PG_FUNCTION_ARGS)
 	int32		heaptidsLength = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldCountCandidateWithHeapTids(heaptidsLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_self_for_vacuum_update);
+Datum
+vector_hnsw_should_skip_self_for_vacuum_update(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+	int32		elementBlkno = PG_GETARG_INT32(1);
+	int32		elementOffno = PG_GETARG_INT32(2);
+	int32		skipBlkno = PG_GETARG_INT32(3);
+	int32		skipOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldSkipSelfForVacuumUpdate(hasSkipElement != 0, elementBlkno, elementOffno, skipBlkno, skipOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_self_for_vacuum_update);
+Datum
+vector_rust_hnsw_should_skip_self_for_vacuum_update(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+	int32		elementBlkno = PG_GETARG_INT32(1);
+	int32		elementOffno = PG_GETARG_INT32(2);
+	int32		skipBlkno = PG_GETARG_INT32(3);
+	int32		skipOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldSkipSelfForVacuumUpdate(hasSkipElement != 0, elementBlkno, elementOffno, skipBlkno, skipOffno, true));
 }
 
 /*
@@ -2482,7 +2523,7 @@ RemoveElements(char *base, List *w, HnswElement skipElement)
 		HnswElement hce = HnswPtrAccess(base, hc->element);
 
 		/* Skip self for vacuuming update */
-		if (skipElement != NULL && hce->blkno == skipElement->blkno && hce->offno == skipElement->offno)
+		if (HnswShouldSkipSelfForVacuumUpdate(skipElement != NULL, hce->blkno, hce->offno, skipElement != NULL ? skipElement->blkno : 0, skipElement != NULL ? skipElement->offno : 0, true))
 			continue;
 
 		if (HnswShouldKeepElementWithHeapTids(hce->heaptidsLength, true))
