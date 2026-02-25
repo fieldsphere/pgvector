@@ -149,6 +149,7 @@ static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
 static bool HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust);
+static bool HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -891,6 +892,15 @@ HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust)
 	return !hasBasePointer;
 }
 
+static bool
+HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(mustCalculate);
+
+	return mustCalculate;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1537,6 +1547,24 @@ vector_rust_hnsw_should_sort_pointer_candidates(PG_FUNCTION_ARGS)
 	int32		hasBasePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSortPointerCandidates(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_calculate_neighbor_closer);
+Datum
+vector_hnsw_should_calculate_neighbor_closer(PG_FUNCTION_ARGS)
+{
+	int32		mustCalculate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateNeighborCloser(mustCalculate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_calculate_neighbor_closer);
+Datum
+vector_rust_hnsw_should_calculate_neighbor_closer(PG_FUNCTION_ARGS)
+{
+	int32		mustCalculate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateNeighborCloser(mustCalculate != 0, true));
 }
 
 /*
@@ -2484,7 +2512,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		w = list_delete_last(w);
 
 		/* Use previous state of r and wd to skip work when possible */
-		if (mustCalculate)
+		if (HnswShouldCalculateNeighborCloser(mustCalculate, true))
 			e->closer = CheckElementCloser(base, e, r, support);
 		else if (list_length(added) > 0)
 		{
