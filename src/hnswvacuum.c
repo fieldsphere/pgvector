@@ -775,6 +775,54 @@ vector_rust_hnsw_should_reset_markdeleted_version(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldSkipNonElementRepairGraphTuple(bool isElementTuple, bool useRust)
+{
+	return HnswShouldSkipNonElementVacuumTuple(isElementTuple, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_repairgraph_tuple);
+Datum
+vector_hnsw_should_skip_non_element_repairgraph_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNonElementRepairGraphTuple(isElementTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_non_element_repairgraph_tuple);
+Datum
+vector_rust_hnsw_should_skip_non_element_repairgraph_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipNonElementRepairGraphTuple(isElementTuple != 0, true));
+}
+
+static bool
+HnswShouldSkipDeletedRepairGraphElement(bool firstHeaptidValid, bool useRust)
+{
+	return HnswShouldMarkVacuumTupleDeleted(firstHeaptidValid, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_deleted_repairgraph_element);
+Datum
+vector_hnsw_should_skip_deleted_repairgraph_element(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipDeletedRepairGraphElement(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_deleted_repairgraph_element);
+Datum
+vector_rust_hnsw_should_skip_deleted_repairgraph_element(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipDeletedRepairGraphElement(firstHeaptidValid != 0, true));
+}
+
+static bool
 HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
@@ -1153,11 +1201,11 @@ RepairGraph(HnswVacuumState * vacuumstate)
 			HnswElement element;
 
 			/* Skip neighbor tuples */
-			if (!HnswIsElementTuple(etup))
+			if (HnswShouldSkipNonElementRepairGraphTuple(HnswIsElementTuple(etup), true))
 				continue;
 
 			/* Skip updating neighbors if being deleted */
-			if (!ItemPointerIsValid(&etup->heaptids[0]))
+			if (HnswShouldSkipDeletedRepairGraphElement(ItemPointerIsValid(&etup->heaptids[0]), true))
 				continue;
 
 			/* Create an element */
