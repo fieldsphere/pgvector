@@ -139,6 +139,7 @@ static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
 static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
 static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
 static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust);
+static bool HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust);
 
 /*
  * Get the max number of connections in an upper layer for each element in the index
@@ -786,6 +787,15 @@ HnswShouldIncrementEfForExistingElement(bool existing, bool useRust)
 	return existing;
 }
 
+static bool
+HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
+
+	return !inMemory;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
 Datum
 vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
@@ -1240,6 +1250,24 @@ vector_rust_hnsw_should_increment_ef_for_existing_element(PG_FUNCTION_ARGS)
 	int32		existing = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldIncrementEfForExistingElement(existing != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_remove_disk_only_elements_before_select);
+Datum
+vector_hnsw_should_remove_disk_only_elements_before_select(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_remove_disk_only_elements_before_select);
+Datum
+vector_rust_hnsw_should_remove_disk_only_elements_before_select(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory != 0, true));
 }
 
 /*
@@ -2432,7 +2460,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 
 		/* Elements being deleted or skipped can help with search */
 		/* but should be removed before selecting neighbors */
-		if (!inMemory)
+		if (HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory, true))
 			lw = RemoveElements(base, lw, skipElement);
 
 		/*
