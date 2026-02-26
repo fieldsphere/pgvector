@@ -80,6 +80,8 @@ static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
 static bool HnswShouldHaveOnDiskBlockFlag(bool blockValid, bool useRust);
+static bool HnswShouldHaveValidOnDiskBlockNumberFlag(bool blockNumberValid, bool useRust);
+static bool HnswShouldHaveValidOnDiskBlockNumber(BlockNumber blkno, bool useRust);
 static bool HnswShouldHaveOnDiskBlockNumber(BlockNumber blkno, bool useRust);
 static bool HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust);
 static bool HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust);
@@ -2265,9 +2267,21 @@ HnswShouldHaveOnDiskBlockFlag(bool blockValid, bool useRust)
 }
 
 static bool
+HnswShouldHaveValidOnDiskBlockNumberFlag(bool blockNumberValid, bool useRust)
+{
+	return HnswShouldHaveOnDiskBlockFlag(blockNumberValid, useRust);
+}
+
+static bool
+HnswShouldHaveValidOnDiskBlockNumber(BlockNumber blkno, bool useRust)
+{
+	return HnswShouldHaveValidOnDiskBlockNumberFlag(BlockNumberIsValid(blkno), useRust);
+}
+
+static bool
 HnswShouldHaveOnDiskBlockNumber(BlockNumber blkno, bool useRust)
 {
-	return HnswShouldHaveOnDiskBlockFlag(BlockNumberIsValid(blkno), useRust);
+	return HnswShouldHaveValidOnDiskBlockNumber(blkno, useRust);
 }
 
 static bool
@@ -2316,6 +2330,24 @@ vector_rust_hnsw_should_have_ondisk_block_number(PG_FUNCTION_ARGS)
 	int32		blkno = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskBlockNumber((BlockNumber) blkno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_valid_ondisk_block_number);
+Datum
+vector_hnsw_should_have_valid_ondisk_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskBlockNumber((BlockNumber) blkno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_valid_ondisk_block_number);
+Datum
+vector_rust_hnsw_should_have_valid_ondisk_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskBlockNumber((BlockNumber) blkno, true));
 }
 
 static bool
