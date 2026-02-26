@@ -141,6 +141,8 @@ static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
+static bool HnswShouldHaveQueryValuePointerFlag(bool hasQueryValue, bool useRust);
+static bool HnswShouldHaveQueryValuePointer(const void *queryValuePointer, bool useRust);
 static bool HnswShouldHaveElementDistancePointerFlag(bool hasDistancePointer, bool useRust);
 static bool HnswShouldHaveElementDistancePointer(const double *distance, bool useRust);
 static bool HnswShouldHaveElementMaxDistancePointerFlag(bool hasMaxDistancePointer, bool useRust);
@@ -635,6 +637,21 @@ static inline double
 HnswGetDistance(Datum a, Datum b, HnswSupport * support)
 {
 	return DatumGetFloat8(FunctionCall2Coll(support->procinfo, support->collation, a, b));
+}
+
+static bool
+HnswShouldHaveQueryValuePointerFlag(bool hasQueryValue, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasQueryValue);
+
+	return hasQueryValue;
+}
+
+static bool
+HnswShouldHaveQueryValuePointer(const void *queryValuePointer, bool useRust)
+{
+	return HnswShouldHaveQueryValuePointerFlag(queryValuePointer != NULL, useRust);
 }
 
 static bool
@@ -1512,6 +1529,24 @@ vector_rust_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
 	int32		hasQueryValue = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldZeroDistanceForNullQueryValue(hasQueryValue != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_query_value_pointer);
+Datum
+vector_hnsw_should_have_query_value_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_query_value_pointer);
+Datum
+vector_rust_hnsw_should_have_query_value_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_calculate_element_distance);
@@ -3069,6 +3104,7 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	double		maxDistanceValueForCompare = 0;
 	bool		hasDistancePointer;
 	bool		hasMaxDistancePointer;
+	bool		hasQueryValue = false;
 
 	/* Read vector */
 	buf = ReadBuffer(index, blkno);
@@ -3085,7 +3121,9 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	/* Calculate distance */
 	if (HnswShouldCalculateElementDistance(hasDistancePointer, true))
 	{
-		if (HnswShouldZeroDistanceForNullQueryValue(DatumGetPointer(q->value) != NULL, true))
+		hasQueryValue = HnswShouldHaveQueryValuePointer(DatumGetPointer(q->value), true);
+
+		if (HnswShouldZeroDistanceForNullQueryValue(hasQueryValue, true))
 			*distance = 0;
 		else
 			*distance = HnswGetDistance(q->value, PointerGetDatum(&etup->data), support);
