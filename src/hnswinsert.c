@@ -95,7 +95,9 @@ static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust)
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
 static bool HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust);
-static bool HnswShouldRejectOnDiskUnexpectedOffset(int32 insertedOffset, int32 expectedOffset, bool useRust);
+static bool HnswShouldHaveExpectedOnDiskOffsetFlag(bool hasExpectedOffset, bool useRust);
+static bool HnswShouldHaveExpectedOnDiskOffset(int32 insertedOffset, int32 expectedOffset, bool useRust);
+static bool HnswShouldRejectOnDiskUnexpectedOffset(bool hasExpectedOffset, bool useRust);
 
 /*
  * Get the insert page
@@ -425,13 +427,15 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	}
 	else
 	{
-		if (HnswShouldRejectOnDiskUnexpectedOffset((int32) PageAddItem(page, (Item) etup, etupSize, InvalidOffsetNumber, false, false),
+		if (HnswShouldRejectOnDiskUnexpectedOffset(HnswShouldHaveExpectedOnDiskOffset((int32) PageAddItem(page, (Item) etup, etupSize, InvalidOffsetNumber, false, false),
 												   (int32) e->offno,
+												   true),
 												   true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 
-		if (HnswShouldRejectOnDiskUnexpectedOffset((int32) PageAddItem(npage, (Item) ntup, ntupSize, InvalidOffsetNumber, false, false),
+		if (HnswShouldRejectOnDiskUnexpectedOffset(HnswShouldHaveExpectedOnDiskOffset((int32) PageAddItem(npage, (Item) ntup, ntupSize, InvalidOffsetNumber, false, false),
 												   (int32) e->neighborOffno,
+												   true),
 												   true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
 	}
@@ -2697,12 +2701,27 @@ vector_rust_hnsw_should_reject_ondisk_element_overwrite(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectOnDiskUnexpectedOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
+HnswShouldHaveExpectedOnDiskOffsetFlag(bool hasExpectedOffset, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(insertedOffset, expectedOffset);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedOffset);
 
-	return insertedOffset != expectedOffset;
+	return hasExpectedOffset;
+}
+
+static bool
+HnswShouldHaveExpectedOnDiskOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
+{
+	return HnswShouldHaveExpectedOnDiskOffsetFlag(insertedOffset == expectedOffset, useRust);
+}
+
+static bool
+HnswShouldRejectOnDiskUnexpectedOffset(bool hasExpectedOffset, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedOffset);
+
+	return !hasExpectedOffset;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_ondisk_unexpected_offset);
@@ -2712,7 +2731,7 @@ vector_hnsw_should_reject_ondisk_unexpected_offset(PG_FUNCTION_ARGS)
 	int32		insertedOffset = PG_GETARG_INT32(0);
 	int32		expectedOffset = PG_GETARG_INT32(1);
 
-	PG_RETURN_BOOL(HnswShouldRejectOnDiskUnexpectedOffset(insertedOffset, expectedOffset, false));
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskUnexpectedOffset(HnswShouldHaveExpectedOnDiskOffset(insertedOffset, expectedOffset, false), false));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_ondisk_unexpected_offset);
@@ -2722,7 +2741,27 @@ vector_rust_hnsw_should_reject_ondisk_unexpected_offset(PG_FUNCTION_ARGS)
 	int32		insertedOffset = PG_GETARG_INT32(0);
 	int32		expectedOffset = PG_GETARG_INT32(1);
 
-	PG_RETURN_BOOL(HnswShouldRejectOnDiskUnexpectedOffset(insertedOffset, expectedOffset, true));
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskUnexpectedOffset(HnswShouldHaveExpectedOnDiskOffset(insertedOffset, expectedOffset, true), true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_expected_ondisk_offset);
+Datum
+vector_hnsw_should_have_expected_ondisk_offset(PG_FUNCTION_ARGS)
+{
+	int32		insertedOffset = PG_GETARG_INT32(0);
+	int32		expectedOffset = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedOnDiskOffset(insertedOffset, expectedOffset, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_expected_ondisk_offset);
+Datum
+vector_rust_hnsw_should_have_expected_ondisk_offset(PG_FUNCTION_ARGS)
+{
+	int32		insertedOffset = PG_GETARG_INT32(0);
+	int32		expectedOffset = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedOnDiskOffset(insertedOffset, expectedOffset, true));
 }
 
 static bool
