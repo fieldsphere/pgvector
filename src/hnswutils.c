@@ -242,6 +242,8 @@ static bool HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust);
 static bool HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust);
 static bool HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust);
 static bool HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust);
+static bool HnswShouldHaveExpectedMetaMagicFlag(bool hasExpectedMagic, bool useRust);
+static bool HnswShouldHaveExpectedMetaMagic(uint32 magicNumber, bool useRust);
 static bool HnswShouldRejectInvalidMetaMagic(bool hasExpectedMagic, bool useRust);
 
 /*
@@ -445,7 +447,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 	page = BufferGetPage(buf);
 	metap = HnswPageGetMeta(page);
 
-	if (unlikely(HnswShouldRejectInvalidMetaMagic(metap->magicNumber == HNSW_MAGIC_NUMBER, true)))
+	if (unlikely(HnswShouldRejectInvalidMetaMagic(HnswShouldHaveExpectedMetaMagic(metap->magicNumber, true), true)))
 		elog(ERROR, "hnsw index is not valid");
 
 	if (HnswShouldLoadMetaM(HnswShouldHaveMetaMOutputPointer(m, true), true))
@@ -1703,6 +1705,21 @@ HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftOffsetPrecedes);
 
 	return leftOffsetPrecedes;
+}
+
+static bool
+HnswShouldHaveExpectedMetaMagicFlag(bool hasExpectedMagic, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedMagic);
+
+	return hasExpectedMagic;
+}
+
+static bool
+HnswShouldHaveExpectedMetaMagic(uint32 magicNumber, bool useRust)
+{
+	return HnswShouldHaveExpectedMetaMagicFlag(magicNumber == HNSW_MAGIC_NUMBER, useRust);
 }
 
 static bool
@@ -3479,6 +3496,24 @@ vector_hnsw_should_reject_invalid_meta_magic(PG_FUNCTION_ARGS)
 	int32		hasExpectedMagic = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectInvalidMetaMagic(hasExpectedMagic != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_expected_meta_magic);
+Datum
+vector_hnsw_should_have_expected_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		magicNumber = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagic((uint32) magicNumber, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_expected_meta_magic);
+Datum
+vector_rust_hnsw_should_have_expected_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		magicNumber = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagic((uint32) magicNumber, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_invalid_meta_magic);
