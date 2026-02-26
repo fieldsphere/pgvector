@@ -1040,6 +1040,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_free_ondisk_offset(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_free_ondisk_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_free_ondisk_offset(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_free_ondisk_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_process_free_offset_result(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_process_free_offset_result'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4270,6 +4280,18 @@ my $use_free_ondisk_offsets_parity = $node->safe_psql("postgres", q{
 	) AS t(free_offset_valid);
 });
 is($use_free_ondisk_offsets_parity, "t\nt\nt\nt");
+
+my $have_free_ondisk_offset_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_free_ondisk_offset(free_offset_valid) =
+		   rust_hnsw_should_have_free_ondisk_offset(free_offset_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(free_offset_valid);
+});
+is($have_free_ondisk_offset_parity, "t\nt\nt\nt");
 
 my $process_free_offset_result_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_process_free_offset_result(free_offset_result) =
