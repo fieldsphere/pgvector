@@ -90,6 +90,7 @@ static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
 static bool HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust);
 static bool HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust);
 static bool HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust);
+static bool HnswShouldTreatForkAsInit(int32 forkNum, bool useRust);
 static bool HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust);
 static bool HnswShouldSkipNullBuildTuple(bool isNull, bool useRust);
 static bool HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust);
@@ -1886,6 +1887,33 @@ vector_rust_hnsw_should_reject_low_ef_construction(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldTreatForkAsInit(int32 forkNum, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(forkNum, 0, INIT_FORKNUM, 0);
+
+	return forkNum == INIT_FORKNUM;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_treat_fork_as_init);
+Datum
+vector_hnsw_should_treat_fork_as_init(PG_FUNCTION_ARGS)
+{
+	int32		forkNum = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTreatForkAsInit(forkNum, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_treat_fork_as_init);
+Datum
+vector_rust_hnsw_should_treat_fork_as_init(PG_FUNCTION_ARGS)
+{
+	int32		forkNum = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTreatForkAsInit(forkNum, true));
+}
+
+static bool
 HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
 {
 	if (useRust)
@@ -2280,6 +2308,8 @@ static void
 BuildIndex(Relation heap, Relation index, IndexInfo *indexInfo,
 		   HnswBuildState * buildstate, ForkNumber forkNum)
 {
+	bool		isInitFork;
+
 #ifdef HNSW_MEMORY
 	SeedRandom(42);
 #endif
@@ -2287,8 +2317,9 @@ BuildIndex(Relation heap, Relation index, IndexInfo *indexInfo,
 	InitBuildState(buildstate, heap, index, indexInfo, forkNum);
 
 	BuildGraph(buildstate);
+	isInitFork = HnswShouldTreatForkAsInit((int32) forkNum, true);
 
-	if (HnswShouldWriteWalPage(RelationNeedsWAL(index), forkNum == INIT_FORKNUM, true))
+	if (HnswShouldWriteWalPage(RelationNeedsWAL(index), isInitFork, true))
 		log_newpage_range(index, forkNum, 0, RelationGetNumberOfBlocksInFork(index, forkNum), true);
 
 	FreeBuildState(buildstate);
