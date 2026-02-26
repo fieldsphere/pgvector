@@ -1580,6 +1580,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_sort_base_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_sort_base_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_sort_base_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_sort_base_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_calculate_neighbor_closer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_calculate_neighbor_closer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4908,6 +4918,18 @@ my $sort_pointer_candidates_parity = $node->safe_psql("postgres", q{
 	) AS t(has_base_pointer);
 });
 is($sort_pointer_candidates_parity, "t\nt\nt\nt");
+
+my $have_sort_base_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_sort_base_pointer(has_base_pointer) =
+		   rust_hnsw_should_have_sort_base_pointer(has_base_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_base_pointer);
+});
+is($have_sort_base_pointer_parity, "t\nt\nt\nt");
 
 my $calculate_neighbor_closer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_calculate_neighbor_closer(must_calculate) =
