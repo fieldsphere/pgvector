@@ -470,6 +470,21 @@ HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
 	return hasKeys && keyCount > 0;
 }
 
+static bool
+HnswShouldUseProvidedRescanKeyArrayFlag(bool hasKeyArray, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasKeyArray);
+
+	return hasKeyArray;
+}
+
+static bool
+HnswShouldUseProvidedRescanKeyArray(ScanKey keys, bool useRust)
+{
+	return HnswShouldUseProvidedRescanKeyArrayFlag(keys != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_rescan_keys);
 Datum
 vector_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
@@ -488,6 +503,24 @@ vector_rust_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
 	int32		keyCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_rescan_key_array);
+Datum
+vector_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_rescan_key_array);
+Datum
+vector_rust_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
 }
 
 static bool
@@ -750,6 +783,8 @@ void
 hnswrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int norderbys)
 {
 	HnswScanOpaque so = (HnswScanOpaque) scan->opaque;
+	bool		hasKeys;
+	bool		hasOrderBys;
 
 	so->first = true;
 	/* v and discarded are allocated in tmpCtx */
@@ -758,11 +793,13 @@ hnswrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int no
 	so->tuples = 0;
 	so->previousDistance = -get_float8_infinity();
 	MemoryContextReset(so->tmpCtx);
+	hasKeys = HnswShouldUseProvidedRescanKeyArray(keys, true);
+	hasOrderBys = HnswShouldUseProvidedRescanKeyArray(orderbys, true);
 
-	if (HnswShouldCopyRescanKeys(keys != NULL, scan->numberOfKeys, true))
+	if (HnswShouldCopyRescanKeys(hasKeys, scan->numberOfKeys, true))
 		memmove(scan->keyData, keys, scan->numberOfKeys * sizeof(ScanKeyData));
 
-	if (HnswShouldCopyRescanKeys(orderbys != NULL, scan->numberOfOrderBys, true))
+	if (HnswShouldCopyRescanKeys(hasOrderBys, scan->numberOfOrderBys, true))
 		memmove(scan->orderByData, orderbys, scan->numberOfOrderBys * sizeof(ScanKeyData));
 }
 
