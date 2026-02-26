@@ -1090,6 +1090,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_insufficient_ondisk_neighbor_space(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_insufficient_ondisk_neighbor_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_insufficient_ondisk_neighbor_space(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_insufficient_ondisk_neighbor_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_append_ondisk_element_page(bigint, bigint, bigint, bigint, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_append_ondisk_element_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4780,6 +4790,18 @@ my $append_ondisk_neighbor_page_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, tuple_size);
 });
 is($append_ondisk_neighbor_page_parity, "t\nt\nt\nt");
+
+my $have_insufficient_ondisk_neighbor_space_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_insufficient_ondisk_neighbor_space(free_space, tuple_size) =
+		   rust_hnsw_should_have_insufficient_ondisk_neighbor_space(free_space, tuple_size)
+	FROM (VALUES
+		(0, 1),
+		(128, 128),
+		(127, 128),
+		(1024, 512)
+	) AS t(free_space, tuple_size);
+});
+is($have_insufficient_ondisk_neighbor_space_parity, "t\nt\nt\nt");
 
 my $append_ondisk_element_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_append_ondisk_element_page(combined_size, max_size, free_space, element_tuple_size, has_next_page) =
