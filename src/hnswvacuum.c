@@ -633,11 +633,44 @@ HnswShouldHaveVacuumHighestPointBlockFlag(bool highestPointValid, bool useRust)
 }
 
 static bool
+HnswShouldHaveVacuumHighestPointPointerFlag(bool hasHighestPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasHighestPoint);
+
+	return hasHighestPoint;
+}
+
+static bool
+HnswShouldHaveVacuumHighestPointPointer(HnswElement highestPoint, bool useRust)
+{
+	return HnswShouldHaveVacuumHighestPointPointerFlag(highestPoint != NULL, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_pointer);
+Datum
+vector_hnsw_should_have_vacuum_highest_point_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_highest_point_pointer);
+Datum
+vector_rust_hnsw_should_have_vacuum_highest_point_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, true));
+}
+
+static bool
 HnswShouldHaveVacuumHighestPointBlock(HnswElement highestPoint, bool useRust)
 {
 	bool		highestPointValid = false;
 
-	if (highestPoint != NULL)
+	if (HnswShouldHaveVacuumHighestPointPointer(highestPoint, useRust))
 		highestPointValid = BlockNumberIsValid(highestPoint->blkno);
 
 	return HnswShouldHaveVacuumHighestPointBlockFlag(highestPointValid, useRust);
