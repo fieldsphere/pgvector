@@ -183,6 +183,8 @@ static bool HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, b
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
 static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
+static bool HnswShouldHaveMetaUpdateEntrypointFlag(bool hasEntrypoint, bool useRust);
+static bool HnswShouldHaveMetaUpdateEntrypoint(HnswElement entryPoint, bool useRust);
 static bool HnswShouldForceMetaEntryUpdate(int updateEntry, bool useRust);
 static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust);
 static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust);
@@ -440,16 +442,17 @@ static void
 HnswUpdateMetaPageInfo(Page page, int updateEntry, HnswElement entryPoint, BlockNumber insertPage)
 {
 	HnswMetaPage metap = HnswPageGetMeta(page);
+	bool		hasMetaUpdateEntrypoint = HnswShouldHaveMetaUpdateEntrypoint(entryPoint, true);
 
 	if (HnswShouldUpdateMetaEntryInfo(updateEntry, true))
 	{
-		if (HnswShouldResetMetaEntrypoint(entryPoint != NULL, true))
+		if (HnswShouldResetMetaEntrypoint(hasMetaUpdateEntrypoint, true))
 		{
 			metap->entryBlkno = InvalidBlockNumber;
 			metap->entryOffno = InvalidOffsetNumber;
 			metap->entryLevel = -1;
 		}
-		else if (HnswShouldWriteMetaEntrypoint(entryPoint != NULL, entryPoint->level, metap->entryLevel, updateEntry, true))
+		else if (HnswShouldWriteMetaEntrypoint(hasMetaUpdateEntrypoint, entryPoint->level, metap->entryLevel, updateEntry, true))
 		{
 			metap->entryBlkno = entryPoint->blkno;
 			metap->entryOffno = entryPoint->offno;
@@ -1241,6 +1244,21 @@ HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntrypoint);
 
 	return !hasEntrypoint;
+}
+
+static bool
+HnswShouldHaveMetaUpdateEntrypointFlag(bool hasEntrypoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypoint);
+
+	return hasEntrypoint;
+}
+
+static bool
+HnswShouldHaveMetaUpdateEntrypoint(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveMetaUpdateEntrypointFlag(entryPoint != NULL, useRust);
 }
 
 static bool
@@ -2549,6 +2567,24 @@ vector_rust_hnsw_should_reset_meta_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntrypoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldResetMetaEntrypoint(hasEntrypoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_update_entrypoint);
+Datum
+vector_hnsw_should_have_meta_update_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_update_entrypoint);
+Datum
+vector_rust_hnsw_should_have_meta_update_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_meta_entrypoint);
