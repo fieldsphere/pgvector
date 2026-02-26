@@ -1480,6 +1480,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_skip_element_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_skip_element_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_skip_element_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_skip_element_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_default_type_info(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_default_type_info'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4708,6 +4718,18 @@ my $use_default_skip_element_tid_parity = $node->safe_psql("postgres", q{
 	) AS t(has_skip_element);
 });
 is($use_default_skip_element_tid_parity, "t\nt\nt\nt");
+
+my $have_skip_element_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_skip_element_pointer(has_skip_element) =
+		   rust_hnsw_should_have_skip_element_pointer(has_skip_element)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_skip_element);
+});
+is($have_skip_element_pointer_parity, "t\nt\nt\nt");
 
 my $use_default_type_info_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_default_type_info(has_procinfo) =
