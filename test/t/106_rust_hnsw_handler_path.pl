@@ -1300,6 +1300,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_search_entrypoint_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_search_entrypoint_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_search_entrypoint_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_search_entrypoint_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_precompute_hash_for_neighbors(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_precompute_hash_for_neighbors'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4382,6 +4392,18 @@ my $return_without_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entrypoint);
 });
 is($return_without_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_search_entrypoint_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_search_entrypoint_pointer(has_entrypoint) =
+		   rust_hnsw_should_have_search_entrypoint_pointer(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_search_entrypoint_pointer_parity, "t\nt\nt\nt");
 
 my $precompute_hash_for_neighbors_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_precompute_hash_for_neighbors(in_memory) =
