@@ -29,7 +29,9 @@ static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual,
 static bool HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, bool useRust);
 static bool HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust);
 static bool HnswShouldUpdateOnDiskInsertPage(bool hasNewInsertPage, bool useRust);
-static bool HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust);
+static bool HnswShouldHaveBoundaryDuplicateInsertSlotFlag(bool hasBoundarySlot, bool useRust);
+static bool HnswShouldHaveBoundaryDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust);
+static bool HnswShouldRejectOnDiskDuplicateInsertSlot(bool hasBoundarySlot, bool useRust);
 static bool HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRust);
 static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
@@ -731,7 +733,7 @@ AddDuplicateOnDisk(Relation index, HnswElement element, HnswElement dup, bool bu
 	}
 
 	/* Either being deleted or we lost our chance to another backend */
-	if (HnswShouldRejectOnDiskDuplicateInsertSlot(i, HNSW_HEAPTIDS, true))
+	if (HnswShouldRejectOnDiskDuplicateInsertSlot(HnswShouldHaveBoundaryDuplicateInsertSlot(i, HNSW_HEAPTIDS, true), true))
 	{
 		if (HnswShouldAbortOnDiskDuplicateSlotReject(building, true))
 			GenericXLogAbort(state);
@@ -1174,12 +1176,24 @@ vector_rust_hnsw_should_update_ondisk_insert_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectOnDiskDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust)
+HnswShouldHaveBoundaryDuplicateInsertSlotFlag(bool hasBoundarySlot, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot_kernel(freeSlotIndex, maxHeaptids);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBoundarySlot);
 
-	return freeSlotIndex == 0 || freeSlotIndex == maxHeaptids;
+	return hasBoundarySlot;
+}
+
+static bool
+HnswShouldHaveBoundaryDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust)
+{
+	return HnswShouldHaveBoundaryDuplicateInsertSlotFlag(freeSlotIndex == 0 || freeSlotIndex == maxHeaptids, useRust);
+}
+
+static bool
+HnswShouldRejectOnDiskDuplicateInsertSlot(bool hasBoundarySlot, bool useRust)
+{
+	return HnswShouldHaveBoundaryDuplicateInsertSlotFlag(hasBoundarySlot, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_ondisk_duplicate_insert_slot);
@@ -1189,7 +1203,7 @@ vector_hnsw_should_reject_ondisk_duplicate_insert_slot(PG_FUNCTION_ARGS)
 	int32		freeSlotIndex = PG_GETARG_INT32(0);
 	int32		maxHeaptids = PG_GETARG_INT32(1);
 
-	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(freeSlotIndex, maxHeaptids, false));
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(HnswShouldHaveBoundaryDuplicateInsertSlot(freeSlotIndex, maxHeaptids, false), false));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot);
@@ -1199,7 +1213,27 @@ vector_rust_hnsw_should_reject_ondisk_duplicate_insert_slot(PG_FUNCTION_ARGS)
 	int32		freeSlotIndex = PG_GETARG_INT32(0);
 	int32		maxHeaptids = PG_GETARG_INT32(1);
 
-	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true));
+	PG_RETURN_BOOL(HnswShouldRejectOnDiskDuplicateInsertSlot(HnswShouldHaveBoundaryDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true), true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_boundary_duplicate_insert_slot);
+Datum
+vector_hnsw_should_have_boundary_duplicate_insert_slot(PG_FUNCTION_ARGS)
+{
+	int32		freeSlotIndex = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveBoundaryDuplicateInsertSlot(freeSlotIndex, maxHeaptids, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_boundary_duplicate_insert_slot);
+Datum
+vector_rust_hnsw_should_have_boundary_duplicate_insert_slot(PG_FUNCTION_ARGS)
+{
+	int32		freeSlotIndex = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveBoundaryDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true));
 }
 
 static bool
