@@ -2280,6 +2280,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_space_for_combined_tuple(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_space_for_combined_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_space_for_combined_tuple(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_space_for_combined_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_build_path_for_ondisk_add_element(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_build_path_for_ondisk_add_element'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6225,6 +6235,18 @@ my $fit_ondisk_combined_tuple_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, combined_size);
 });
 is($fit_ondisk_combined_tuple_parity, "t\nt\nt\nt");
+
+my $have_ondisk_space_for_combined_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_space_for_combined_tuple(free_space, combined_size) =
+		   rust_hnsw_should_have_ondisk_space_for_combined_tuple(free_space, combined_size)
+	FROM (VALUES
+		(0, 1),
+		(128, 128),
+		(256, 128),
+		(127, 128)
+	) AS t(free_space, combined_size);
+});
+is($have_ondisk_space_for_combined_tuple_parity, "t\nt\nt\nt");
 
 my $use_build_path_for_ondisk_add_element_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_build_path_for_ondisk_add_element(building) =
