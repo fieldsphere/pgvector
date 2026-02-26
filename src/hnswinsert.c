@@ -59,6 +59,8 @@ static bool HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indexti
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
+static bool HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust);
+static bool HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
 static bool HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust);
 static bool HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust);
@@ -131,7 +133,7 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 
 			samePage = HnswShouldMatchNeighborPages((int32) neighborPage, (int32) elementPage, true);
 
-			if (HnswShouldSetInsertPageWhenMissing(BlockNumberIsValid(*newInsertPage), true))
+			if (HnswShouldSetInsertPageWhenMissing(HnswShouldHaveOnDiskInsertPage(*newInsertPage, true), true))
 				*newInsertPage = elementPage;
 
 			if (HnswShouldReuseElementBufferForNeighborPage(samePage, true))
@@ -271,7 +273,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		}
 
 		/* Keep track of first page where element at level 0 can fit */
-		if (HnswShouldSetInitialOnDiskInsertPage(BlockNumberIsValid(newInsertPage),
+		if (HnswShouldSetInitialOnDiskInsertPage(HnswShouldHaveOnDiskInsertPage(newInsertPage, true),
 												 PageGetFreeSpace(page) >= minCombinedSize,
 												 true))
 			newInsertPage = currentPage;
@@ -374,7 +376,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 
 	/* Added tuple to new page if newInsertPage is not set */
 	/* So can set to neighbor page instead of element page */
-	if (HnswShouldUseNeighborPageAsInsertPage(BlockNumberIsValid(newInsertPage), true))
+	if (HnswShouldUseNeighborPageAsInsertPage(HnswShouldHaveOnDiskInsertPage(newInsertPage, true), true))
 		newInsertPage = e->neighborPage;
 
 	if (HnswShouldUseFreeOnDiskOffsets(OffsetNumberIsValid(freeOffno), true))
@@ -431,7 +433,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		UnlockReleaseBuffer(nbuf);
 
 	/* Update the insert page */
-	if (HnswShouldUpdateAddElementInsertPage(BlockNumberIsValid(newInsertPage),
+	if (HnswShouldUpdateAddElementInsertPage(HnswShouldHaveOnDiskInsertPage(newInsertPage, true),
 											 newInsertPage != insertPage,
 											 true))
 		*updatedInsertPage = newInsertPage;
@@ -771,7 +773,7 @@ UpdateGraphOnDisk(Relation index, HnswSupport * support, HnswElement element, in
 	AddElementOnDisk(index, element, m, GetInsertPage(index), &newInsertPage, building);
 
 	/* Update insert page if needed */
-	if (HnswShouldUpdateOnDiskInsertPage(BlockNumberIsValid(newInsertPage), true))
+	if (HnswShouldUpdateOnDiskInsertPage(HnswShouldHaveOnDiskInsertPage(newInsertPage, true), true))
 		HnswUpdateMetaPage(index, 0, NULL, newInsertPage, MAIN_FORKNUM, building);
 
 	/* Update neighbors */
@@ -1908,6 +1910,39 @@ vector_rust_hnsw_should_reuse_deleted_ondisk_tuple(PG_FUNCTION_ARGS)
 	int32		isDeleted = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReuseDeletedOnDiskTuple(isDeleted != 0, true));
+}
+
+static bool
+HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasInsertPage);
+
+	return hasInsertPage;
+}
+
+static bool
+HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust)
+{
+	return HnswShouldHaveOnDiskInsertPageFlag(BlockNumberIsValid(insertPage), useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_insert_page);
+Datum
+vector_hnsw_should_have_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertPageFlag(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_insert_page);
+Datum
+vector_rust_hnsw_should_have_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertPageFlag(hasInsertPage != 0, true));
 }
 
 static bool
