@@ -1000,6 +1000,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_changed_ondisk_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_changed_ondisk_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_changed_ondisk_insert_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_changed_ondisk_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_release_ondisk_neighbor_buffer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_release_ondisk_neighbor_buffer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4252,6 +4262,18 @@ my $update_add_element_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(has_new_insert_page, page_changed);
 });
 is($update_add_element_insert_page_parity, "t\nt\nt\nt");
+
+my $have_changed_ondisk_insert_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_changed_ondisk_insert_page(new_insert_page, insert_page) =
+		   rust_hnsw_should_have_changed_ondisk_insert_page(new_insert_page, insert_page)
+	FROM (VALUES
+		(1, 1),
+		(1, 2),
+		(9, 4),
+		(8, 8)
+	) AS t(new_insert_page, insert_page);
+});
+is($have_changed_ondisk_insert_page_parity, "t\nt\nt\nt");
 
 my $release_ondisk_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_ondisk_neighbor_buffer(same_buffer) =
