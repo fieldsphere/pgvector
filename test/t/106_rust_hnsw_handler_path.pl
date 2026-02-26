@@ -1100,6 +1100,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_exceed_ondisk_element_max_size(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_exceed_ondisk_element_max_size'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_exceed_ondisk_element_max_size(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_exceed_ondisk_element_max_size'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_abort_ondisk_element_move_next(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_abort_ondisk_element_move_next'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4772,6 +4782,18 @@ my $append_ondisk_element_page_parity = $node->safe_psql("postgres", q{
 	) AS t(combined_size, max_size, free_space, element_tuple_size, has_next_page);
 });
 is($append_ondisk_element_page_parity, "t\nt\nt\nt");
+
+my $exceed_ondisk_element_max_size_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_exceed_ondisk_element_max_size(combined_size, max_size) =
+		   rust_hnsw_should_exceed_ondisk_element_max_size(combined_size, max_size)
+	FROM (VALUES
+		(128::bigint, 256::bigint),
+		(256::bigint, 256::bigint),
+		(257::bigint, 256::bigint),
+		(512::bigint, 128::bigint)
+	) AS t(combined_size, max_size);
+});
+is($exceed_ondisk_element_max_size_parity, "t\nt\nt\nt");
 
 my $abort_ondisk_element_move_next_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_abort_ondisk_element_move_next(building) =
