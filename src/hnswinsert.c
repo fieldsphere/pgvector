@@ -108,6 +108,8 @@ static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
+static bool HnswShouldHaveExistingNeighborConnectionFlag(bool hasConnection, bool useRust);
+static bool HnswShouldHaveExistingNeighborConnection(bool connectionExists, bool useRust);
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
 static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldHaveNonNegativeUpdateIndexFlag(bool isNonNegative, bool useRust);
@@ -2863,13 +2865,28 @@ vector_rust_hnsw_should_probe_for_free_neighbor_slot(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveExistingNeighborConnectionFlag(bool hasConnection, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(hasConnection);
+
+	return hasConnection;
+}
+
+static bool
+HnswShouldHaveExistingNeighborConnection(bool connectionExists, bool useRust)
+{
+	return HnswShouldHaveExistingNeighborConnectionFlag(connectionExists, useRust);
+}
+
+static bool
 HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(checkExisting) &&
-			vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(connectionExists);
+			HnswShouldHaveExistingNeighborConnection(connectionExists, true);
 
-	return checkExisting && connectionExists;
+	return checkExisting && HnswShouldHaveExistingNeighborConnection(connectionExists, false);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_existing_neighbor_update);
@@ -2890,6 +2907,24 @@ vector_rust_hnsw_should_skip_existing_neighbor_update(PG_FUNCTION_ARGS)
 	int32		connectionExists = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSkipExistingNeighborUpdate(checkExisting != 0, connectionExists != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_existing_neighbor_connection);
+Datum
+vector_hnsw_should_have_existing_neighbor_connection(PG_FUNCTION_ARGS)
+{
+	int32		connectionExists = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborConnection(connectionExists != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_existing_neighbor_connection);
+Datum
+vector_rust_hnsw_should_have_existing_neighbor_connection(PG_FUNCTION_ARGS)
+{
+	int32		connectionExists = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborConnection(connectionExists != 0, true));
 }
 
 static bool
