@@ -81,6 +81,7 @@
 static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
 static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust);
+static bool HnswShouldHaveDebugQueryString(const char *debugQueryString, bool useRust);
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
 static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
 static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust);
@@ -1422,7 +1423,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	shm_toc_estimate_keys(&pcxt->estimator, 2);
 
 	/* Finally, estimate PARALLEL_KEY_QUERY_TEXT space */
-	if (HnswShouldUseDebugQueryString(debug_query_string != NULL, true))
+	if (HnswShouldUseDebugQueryString(HnswShouldHaveDebugQueryString(debug_query_string, true), true))
 	{
 		querylen = strlen(debug_query_string);
 		shm_toc_estimate_chunk(&pcxt->estimator, querylen + 1);
@@ -1475,7 +1476,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	shm_toc_insert(pcxt->toc, PARALLEL_KEY_HNSW_AREA, hnswarea);
 
 	/* Store query string for workers */
-	if (HnswShouldUseDebugQueryString(debug_query_string != NULL, true))
+	if (HnswShouldUseDebugQueryString(HnswShouldHaveDebugQueryString(debug_query_string, true), true))
 	{
 		char	   *sharedquery;
 
@@ -1617,6 +1618,15 @@ HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust)
 	return hasDebugQueryString;
 }
 
+static bool
+HnswShouldHaveDebugQueryString(const char *debugQueryString, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(debugQueryString != NULL);
+
+	return debugQueryString != NULL;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_debug_query_string);
 Datum
 vector_hnsw_should_use_debug_query_string(PG_FUNCTION_ARGS)
@@ -1633,6 +1643,26 @@ vector_rust_hnsw_should_use_debug_query_string(PG_FUNCTION_ARGS)
 	int32		hasDebugQueryString = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDebugQueryString(hasDebugQueryString != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_debug_query_string);
+Datum
+vector_hnsw_should_have_debug_query_string(PG_FUNCTION_ARGS)
+{
+	int32		hasDebugQueryString = PG_GETARG_INT32(0);
+	const char *debugQueryString = hasDebugQueryString != 0 ? "debug" : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveDebugQueryString(debugQueryString, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_debug_query_string);
+Datum
+vector_rust_hnsw_should_have_debug_query_string(PG_FUNCTION_ARGS)
+{
+	int32		hasDebugQueryString = PG_GETARG_INT32(0);
+	const char *debugQueryString = hasDebugQueryString != 0 ? "debug" : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveDebugQueryString(debugQueryString, true));
 }
 
 static bool
