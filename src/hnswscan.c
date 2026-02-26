@@ -485,6 +485,21 @@ HnswShouldUseProvidedRescanKeyArray(ScanKey keys, bool useRust)
 	return HnswShouldUseProvidedRescanKeyArrayFlag(keys != NULL, useRust);
 }
 
+static bool
+HnswShouldUseProvidedOrderByDataFlag(bool hasOrderByData, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOrderByData);
+
+	return hasOrderByData;
+}
+
+static bool
+HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
+{
+	return HnswShouldUseProvidedOrderByDataFlag(orderByData != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_rescan_keys);
 Datum
 vector_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
@@ -521,6 +536,24 @@ vector_rust_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
 	int32		hasKeyArray = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_orderby_data);
+Datum
+vector_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_orderby_data);
+Datum
+vector_rust_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
 }
 
 static bool
@@ -821,6 +854,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 	if (HnswShouldInitializeScanState(so->first, true))
 	{
 		Datum		value;
+		bool		hasOrderByData;
 
 		/* Count index scan for stats */
 		pgstat_count_index_scan(scan->indexRelation);
@@ -830,7 +864,8 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 #endif
 
 		/* Safety check */
-		if (HnswShouldRejectMissingOrderBy(scan->orderByData == NULL, true))
+		hasOrderByData = HnswShouldUseProvidedOrderByData(scan->orderByData, true);
+		if (HnswShouldRejectMissingOrderBy(!hasOrderByData, true))
 			elog(ERROR, "cannot scan hnsw index without order");
 
 		/* Requires MVCC-compliant snapshot as not able to maintain a pin */
