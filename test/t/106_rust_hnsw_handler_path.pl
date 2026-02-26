@@ -1660,6 +1660,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_update_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_update_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_update_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_update_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_write_meta_entrypoint(integer, integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_write_meta_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4558,6 +4568,18 @@ my $reset_meta_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entrypoint);
 });
 is($reset_meta_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_meta_update_entrypoint_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_update_entrypoint(has_entrypoint) =
+		   rust_hnsw_should_have_meta_update_entrypoint(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_meta_update_entrypoint_parity, "t\nt\nt\nt");
 
 my $write_meta_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_write_meta_entrypoint(has_entrypoint, entry_level, current_entry_level, update_entry_mode) =
