@@ -103,18 +103,30 @@ vector_rust_hnsw_should_continue_vacuum_block_scan(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldHaveVacuumScanBlockFlag(bool hasValidBlock, bool useRust)
+HnswShouldHaveVacuumBlockFlag(bool blockValid, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(blockValid);
 
-	return hasValidBlock;
+	return blockValid;
+}
+
+static bool
+HnswShouldHaveVacuumBlockNumber(BlockNumber blkno, bool useRust)
+{
+	return HnswShouldHaveVacuumBlockFlag(BlockNumberIsValid(blkno), useRust);
+}
+
+static bool
+HnswShouldHaveVacuumScanBlockFlag(bool hasValidBlock, bool useRust)
+{
+	return HnswShouldHaveVacuumBlockFlag(hasValidBlock, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumScanBlock(BlockNumber blkno, bool useRust)
 {
-	return HnswShouldHaveVacuumScanBlockFlag(BlockNumberIsValid(blkno), useRust);
+	return HnswShouldHaveVacuumBlockNumber(blkno, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_scan_block);
@@ -133,6 +145,24 @@ vector_rust_hnsw_should_have_vacuum_scan_block(PG_FUNCTION_ARGS)
 	int32		hasValidBlock = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumScanBlockFlag(hasValidBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_block_number);
+Datum
+vector_hnsw_should_have_vacuum_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumBlockNumber((BlockNumber) blkno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_block_number);
+Datum
+vector_rust_hnsw_should_have_vacuum_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumBlockNumber((BlockNumber) blkno, true));
 }
 
 static bool
@@ -1206,16 +1236,13 @@ vector_rust_hnsw_should_set_vacuum_insert_page_when_missing(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumInsertPageFlag(bool hasInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasInsertPage);
-
-	return hasInsertPage;
+	return HnswShouldHaveVacuumBlockFlag(hasInsertPage, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumInsertPage(BlockNumber insertPage, bool useRust)
 {
-	return HnswShouldHaveVacuumInsertPageFlag(BlockNumberIsValid(insertPage), useRust);
+	return HnswShouldHaveVacuumBlockNumber(insertPage, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_insert_page);
