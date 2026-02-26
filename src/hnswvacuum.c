@@ -50,6 +50,33 @@ vector_rust_hnsw_should_contain_deleted_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldContinueVacuumBlockScan(bool hasValidBlock, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
+
+	return hasValidBlock;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_continue_vacuum_block_scan);
+Datum
+vector_hnsw_should_continue_vacuum_block_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldContinueVacuumBlockScan(hasValidBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_continue_vacuum_block_scan);
+Datum
+vector_rust_hnsw_should_continue_vacuum_block_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldContinueVacuumBlockScan(hasValidBlock != 0, true));
+}
+
+static bool
 DeletedContains(tidhash_hash * deleted, ItemPointer indextid)
 {
 	return HnswShouldContainDeletedTid(tidhash_lookup(deleted, *indextid) != NULL, true);
@@ -1310,7 +1337,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 	highestPoint->blkno = InvalidBlockNumber;
 	highestPoint->offno = InvalidOffsetNumber;
 
-	while (BlockNumberIsValid(blkno))
+	while (HnswShouldContinueVacuumBlockScan(BlockNumberIsValid(blkno), true))
 	{
 		Buffer		buf;
 		Page		page;
@@ -1620,7 +1647,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 	/* Repair entry point first */
 	RepairGraphEntryPoint(vacuumstate);
 
-	while (BlockNumberIsValid(blkno))
+	while (HnswShouldContinueVacuumBlockScan(BlockNumberIsValid(blkno), true))
 	{
 		Buffer		buf;
 		Page		page;
@@ -1734,7 +1761,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 	LockPage(index, HNSW_SCAN_LOCK, ExclusiveLock);
 	UnlockPage(index, HNSW_SCAN_LOCK, ExclusiveLock);
 
-	while (BlockNumberIsValid(blkno))
+	while (HnswShouldContinueVacuumBlockScan(BlockNumberIsValid(blkno), true))
 	{
 		Buffer		buf;
 		Page		page;
