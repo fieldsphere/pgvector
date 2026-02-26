@@ -1260,6 +1260,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_discarded_heap_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_discarded_heap_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_discarded_heap_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_discarded_heap_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_load_element_with_max_distance_cap(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_load_element_with_max_distance_cap'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4454,6 +4464,18 @@ my $initialize_discarded_heap_parity = $node->safe_psql("postgres", q{
 	) AS t(has_discarded_heap);
 });
 is($initialize_discarded_heap_parity, "t\nt\nt\nt");
+
+my $have_discarded_heap_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_discarded_heap_pointer(has_discarded_heap) =
+		   rust_hnsw_should_have_discarded_heap_pointer(has_discarded_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_discarded_heap);
+});
+is($have_discarded_heap_pointer_parity, "t\nt\nt\nt");
 
 my $load_element_with_max_distance_cap_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_load_element_with_max_distance_cap(always_add, track_discarded) =
