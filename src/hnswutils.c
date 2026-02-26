@@ -138,6 +138,8 @@ static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRus
 static bool HnswShouldHaveTupleCounterPointerFlag(bool hasTupleCounter, bool useRust);
 static bool HnswShouldHaveTupleCounterPointer(int64 *tuples, bool useRust);
 static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
+static bool HnswShouldHaveVisitedHashPointerFlag(bool hasVisitedHash, bool useRust);
+static bool HnswShouldHaveVisitedHashPointer(visited_hash *v, bool useRust);
 static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
 static bool HnswShouldInitializeVisitedState(bool initVisited, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
@@ -913,6 +915,21 @@ static bool
 HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
 {
 	return HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter, useRust);
+}
+
+static bool
+HnswShouldHaveVisitedHashPointerFlag(bool hasVisitedHash, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasVisitedHash);
+
+	return hasVisitedHash;
+}
+
+static bool
+HnswShouldHaveVisitedHashPointer(visited_hash *v, bool useRust)
+{
+	return HnswShouldHaveVisitedHashPointerFlag(v != NULL, useRust);
 }
 
 static bool
@@ -2078,6 +2095,24 @@ vector_rust_hnsw_should_initialize_visited_hash(PG_FUNCTION_ARGS)
 	int32		hasVisitedHash = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitializeVisitedHash(hasVisitedHash != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_hash_pointer);
+Datum
+vector_hnsw_should_have_visited_hash_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_hash_pointer);
+Datum
+vector_rust_hnsw_should_have_visited_hash_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_visited_state);
@@ -3626,7 +3661,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	bool		hasDiscardedHeapPointer = HnswShouldHaveDiscardedHeapPointer(discarded, true);
 	bool		hasTupleCounterPointer = HnswShouldHaveTupleCounterPointer(tuples, true);
 
-	if (HnswShouldInitializeVisitedHash(v != NULL, true))
+	if (HnswShouldInitializeVisitedHash(HnswShouldHaveVisitedHashPointer(v, true), true))
 	{
 		v = &vh;
 		initVisited = true;
