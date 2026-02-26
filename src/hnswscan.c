@@ -170,14 +170,19 @@ HnswShouldHaveDecreasingScanDistance(double distance, double previousDistance, b
 }
 
 static bool
-HnswShouldSkipStrictOutOfOrder(int iterativeScanMode, double distance, double previousDistance, bool useRust)
+HnswShouldHaveStrictOutOfOrderScanMode(int iterativeScanMode, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode) &&
-			HnswShouldHaveDecreasingScanDistance(distance, previousDistance, true);
+		return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode);
 
-	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT &&
-		HnswShouldHaveDecreasingScanDistance(distance, previousDistance, false);
+	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT;
+}
+
+static bool
+HnswShouldSkipStrictOutOfOrder(int iterativeScanMode, double distance, double previousDistance, bool useRust)
+{
+	return HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, useRust) &&
+		HnswShouldHaveDecreasingScanDistance(distance, previousDistance, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_strict_out_of_order);
@@ -200,6 +205,24 @@ vector_rust_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
 	float8		previousDistance = PG_GETARG_FLOAT8(2);
 
 	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_strict_out_of_order_scan_mode);
+Datum
+vector_hnsw_should_have_strict_out_of_order_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_strict_out_of_order_scan_mode);
+Datum
+vector_rust_hnsw_should_have_strict_out_of_order_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_decreasing_scan_distance);
@@ -483,10 +506,7 @@ vector_rust_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
 static bool
 HnswShouldUseStrictScanMode(int iterativeScanMode, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode);
-
-	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT;
+	return HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, useRust);
 }
 
 static bool
