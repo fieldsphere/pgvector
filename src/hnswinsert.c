@@ -89,6 +89,8 @@ static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust)
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
 static bool HnswShouldHaveMatchingNeighborBlockFlag(bool hasMatchingBlock, bool useRust);
 static bool HnswShouldHaveMatchingNeighborBlock(int32 indextidBlkno, int32 elementBlkno, bool useRust);
+static bool HnswShouldHaveMatchingNeighborOffsetFlag(bool hasMatchingOffset, bool useRust);
+static bool HnswShouldHaveMatchingNeighborOffset(int32 indextidOffno, int32 elementOffno, bool useRust);
 static bool HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indextidOffno, int32 elementBlkno, int32 elementOffno, bool useRust);
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
@@ -2391,10 +2393,25 @@ HnswShouldHaveMatchingNeighborBlock(int32 indextidBlkno, int32 elementBlkno, boo
 }
 
 static bool
+HnswShouldHaveMatchingNeighborOffsetFlag(bool hasMatchingOffset, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingOffset);
+
+	return hasMatchingOffset;
+}
+
+static bool
+HnswShouldHaveMatchingNeighborOffset(int32 indextidOffno, int32 elementOffno, bool useRust)
+{
+	return HnswShouldHaveMatchingNeighborOffsetFlag(indextidOffno == elementOffno, useRust);
+}
+
+static bool
 HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indextidOffno, int32 elementBlkno, int32 elementOffno, bool useRust)
 {
 	return HnswShouldHaveMatchingNeighborBlock(indextidBlkno, elementBlkno, useRust) &&
-		indextidOffno == elementOffno;
+		HnswShouldHaveMatchingNeighborOffset(indextidOffno, elementOffno, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_neighbor_connection);
@@ -2439,6 +2456,26 @@ vector_rust_hnsw_should_have_matching_neighbor_block(PG_FUNCTION_ARGS)
 	int32		elementBlkno = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborBlock(indextidBlkno, elementBlkno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_neighbor_offset);
+Datum
+vector_hnsw_should_have_matching_neighbor_offset(PG_FUNCTION_ARGS)
+{
+	int32		indextidOffno = PG_GETARG_INT32(0);
+	int32		elementOffno = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborOffset(indextidOffno, elementOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_neighbor_offset);
+Datum
+vector_rust_hnsw_should_have_matching_neighbor_offset(PG_FUNCTION_ARGS)
+{
+	int32		indextidOffno = PG_GETARG_INT32(0);
+	int32		elementOffno = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborOffset(indextidOffno, elementOffno, true));
 }
 
 static bool
