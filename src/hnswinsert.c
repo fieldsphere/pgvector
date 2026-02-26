@@ -25,6 +25,8 @@ static bool HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust)
 static bool HnswShouldHaveOnDiskEntrypoint(HnswElement entryPoint, bool useRust);
 static int HnswGetOnDiskEntryLevelForUpdate(HnswElement entryPoint, bool useRust);
 static bool HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust);
+static bool HnswShouldHaveValidInsertIndexValueFlag(bool hasValidIndexValue, bool useRust);
+static bool HnswShouldHaveValidInsertIndexValue(bool indexValueFormed, bool useRust);
 static bool HnswShouldHaveOnDiskValueMismatchFlag(bool valuesMismatch, bool useRust);
 static bool HnswShouldHaveOnDiskValueMismatch(bool valuesEqual, bool useRust);
 static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust);
@@ -1082,12 +1084,24 @@ vector_rust_hnsw_should_use_default_ondisk_entry_level(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust)
+HnswShouldHaveValidInsertIndexValueFlag(bool hasValidIndexValue, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(indexValueFormed);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidIndexValue);
 
-	return !indexValueFormed;
+	return hasValidIndexValue;
+}
+
+static bool
+HnswShouldHaveValidInsertIndexValue(bool indexValueFormed, bool useRust)
+{
+	return HnswShouldHaveValidInsertIndexValueFlag(indexValueFormed, useRust);
+}
+
+static bool
+HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust)
+{
+	return !HnswShouldHaveValidInsertIndexValue(indexValueFormed, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_invalid_insert_value);
@@ -1106,6 +1120,24 @@ vector_rust_hnsw_should_skip_invalid_insert_value(PG_FUNCTION_ARGS)
 	int32		indexValueFormed = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipInvalidInsertValue(indexValueFormed != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_valid_insert_index_value);
+Datum
+vector_hnsw_should_have_valid_insert_index_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidInsertIndexValue(indexValueFormed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_valid_insert_index_value);
+Datum
+vector_rust_hnsw_should_have_valid_insert_index_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidInsertIndexValue(indexValueFormed != 0, true));
 }
 
 static bool
