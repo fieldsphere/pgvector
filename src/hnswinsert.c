@@ -82,6 +82,8 @@ static bool HnswShouldHaveOnDiskBlockNumber(BlockNumber blkno, bool useRust);
 static bool HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust);
 static bool HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
+static bool HnswShouldHaveMatchingNeighborPageFlag(bool hasMatchingPage, bool useRust);
+static bool HnswShouldHaveMatchingNeighborPage(int32 neighborPage, int32 elementPage, bool useRust);
 static bool HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust);
 static bool HnswShouldHaveMatchingOnDiskBufferFlag(bool hasMatchingBuffer, bool useRust);
 static bool HnswShouldHaveMatchingOnDiskBuffer(int32 leftBuffer, int32 rightBuffer, bool useRust);
@@ -2291,12 +2293,27 @@ HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust)
 }
 
 static bool
-HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust)
+HnswShouldHaveMatchingNeighborPageFlag(bool hasMatchingPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingPage);
+
+	return hasMatchingPage;
+}
+
+static bool
+HnswShouldHaveMatchingNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
 
-	return neighborPage == elementPage;
+	return HnswShouldHaveMatchingNeighborPageFlag(neighborPage == elementPage, false);
+}
+
+static bool
+HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust)
+{
+	return HnswShouldHaveMatchingNeighborPage(neighborPage, elementPage, useRust);
 }
 
 static bool
@@ -2359,6 +2376,26 @@ vector_rust_hnsw_should_match_neighbor_pages(PG_FUNCTION_ARGS)
 	int32		elementPage = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldMatchNeighborPages(neighborPage, elementPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_neighbor_page);
+Datum
+vector_hnsw_should_have_matching_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborPage(neighborPage, elementPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_neighbor_page);
+Datum
+vector_rust_hnsw_should_have_matching_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborPage(neighborPage, elementPage, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_ondisk_buffers);
