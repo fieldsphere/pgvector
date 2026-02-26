@@ -77,6 +77,39 @@ vector_rust_hnsw_should_continue_vacuum_block_scan(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveVacuumScanBlockFlag(bool hasValidBlock, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
+
+	return hasValidBlock;
+}
+
+static bool
+HnswShouldHaveVacuumScanBlock(BlockNumber blkno, bool useRust)
+{
+	return HnswShouldHaveVacuumScanBlockFlag(BlockNumberIsValid(blkno), useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_scan_block);
+Datum
+vector_hnsw_should_have_vacuum_scan_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumScanBlockFlag(hasValidBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_scan_block);
+Datum
+vector_rust_hnsw_should_have_vacuum_scan_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumScanBlockFlag(hasValidBlock != 0, true));
+}
+
+static bool
 DeletedContains(tidhash_hash * deleted, ItemPointer indextid)
 {
 	return HnswShouldContainDeletedTid(tidhash_lookup(deleted, *indextid) != NULL, true);
@@ -1534,7 +1567,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 	highestPoint->blkno = InvalidBlockNumber;
 	highestPoint->offno = InvalidOffsetNumber;
 
-	while (HnswShouldContinueVacuumBlockScan(BlockNumberIsValid(blkno), true))
+	while (HnswShouldContinueVacuumBlockScan(HnswShouldHaveVacuumScanBlock(blkno, true), true))
 	{
 		Buffer		buf;
 		Page		page;
@@ -1844,7 +1877,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 	/* Repair entry point first */
 	RepairGraphEntryPoint(vacuumstate);
 
-	while (HnswShouldContinueVacuumBlockScan(BlockNumberIsValid(blkno), true))
+	while (HnswShouldContinueVacuumBlockScan(HnswShouldHaveVacuumScanBlock(blkno, true), true))
 	{
 		Buffer		buf;
 		Page		page;
@@ -1958,7 +1991,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 	LockPage(index, HNSW_SCAN_LOCK, ExclusiveLock);
 	UnlockPage(index, HNSW_SCAN_LOCK, ExclusiveLock);
 
-	while (HnswShouldContinueVacuumBlockScan(BlockNumberIsValid(blkno), true))
+	while (HnswShouldContinueVacuumBlockScan(HnswShouldHaveVacuumScanBlock(blkno, true), true))
 	{
 		Buffer		buf;
 		Page		page;
