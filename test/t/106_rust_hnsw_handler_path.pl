@@ -2720,6 +2720,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_missing_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_missing_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_missing_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_missing_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_higher_vacuum_entrypoint_level(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_higher_vacuum_entrypoint_level'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6713,6 +6723,18 @@ my $promote_vacuum_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(entry_point_is_null, element_level, entry_level);
 });
 is($promote_vacuum_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_vacuum_missing_entrypoint_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_missing_entrypoint(entry_point_is_null) =
+		   rust_hnsw_should_have_vacuum_missing_entrypoint(entry_point_is_null)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(entry_point_is_null);
+});
+is($have_vacuum_missing_entrypoint_parity, "t\nt\nt\nt");
 
 my $have_higher_vacuum_entrypoint_level_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_higher_vacuum_entrypoint_level(element_level, entry_level) =
