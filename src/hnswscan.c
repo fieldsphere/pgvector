@@ -586,6 +586,12 @@ HnswShouldHaveScanPointer(const void *pointer, bool useRust)
 }
 
 static bool
+HnswShouldHaveRescanKeysFlag(bool hasKeys, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasKeys, useRust);
+}
+
+static bool
 HnswShouldHavePositiveRescanKeyCountFlag(bool hasPositiveKeyCount, bool useRust)
 {
 	if (useRust)
@@ -603,11 +609,8 @@ HnswShouldHavePositiveRescanKeyCount(int keyCount, bool useRust)
 static bool
 HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
 {
-	if (useRust)
-		return HnswShouldHaveScanPointerFlag(hasKeys, true) &&
-			HnswShouldHavePositiveRescanKeyCount(keyCount, true);
-
-	return hasKeys && HnswShouldHavePositiveRescanKeyCount(keyCount, false);
+	return HnswShouldHaveRescanKeysFlag(hasKeys, useRust) &&
+		HnswShouldHavePositiveRescanKeyCount(keyCount, useRust);
 }
 
 static bool
@@ -705,6 +708,24 @@ vector_rust_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
 	int32		keyCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_rescan_keys);
+Datum
+vector_hnsw_should_have_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_rescan_keys);
+Datum
+vector_rust_hnsw_should_have_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_positive_rescan_key_count);
