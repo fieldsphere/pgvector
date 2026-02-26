@@ -160,6 +160,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_strict_out_of_order_scan_mode(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_strict_out_of_order_scan_mode'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_strict_out_of_order_scan_mode(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_strict_out_of_order_scan_mode'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_decreasing_scan_distance(double precision, double precision) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_decreasing_scan_distance'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3612,6 +3622,18 @@ my $skip_strict_out_of_order_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode, distance, previous_distance);
 });
 is($skip_strict_out_of_order_parity, "t\nt\nt\nt");
+
+my $have_strict_out_of_order_scan_mode_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_strict_out_of_order_scan_mode(iterative_scan_mode) =
+		   rust_hnsw_should_have_strict_out_of_order_scan_mode(iterative_scan_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(1)
+	) AS t(iterative_scan_mode);
+});
+is($have_strict_out_of_order_scan_mode_parity, "t\nt\nt\nt");
 
 my $have_decreasing_scan_distance_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_decreasing_scan_distance(distance, previous_distance) =
