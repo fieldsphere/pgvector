@@ -55,6 +55,8 @@ static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRus
 static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
+static bool HnswShouldHaveOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust);
+static bool HnswShouldHaveOnDiskNeighborTid(ItemPointer indextid, bool useRust);
 static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
 static bool HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indextidOffno, int32 elementBlkno, int32 elementOffno, bool useRust);
@@ -460,7 +462,7 @@ HnswLoadNeighbors(HnswElement element, Relation index, int m, int lm, int lc)
 		HnswElement e;
 		HnswCandidate *hc;
 
-		if (HnswShouldStopOnInvalidOnDiskNeighborTid(ItemPointerIsValid(indextid), true))
+		if (HnswShouldStopOnInvalidOnDiskNeighborTid(HnswShouldHaveOnDiskNeighborTid(indextid, true), true))
 			break;
 
 		e = HnswInitElementFromBlock(ItemPointerGetBlockNumber(indextid), ItemPointerGetOffsetNumber(indextid));
@@ -552,7 +554,7 @@ ConnectionExists(HnswElement e, HnswNeighborTuple ntup, int startIdx, int lm)
 	{
 		ItemPointer indextid = &ntup->indextids[startIdx + i];
 
-		if (HnswShouldStopOnInvalidOnDiskNeighborTid(ItemPointerIsValid(indextid), true))
+		if (HnswShouldStopOnInvalidOnDiskNeighborTid(HnswShouldHaveOnDiskNeighborTid(indextid, true), true))
 			break;
 
 		if (HnswShouldMatchNeighborConnection((int32) ItemPointerGetBlockNumber(indextid), (int32) ItemPointerGetOffsetNumber(indextid), (int32) e->blkno, (int32) e->offno, true))
@@ -606,7 +608,7 @@ UpdateNeighborOnDisk(HnswElement element, HnswElement newElement, int idx, int m
 		/* TODO Retry updating connections if not */
 		for (int j = 0; j < lm; j++)
 		{
-			if (HnswShouldUseFreeOnDiskNeighborSlot(ItemPointerIsValid(&ntup->indextids[startIdx + j]), true))
+			if (HnswShouldUseFreeOnDiskNeighborSlot(HnswShouldHaveOnDiskNeighborTid(&ntup->indextids[startIdx + j], true), true))
 			{
 				idx = startIdx + j;
 				break;
@@ -1771,6 +1773,39 @@ vector_rust_hnsw_should_abort_ondisk_duplicate_slot_reject(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAbortOnDiskDuplicateSlotReject(building != 0, true));
+}
+
+static bool
+HnswShouldHaveOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(neighborTidValid);
+
+	return neighborTidValid;
+}
+
+static bool
+HnswShouldHaveOnDiskNeighborTid(ItemPointer indextid, bool useRust)
+{
+	return HnswShouldHaveOnDiskNeighborTidFlag(ItemPointerIsValid(indextid), useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_neighbor_tid);
+Datum
+vector_hnsw_should_have_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskNeighborTidFlag(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_neighbor_tid);
+Datum
+vector_rust_hnsw_should_have_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskNeighborTidFlag(neighborTidValid != 0, true));
 }
 
 static bool
