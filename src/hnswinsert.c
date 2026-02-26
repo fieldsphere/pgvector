@@ -67,6 +67,7 @@ static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRus
 static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
+static bool HnswShouldHaveOnDiskInsertSpaceFlag(bool hasSpace, bool useRust);
 static bool HnswShouldHaveOnDiskItemPointerFlag(bool itemPointerValid, bool useRust);
 static bool HnswShouldHaveOnDiskItemPointer(ItemPointer itemPointer, bool useRust);
 static bool HnswShouldHaveOnDiskHeapTidFlag(bool heapTidValid, bool useRust);
@@ -3024,13 +3025,19 @@ vector_rust_hnsw_should_have_ondisk_next_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpace, bool useRust)
+HnswShouldHaveOnDiskInsertSpaceFlag(bool hasSpace, bool useRust)
 {
 	if (useRust)
-		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasInsertPage) &&
-			vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasSpace);
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasSpace);
 
-	return !hasInsertPage && hasSpace;
+	return hasSpace;
+}
+
+static bool
+HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpace, bool useRust)
+{
+	return HnswShouldSetInsertPageWhenMissing(hasInsertPage, useRust) &&
+		HnswShouldHaveOnDiskInsertSpaceFlag(hasSpace, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_initial_ondisk_insert_page);
@@ -3051,6 +3058,24 @@ vector_rust_hnsw_should_set_initial_ondisk_insert_page(PG_FUNCTION_ARGS)
 	int32		hasSpace = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSetInitialOnDiskInsertPage(hasInsertPage != 0, hasSpace != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_insert_space);
+Datum
+vector_hnsw_should_have_ondisk_insert_space(PG_FUNCTION_ARGS)
+{
+	int32		hasSpace = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertSpaceFlag(hasSpace != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_insert_space);
+Datum
+vector_rust_hnsw_should_have_ondisk_insert_space(PG_FUNCTION_ARGS)
+{
+	int32		hasSpace = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertSpaceFlag(hasSpace != 0, true));
 }
 
 static bool
