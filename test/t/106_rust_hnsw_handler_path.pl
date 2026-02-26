@@ -3060,6 +3060,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_expected_ondisk_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_expected_ondisk_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_expected_ondisk_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_expected_ondisk_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_empty_without_neighbor_tids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_empty_without_neighbor_tids'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6761,6 +6771,18 @@ my $reject_ondisk_unexpected_offset_parity = $node->safe_psql("postgres", q{
 	) AS t(inserted_offset, expected_offset);
 });
 is($reject_ondisk_unexpected_offset_parity, "t\nt\nt\nt");
+
+my $have_expected_ondisk_offset_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_expected_ondisk_offset(inserted_offset, expected_offset) =
+		   rust_hnsw_should_have_expected_ondisk_offset(inserted_offset, expected_offset)
+	FROM (VALUES
+		(1, 1),
+		(2, 1),
+		(10, 10),
+		(0, 1)
+	) AS t(inserted_offset, expected_offset);
+});
+is($have_expected_ondisk_offset_parity, "t\nt\nt\nt");
 
 my $return_empty_without_neighbor_tids_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_empty_without_neighbor_tids(neighbor_tids_loaded) =
