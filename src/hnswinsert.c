@@ -58,6 +58,7 @@ static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
+static bool HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust);
 static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
 static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust);
@@ -122,11 +123,14 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 			ItemId		nitemid;
 			Size		pageFree;
 			Size		npageFree;
+			bool		samePage;
+
+			samePage = HnswShouldMatchNeighborPages((int32) neighborPage, (int32) elementPage, true);
 
 			if (HnswShouldSetInsertPageWhenMissing(BlockNumberIsValid(*newInsertPage), true))
 				*newInsertPage = elementPage;
 
-			if (HnswShouldReuseElementBufferForNeighborPage(neighborPage == elementPage, true))
+			if (HnswShouldReuseElementBufferForNeighborPage(samePage, true))
 			{
 				*nbuf = buf;
 				*npage = page;
@@ -152,11 +156,11 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 			 */
 			pageFree = ItemIdGetLength(eitemid) + PageGetExactFreeSpace(page);
 			npageFree = ItemIdGetLength(nitemid);
-			if (HnswShouldUseDistinctNeighborPageSpace(neighborPage == elementPage, true))
+			if (HnswShouldUseDistinctNeighborPageSpace(samePage, true))
 				npageFree += PageGetExactFreeSpace(*npage);
 			else if (HnswShouldBorrowSamePageNeighborSpace((int64) pageFree,
 											   (int64) etupSize,
-											   neighborPage == elementPage,
+											   samePage,
 											   true))
 				npageFree += pageFree - etupSize;
 
@@ -1900,6 +1904,15 @@ HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust)
 	return samePage;
 }
 
+static bool
+HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
+
+	return neighborPage == elementPage;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_element_buffer_for_neighbor_page);
 Datum
 vector_hnsw_should_reuse_element_buffer_for_neighbor_page(PG_FUNCTION_ARGS)
@@ -1916,6 +1929,26 @@ vector_rust_hnsw_should_reuse_element_buffer_for_neighbor_page(PG_FUNCTION_ARGS)
 	int32		samePage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReuseElementBufferForNeighborPage(samePage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_neighbor_pages);
+Datum
+vector_hnsw_should_match_neighbor_pages(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchNeighborPages(neighborPage, elementPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_match_neighbor_pages);
+Datum
+vector_rust_hnsw_should_match_neighbor_pages(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchNeighborPages(neighborPage, elementPage, true));
 }
 
 static bool
