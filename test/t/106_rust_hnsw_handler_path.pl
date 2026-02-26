@@ -510,6 +510,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_treat_fork_as_init(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_treat_fork_as_init'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_treat_fork_as_init(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_treat_fork_as_init'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_null_build_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_null_build_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2924,6 +2934,18 @@ my $write_wal_page_parity = $node->safe_psql("postgres", q{
 	) AS t(needs_wal, is_init_fork);
 });
 is($write_wal_page_parity, "t\nt\nt\nt");
+
+my $treat_fork_as_init_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_treat_fork_as_init(fork_num) =
+		   rust_hnsw_should_treat_fork_as_init(fork_num)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(3)
+	) AS t(fork_num);
+});
+is($treat_fork_as_init_parity, "t\nt\nt\nt");
 
 my $skip_null_build_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_null_build_tuple(is_null) =
