@@ -659,6 +659,21 @@ HnswShouldRepairNonnullVacuumHighestPoint(bool hasHighestPoint, bool useRust)
 	return hasHighestPoint;
 }
 
+static bool
+HnswShouldHaveVacuumHighestPointFlag(bool hasHighestPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasHighestPoint);
+
+	return hasHighestPoint;
+}
+
+static bool
+HnswShouldHaveVacuumHighestPoint(HnswElement highestPoint, bool useRust)
+{
+	return HnswShouldHaveVacuumHighestPointFlag(highestPoint != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_nonnull_vacuum_highest_point);
 Datum
 vector_hnsw_should_repair_nonnull_vacuum_highest_point(PG_FUNCTION_ARGS)
@@ -675,6 +690,24 @@ vector_rust_hnsw_should_repair_nonnull_vacuum_highest_point(PG_FUNCTION_ARGS)
 	int32		hasHighestPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRepairNonnullVacuumHighestPoint(hasHighestPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point);
+Datum
+vector_hnsw_should_have_vacuum_highest_point(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointFlag(hasHighestPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_highest_point);
+Datum
+vector_rust_hnsw_should_have_vacuum_highest_point(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointFlag(hasHighestPoint != 0, true));
 }
 
 static bool
@@ -1442,7 +1475,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 	 * Repair graph for highest non-entry point. Highest point may be outdated
 	 * due to inserts that happen during and after RemoveHeapTids.
 	 */
-	if (HnswShouldRepairNonnullVacuumHighestPoint(highestPoint != NULL, true))
+	if (HnswShouldRepairNonnullVacuumHighestPoint(HnswShouldHaveVacuumHighestPoint(highestPoint, true), true))
 	{
 		/* Get a shared lock */
 		LockPage(index, HNSW_UPDATE_LOCK, ShareLock);
@@ -1491,7 +1524,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 			if (HnswShouldRepairVacuumEntryPoint(NeedsUpdated(vacuumstate, entryPoint), true))
 			{
 				/* Reset neighbors from previous update */
-				if (HnswShouldResetVacuumEntryPointNeighbors(highestPoint != NULL, true))
+				if (HnswShouldResetVacuumEntryPointNeighbors(HnswShouldHaveVacuumHighestPoint(highestPoint, true), true))
 					HnswPtrStore((char *) NULL, highestPoint->neighbors, (HnswNeighborArrayPtr *) NULL);
 
 				RepairGraphElement(vacuumstate, entryPoint, highestPoint);
