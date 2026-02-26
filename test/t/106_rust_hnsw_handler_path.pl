@@ -470,6 +470,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_debug_query_string(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_debug_query_string'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_debug_query_string(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_debug_query_string'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_non_concurrent_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_non_concurrent_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2974,6 +2984,18 @@ my $use_debug_query_string_parity = $node->safe_psql("postgres", q{
 	) AS t(has_debug_query_string);
 });
 is($use_debug_query_string_parity, "t\nt\nt\nt");
+
+my $have_debug_query_string_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_debug_query_string(has_debug_query_string) =
+		   rust_hnsw_should_have_debug_query_string(has_debug_query_string)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_debug_query_string);
+});
+is($have_debug_query_string_parity, "t\nt\nt\nt");
 
 my $use_non_concurrent_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_non_concurrent_snapshot(is_concurrent) =
