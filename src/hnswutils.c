@@ -127,6 +127,8 @@ static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust
 static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
 static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
 static bool HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust);
+static bool HnswShouldHaveDiskNeighborIndexTidFlag(bool isValidIndexTid, bool useRust);
+static bool HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRust);
 static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust);
 static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
@@ -752,6 +754,21 @@ HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
 
 	return !found;
+}
+
+static bool
+HnswShouldHaveDiskNeighborIndexTidFlag(bool isValidIndexTid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isValidIndexTid);
+
+	return isValidIndexTid;
+}
+
+static bool
+HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRust)
+{
+	return HnswShouldHaveDiskNeighborIndexTidFlag(ItemPointerIsValid(indextid), useRust);
 }
 
 static bool
@@ -1704,6 +1721,24 @@ vector_rust_hnsw_should_stop_loading_disk_neighbor(PG_FUNCTION_ARGS)
 	int32		isValidIndexTid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopLoadingDiskNeighbor(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_disk_neighbor_indextid_itempointer);
+Datum
+vector_hnsw_should_have_disk_neighbor_indextid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_disk_neighbor_indextid_itempointer);
+Datum
+vector_rust_hnsw_should_have_disk_neighbor_indextid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_unvisited_disk_load);
@@ -3245,7 +3280,7 @@ HnswLoadUnvisitedFromDisk(HnswElement element, HnswUnvisited * unvisited, int *u
 		ItemPointer indextid = &indextids[i];
 		bool		found;
 
-		if (HnswShouldStopLoadingDiskNeighbor(ItemPointerIsValid(indextid), true))
+		if (HnswShouldStopLoadingDiskNeighbor(HnswShouldHaveDiskNeighborIndexTid(indextid, true), true))
 			break;
 
 		tidhash_insert(v->tids, *indextid, &found);
