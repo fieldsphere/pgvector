@@ -3220,6 +3220,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_existing_neighbor_check(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_existing_neighbor_check'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_existing_neighbor_check(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_existing_neighbor_check'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_existing_neighbor_connection(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_existing_neighbor_connection'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7233,6 +7243,18 @@ my $skip_existing_neighbor_update_parity = $node->safe_psql("postgres", q{
 	) AS t(check_existing, connection_exists);
 });
 is($skip_existing_neighbor_update_parity, "t\nt\nt\nt");
+
+my $have_existing_neighbor_check_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_existing_neighbor_check(check_existing) =
+		   rust_hnsw_should_have_existing_neighbor_check(check_existing)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(check_existing);
+});
+is($have_existing_neighbor_check_parity, "t\nt\nt\nt");
 
 my $have_existing_neighbor_connection_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_existing_neighbor_connection(connection_exists) =
