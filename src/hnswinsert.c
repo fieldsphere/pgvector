@@ -84,6 +84,7 @@ static bool HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indexti
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
+static bool HnswShouldHaveMissingOnDiskInsertPage(bool hasInsertPage, bool useRust);
 static bool HnswShouldHaveOnDiskBlockFlag(bool blockValid, bool useRust);
 static bool HnswShouldHaveValidOnDiskBlockNumberFlag(bool blockNumberValid, bool useRust);
 static bool HnswShouldHaveValidOnDiskBlockNumber(BlockNumber blkno, bool useRust);
@@ -2421,8 +2422,14 @@ vector_rust_hnsw_should_have_valid_ondisk_block_number(PG_FUNCTION_ARGS)
 static bool
 HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust)
 {
+	return HnswShouldHaveMissingOnDiskInsertPage(hasInsertPage, useRust);
+}
+
+static bool
+HnswShouldHaveMissingOnDiskInsertPage(bool hasInsertPage, bool useRust)
+{
 	if (useRust)
-		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasInsertPage);
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasInsertPage);
 
 	return !hasInsertPage;
 }
@@ -2443,6 +2450,24 @@ vector_rust_hnsw_should_set_insert_page_when_missing(PG_FUNCTION_ARGS)
 	int32		hasInsertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSetInsertPageWhenMissing(hasInsertPage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_ondisk_insert_page);
+Datum
+vector_hnsw_should_have_missing_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingOnDiskInsertPage(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_ondisk_insert_page);
+Datum
+vector_rust_hnsw_should_have_missing_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingOnDiskInsertPage(hasInsertPage != 0, true));
 }
 
 static bool
