@@ -2920,6 +2920,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_neighbor_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_neighbor_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_match_ondisk_buffers(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_match_ondisk_buffers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6623,6 +6633,18 @@ my $match_neighbor_pages_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbor_page, element_page);
 });
 is($match_neighbor_pages_parity, "t\nt\nt\nt");
+
+my $have_matching_neighbor_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_neighbor_page(neighbor_page, element_page) =
+		   rust_hnsw_should_have_matching_neighbor_page(neighbor_page, element_page)
+	FROM (VALUES
+		(1, 1),
+		(10, 11),
+		(0, 0),
+		(100, 99)
+	) AS t(neighbor_page, element_page);
+});
+is($have_matching_neighbor_page_parity, "t\nt\nt\nt");
 
 my $match_ondisk_buffers_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_match_ondisk_buffers(left_buffer, right_buffer) =
