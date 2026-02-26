@@ -115,6 +115,8 @@ static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLengt
 static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
 static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, bool useRust);
+static bool HnswShouldHaveUpdateIndexPointerFlag(bool hasUpdateIndexPointer, bool useRust);
+static bool HnswShouldHaveUpdateIndexPointer(int *updateIdx, bool useRust);
 static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
 static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
@@ -4028,6 +4030,21 @@ HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, boo
 }
 
 static bool
+HnswShouldHaveUpdateIndexPointerFlag(bool hasUpdateIndexPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasUpdateIndexPointer);
+
+	return hasUpdateIndexPointer;
+}
+
+static bool
+HnswShouldHaveUpdateIndexPointer(int *updateIdx, bool useRust)
+{
+	return HnswShouldHaveUpdateIndexPointerFlag(updateIdx != NULL, useRust);
+}
+
+static bool
 HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 {
 	if (useRust)
@@ -4276,6 +4293,24 @@ vector_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, false));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_index_pointer);
+Datum
+vector_hnsw_should_have_update_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_index_pointer);
+Datum
+vector_rust_hnsw_should_have_update_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_update_index);
 Datum
 vector_rust_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
@@ -4502,7 +4537,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		neighbors->items[neighbors->length++] = newHc;
 
 		/* Track update */
-		if (HnswShouldTrackUpdateIndex(updateIdx != NULL, true))
+		if (HnswShouldTrackUpdateIndex(HnswShouldHaveUpdateIndexPointer(updateIdx, true), true))
 			*updateIdx = -2;
 	}
 	else
@@ -4530,7 +4565,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 				neighbors->items[i] = newHc;
 
 				/* Track update */
-				if (HnswShouldTrackUpdateIndex(updateIdx != NULL, true))
+				if (HnswShouldTrackUpdateIndex(HnswShouldHaveUpdateIndexPointer(updateIdx, true), true))
 					*updateIdx = i;
 
 				break;
