@@ -42,6 +42,8 @@ static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRu
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
+static bool HnswShouldExceedOnDiskElementMaxSizeFlag(bool exceedsMaxSize, bool useRust);
+static bool HnswShouldExceedOnDiskElementMaxSize(int64 combinedSize, int64 maxSize, bool useRust);
 static bool HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust);
 static bool HnswShouldAbortOnDiskElementMoveNext(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust);
@@ -1494,6 +1496,21 @@ vector_rust_hnsw_should_append_ondisk_neighbor_page(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldExceedOnDiskElementMaxSizeFlag(bool exceedsMaxSize, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(exceedsMaxSize);
+
+	return exceedsMaxSize;
+}
+
+static bool
+HnswShouldExceedOnDiskElementMaxSize(int64 combinedSize, int64 maxSize, bool useRust)
+{
+	return HnswShouldExceedOnDiskElementMaxSizeFlag(combinedSize > maxSize, useRust);
+}
+
+static bool
 HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust)
 {
 	if (useRust)
@@ -1503,7 +1520,8 @@ HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeS
 																		 elementTupleSize,
 																		 hasNextPage);
 
-	return combinedSize > maxSize && freeSpace >= elementTupleSize && !hasNextPage;
+	return HnswShouldExceedOnDiskElementMaxSize(combinedSize, maxSize, false) &&
+		freeSpace >= elementTupleSize && !hasNextPage;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_ondisk_element_page);
@@ -1540,6 +1558,26 @@ vector_rust_hnsw_should_append_ondisk_element_page(PG_FUNCTION_ARGS)
 													 elementTupleSize,
 													 hasNextPage != 0,
 													 true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_exceed_ondisk_element_max_size);
+Datum
+vector_hnsw_should_exceed_ondisk_element_max_size(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldExceedOnDiskElementMaxSize(combinedSize, maxSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_exceed_ondisk_element_max_size);
+Datum
+vector_rust_hnsw_should_exceed_ondisk_element_max_size(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldExceedOnDiskElementMaxSize(combinedSize, maxSize, true));
 }
 
 static bool
