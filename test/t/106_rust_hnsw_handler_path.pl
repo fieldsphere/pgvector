@@ -1150,6 +1150,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_valid_ondisk_offset_number(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_valid_ondisk_offset_number'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_valid_ondisk_offset_number(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_valid_ondisk_offset_number'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_process_free_offset_result(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_process_free_offset_result'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4622,6 +4632,18 @@ my $have_free_ondisk_offset_parity = $node->safe_psql("postgres", q{
 	) AS t(free_offset_valid);
 });
 is($have_free_ondisk_offset_parity, "t\nt\nt\nt");
+
+my $have_valid_ondisk_offset_number_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_valid_ondisk_offset_number(free_offno) =
+		   rust_hnsw_should_have_valid_ondisk_offset_number(free_offno)
+	FROM (VALUES
+		(0),
+		(1),
+		(7),
+		(-1)
+	) AS t(free_offno);
+});
+is($have_valid_ondisk_offset_number_parity, "t\nt\nt\nt");
 
 my $process_free_offset_result_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_process_free_offset_result(free_offset_result) =
