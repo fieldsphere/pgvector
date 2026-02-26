@@ -3510,6 +3510,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_empty_insert_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_empty_insert_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_empty_insert_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_empty_insert_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_unregister_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_unregister_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7731,6 +7741,18 @@ my $prune_deleted_insert_element_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptids_length);
 });
 is($prune_deleted_insert_element_parity, "t\nt\nt\nt");
+
+my $have_empty_insert_heaptids_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_empty_insert_heaptids(heaptids_length) =
+		   rust_hnsw_should_have_empty_insert_heaptids(heaptids_length)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(-1)
+	) AS t(heaptids_length);
+});
+is($have_empty_insert_heaptids_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
