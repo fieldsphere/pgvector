@@ -536,12 +536,22 @@ vector_rust_hnsw_should_skip_invalid_index_value(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveHigherBuildEntrypointLevel(int elementLevel, int entryLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryLevel);
+
+	return elementLevel > entryLevel;
+}
+
+static bool
 HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(entryPointIsNull, elementLevel, entryLevel);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
+			HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, true);
 
-	return entryPointIsNull || elementLevel > entryLevel;
+	return entryPointIsNull || HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, false);
 }
 
 static bool
@@ -609,6 +619,26 @@ vector_rust_hnsw_should_update_entry_point(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPoint(entryPointIsNull != 0, elementLevel, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_build_entrypoint_level);
+Datum
+vector_hnsw_should_have_higher_build_entrypoint_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_higher_build_entrypoint_level);
+Datum
+vector_rust_hnsw_should_have_higher_build_entrypoint_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_entry_level);
