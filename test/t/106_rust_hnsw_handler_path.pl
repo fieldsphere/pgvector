@@ -1580,6 +1580,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_custom_allocator(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_custom_allocator'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_custom_allocator(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_custom_allocator'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_load_meta_m(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_load_meta_m'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4412,6 +4422,18 @@ my $use_custom_allocator_parity = $node->safe_psql("postgres", q{
 	) AS t(has_allocator);
 });
 is($use_custom_allocator_parity, "t\nt\nt\nt");
+
+my $have_custom_allocator_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_custom_allocator(has_allocator) =
+		   rust_hnsw_should_have_custom_allocator(has_allocator)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_allocator);
+});
+is($have_custom_allocator_parity, "t\nt\nt\nt");
 
 my $load_meta_m_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_load_meta_m(has_m_pointer) =
