@@ -304,6 +304,21 @@ vector_rust_hnsw_should_track_scan_discarded(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldReachScanTupleLimitFlag(bool reachesTupleLimit, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(reachesTupleLimit);
+
+	return reachesTupleLimit;
+}
+
+static bool
+HnswShouldReachScanTupleLimit(int64 tupleCount, int64 maxScanTuples, bool useRust)
+{
+	return HnswShouldReachScanTupleLimitFlag(tupleCount >= maxScanTuples, useRust);
+}
+
+static bool
 HnswShouldExceedScanMemoryLimitFlag(bool exceedsMemoryLimit, bool useRust)
 {
 	if (useRust)
@@ -322,10 +337,11 @@ static bool
 HnswShouldLimitScanByResources(int64 tupleCount, int64 maxScanTuples, int64 memoryUsed, int64 maxMemory, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleCount >= maxScanTuples) ||
+		return HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true) ||
 			HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, true);
 
-	return tupleCount >= maxScanTuples || HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, false);
+	return HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, false) ||
+		HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, false);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_limit_scan_by_resources);
@@ -350,6 +366,26 @@ vector_rust_hnsw_should_limit_scan_by_resources(PG_FUNCTION_ARGS)
 	int64		maxMemory = PG_GETARG_INT64(3);
 
 	PG_RETURN_BOOL(HnswShouldLimitScanByResources(tupleCount, maxScanTuples, memoryUsed, maxMemory, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reach_scan_tuple_limit);
+Datum
+vector_hnsw_should_reach_scan_tuple_limit(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reach_scan_tuple_limit);
+Datum
+vector_rust_hnsw_should_reach_scan_tuple_limit(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_exceed_scan_memory_limit);
