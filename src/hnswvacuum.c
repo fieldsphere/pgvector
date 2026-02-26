@@ -397,6 +397,24 @@ HnswShouldPromoteVacuumEntryPoint(bool entryPointIsNull, int32 elementLevel, int
 	return entryPointIsNull || elementLevel > entryPointLevel;
 }
 
+static bool
+HnswShouldUseDefaultVacuumEntryLevel(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
+
+	return !hasEntryPoint;
+}
+
+static int32
+HnswGetVacuumEntryLevelForPromotion(HnswElement entryPoint, bool useRust)
+{
+	if (HnswShouldUseDefaultVacuumEntryLevel(entryPoint != NULL, useRust))
+		return 0;
+
+	return entryPoint->level;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_promote_vacuum_entrypoint);
 Datum
 vector_hnsw_should_promote_vacuum_entrypoint(PG_FUNCTION_ARGS)
@@ -417,6 +435,24 @@ vector_rust_hnsw_should_promote_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	int32		entryPointLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldPromoteVacuumEntryPoint(entryPointIsNull != 0, elementLevel, entryPointLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_vacuum_entry_level);
+Datum
+vector_hnsw_should_use_default_vacuum_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultVacuumEntryLevel(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_vacuum_entry_level);
+Datum
+vector_rust_hnsw_should_use_default_vacuum_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultVacuumEntryLevel(hasEntryPoint != 0, true));
 }
 
 static bool
@@ -1378,7 +1414,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 			entryPoint = HnswGetEntryPoint(index);
 
 			/* Prevent concurrent inserts when likely updating entry point */
-			if (HnswShouldPromoteVacuumEntryPoint(entryPoint == NULL, element->level, entryPoint != NULL ? entryPoint->level : 0, true))
+			if (HnswShouldPromoteVacuumEntryPoint(entryPoint == NULL, element->level, HnswGetVacuumEntryLevelForPromotion(entryPoint, true), true))
 			{
 				/* Release shared lock */
 				UnlockPage(index, HNSW_UPDATE_LOCK, lockmode);
@@ -1398,7 +1434,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 			 * Update metapage if needed. Should only happen if entry point
 			 * was replaced and highest point was outdated.
 			 */
-			if (HnswShouldPromoteVacuumEntryPoint(entryPoint == NULL, element->level, entryPoint != NULL ? entryPoint->level : 0, true))
+			if (HnswShouldPromoteVacuumEntryPoint(entryPoint == NULL, element->level, HnswGetVacuumEntryLevelForPromotion(entryPoint, true), true))
 				HnswUpdateMetaPage(index, HNSW_UPDATE_ENTRY_GREATER, element, InvalidBlockNumber, MAIN_FORKNUM, false);
 
 			/* Release lock */
