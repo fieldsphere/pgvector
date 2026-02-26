@@ -335,6 +335,33 @@ HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, in
 	return hasEntryPoint && elementBlkno == entryBlkno && elementOffno == entryOffno;
 }
 
+static bool
+HnswShouldUseDefaultVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
+
+	return !hasEntryPoint;
+}
+
+static int32
+HnswGetVacuumEntrypointBlknoForCompare(HnswElement entryPoint, bool useRust)
+{
+	if (HnswShouldUseDefaultVacuumEntrypointTid(entryPoint != NULL, useRust))
+		return -1;
+
+	return (int32) entryPoint->blkno;
+}
+
+static int32
+HnswGetVacuumEntrypointOffnoForCompare(HnswElement entryPoint, bool useRust)
+{
+	if (HnswShouldUseDefaultVacuumEntrypointTid(entryPoint != NULL, useRust))
+		return -1;
+
+	return (int32) entryPoint->offno;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_vacuum_entrypoint_element);
 Datum
 vector_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
@@ -359,6 +386,24 @@ vector_rust_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
 	int32		entryOffno = PG_GETARG_INT32(4);
 
 	PG_RETURN_BOOL(HnswShouldSkipVacuumEntryPointElement(hasEntryPoint != 0, elementBlkno, elementOffno, entryBlkno, entryOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_vacuum_entrypoint_tid);
+Datum
+vector_hnsw_should_use_default_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultVacuumEntrypointTid(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_vacuum_entrypoint_tid);
+Datum
+vector_rust_hnsw_should_use_default_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultVacuumEntrypointTid(hasEntryPoint != 0, true));
 }
 
 static bool
@@ -1212,8 +1257,8 @@ RepairGraphElement(HnswVacuumState * vacuumstate, HnswElement element, HnswEleme
 
 	/* Skip if element is entry point */
 	if (HnswShouldSkipVacuumEntryPointElement(entryPoint != NULL, (int32) element->blkno, (int32) element->offno,
-											  entryPoint != NULL ? (int32) entryPoint->blkno : -1,
-											  entryPoint != NULL ? (int32) entryPoint->offno : -1, true))
+											  HnswGetVacuumEntrypointBlknoForCompare(entryPoint, true),
+											  HnswGetVacuumEntrypointOffnoForCompare(entryPoint, true), true))
 		return;
 
 	/* Init fields */
