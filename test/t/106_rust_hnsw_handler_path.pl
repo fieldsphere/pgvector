@@ -3150,6 +3150,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_distinct_markdeleted_buffers(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_distinct_markdeleted_buffers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_distinct_markdeleted_buffers(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_distinct_markdeleted_buffers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_release_markdeleted_neighbor_buffer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_release_markdeleted_neighbor_buffer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7329,6 +7339,18 @@ my $have_matching_markdeleted_buffers_parity = $node->safe_psql("postgres", q{
 	) AS t(left_buffer, right_buffer);
 });
 is($have_matching_markdeleted_buffers_parity, "t\nt\nt\nt");
+
+my $have_distinct_markdeleted_buffers_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_distinct_markdeleted_buffers(left_buffer, right_buffer) =
+		   rust_hnsw_should_have_distinct_markdeleted_buffers(left_buffer, right_buffer)
+	FROM (VALUES
+		(1, 1),
+		(1, 2),
+		(13, 13),
+		(5, 6)
+	) AS t(left_buffer, right_buffer);
+});
+is($have_distinct_markdeleted_buffers_parity, "t\nt\nt\nt");
 
 my $release_markdeleted_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_markdeleted_neighbor_buffer(same_buffer) =
