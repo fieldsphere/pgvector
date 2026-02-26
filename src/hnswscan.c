@@ -501,6 +501,23 @@ HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
 }
 
 static bool
+HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasInstrument);
+
+	return hasInstrument;
+}
+
+#if PG_VERSION_NUM >= 180000
+static bool
+HnswShouldUseScanInstrument(void *instrument, bool useRust)
+{
+	return HnswShouldUseScanInstrumentFlag(instrument != NULL, useRust);
+}
+#endif
+
+static bool
 HnswShouldDiscardedHeapMissingFlag(bool hasDiscardedHeap, bool useRust)
 {
 	if (useRust)
@@ -695,6 +712,24 @@ vector_rust_hnsw_should_increment_instrument_searches(PG_FUNCTION_ARGS)
 	int32		hasInstrument = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldIncrementInstrumentSearches(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_instrument);
+Datum
+vector_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_instrument);
+Datum
+vector_rust_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, true));
 }
 
 /*
@@ -892,7 +927,9 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 		/* Count index scan for stats */
 		pgstat_count_index_scan(scan->indexRelation);
 #if PG_VERSION_NUM >= 180000
-		if (HnswShouldIncrementInstrumentSearches(scan->instrument != NULL, true))
+		bool		hasInstrument = HnswShouldUseScanInstrument(scan->instrument, true);
+
+		if (HnswShouldIncrementInstrumentSearches(hasInstrument, true))
 			scan->instrument->nsearches++;
 #endif
 
