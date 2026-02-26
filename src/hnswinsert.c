@@ -114,6 +114,8 @@ static bool HnswShouldHaveNonNegativeUpdateIndexFlag(bool isNonNegative, bool us
 static bool HnswShouldHaveNonNegativeUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldHaveUpdateIndexBeforeTupleCount(int32 updateIndex, int32 tupleCount, bool useRust);
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
+static bool HnswShouldHaveCandidateUpdateIndexFlag(bool hasCandidateIndex, bool useRust);
+static bool HnswShouldHaveCandidateUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust);
 static bool HnswShouldHaveExpectedOnDiskOffsetFlag(bool hasExpectedOffset, bool useRust);
@@ -2949,12 +2951,27 @@ HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useR
 }
 
 static bool
-HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust)
+HnswShouldHaveCandidateUpdateIndexFlag(bool hasCandidateIndex, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCandidateIndex);
+
+	return hasCandidateIndex;
+}
+
+static bool
+HnswShouldHaveCandidateUpdateIndex(int32 updateIndex, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(updateIndex);
 
-	return updateIndex == -1;
+	return HnswShouldHaveCandidateUpdateIndexFlag(updateIndex == -1, false);
+}
+
+static bool
+HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust)
+{
+	return HnswShouldHaveCandidateUpdateIndex(updateIndex, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_apply_neighbor_update_slot);
@@ -3031,6 +3048,24 @@ vector_rust_hnsw_should_update_connection_from_candidate_index(PG_FUNCTION_ARGS)
 	int32		updateIndex = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUpdateConnectionFromCandidateIndex(updateIndex, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_candidate_update_index);
+Datum
+vector_hnsw_should_have_candidate_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCandidateUpdateIndex(updateIndex, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_candidate_update_index);
+Datum
+vector_rust_hnsw_should_have_candidate_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCandidateUpdateIndex(updateIndex, true));
 }
 
 static bool
