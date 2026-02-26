@@ -41,6 +41,7 @@ int			hnsw_lock_tranche_id;
 static relopt_kind hnsw_relopt_kind;
 static bool HnswShouldInitLockTranche(bool preloadInProgress, bool useRust);
 static bool HnswShouldAssignNewLockTranche(bool found, bool useRust);
+static bool HnswShouldCapRatioAtOne(double ratio, bool useRust);
 
 /*
  * Assign a tranche ID for our LWLocks. This only needs to be done by one
@@ -218,7 +219,19 @@ HnswClampRatio(double ratio, bool useRust)
 	if (useRust)
 		return vector_rust_hnsw_clamp_ratio_kernel(ratio);
 
-	return ratio > 1 ? 1 : ratio;
+	if (HnswShouldCapRatioAtOne(ratio, true))
+		return 1;
+
+	return ratio;
+}
+
+static bool
+HnswShouldCapRatioAtOne(double ratio, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, 1, ratio);
+
+	return ratio > 1;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_clamp_ratio);
@@ -237,6 +250,24 @@ vector_rust_hnsw_clamp_ratio(PG_FUNCTION_ARGS)
 	float8		ratio = PG_GETARG_FLOAT8(0);
 
 	PG_RETURN_FLOAT8(HnswClampRatio(ratio, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_cap_ratio_at_one);
+Datum
+vector_hnsw_should_cap_ratio_at_one(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldCapRatioAtOne(ratio, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_cap_ratio_at_one);
+Datum
+vector_rust_hnsw_should_cap_ratio_at_one(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldCapRatioAtOne(ratio, true));
 }
 
 static bool
