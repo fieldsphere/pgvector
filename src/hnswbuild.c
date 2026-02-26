@@ -549,10 +549,25 @@ HnswShouldUseDefaultEntryLevel(bool hasEntryPoint, bool useRust)
 	return !hasEntryPoint;
 }
 
+static bool
+HnswShouldHaveBuildEntrypointFlag(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+static bool
+HnswShouldHaveBuildEntrypoint(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveBuildEntrypointFlag(entryPoint != NULL, useRust);
+}
+
 static int
 HnswGetEntryLevelForUpdate(HnswElement entryPoint, bool useRust)
 {
-	if (HnswShouldUseDefaultEntryLevel(entryPoint != NULL, useRust))
+	if (HnswShouldUseDefaultEntryLevel(HnswShouldHaveBuildEntrypoint(entryPoint, useRust), useRust))
 		return -1;
 
 	return entryPoint->level;
@@ -596,6 +611,24 @@ vector_rust_hnsw_should_use_default_entry_level(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultEntryLevel(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_entrypoint);
+Datum
+vector_hnsw_should_have_build_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_entrypoint);
+Datum
+vector_rust_hnsw_should_have_build_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, true));
 }
 
 static bool
@@ -901,7 +934,7 @@ UpdateGraphInMemory(HnswSupport * support, HnswElement element, int m, HnswEleme
 	UpdateNeighborsInMemory(base, support, element, m);
 
 	/* Update entry point if needed (already have lock) */
-	if (HnswShouldUpdateEntryPoint(entryPoint == NULL, element->level, HnswGetEntryLevelForUpdate(entryPoint, true), true))
+	if (HnswShouldUpdateEntryPoint(!HnswShouldHaveBuildEntrypoint(entryPoint, true), element->level, HnswGetEntryLevelForUpdate(entryPoint, true), true))
 		HnswPtrStore(base, graph->entryPoint, element);
 }
 
@@ -929,7 +962,7 @@ InsertTupleInMemory(HnswBuildState * buildstate, HnswElement element)
 	entryPoint = HnswPtrAccess(base, graph->entryPoint);
 
 	/* Prevent concurrent inserts when likely updating entry point */
-	if (HnswShouldUpdateEntryPoint(entryPoint == NULL, element->level, HnswGetEntryLevelForUpdate(entryPoint, true), true))
+	if (HnswShouldUpdateEntryPoint(!HnswShouldHaveBuildEntrypoint(entryPoint, true), element->level, HnswGetEntryLevelForUpdate(entryPoint, true), true))
 	{
 		/* Release shared lock */
 		LWLockRelease(entryLock);
