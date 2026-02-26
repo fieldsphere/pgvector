@@ -85,6 +85,8 @@ static bool HnswShouldHaveDebugQueryString(const char *debugQueryString, bool us
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
 static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
 static bool HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust);
+static bool HnswShouldHaveParallelDsmSegmentFlag(bool hasDsmSegment, bool useRust);
+static bool HnswShouldHaveParallelDsmSegment(ParallelContext * pcxt, bool useRust);
 static bool HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust);
 static bool HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust);
 static bool HnswShouldRejectVarbitType(Oid typeOid, bool useRust);
@@ -1535,7 +1537,7 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 	InitializeParallelDSM(pcxt);
 
 	/* If no DSM segment was available, back out (do serial build) */
-	if (HnswShouldFallbackWithoutDsmSegment(pcxt->seg != NULL, true))
+	if (HnswShouldFallbackWithoutDsmSegment(HnswShouldHaveParallelDsmSegment(pcxt, true), true))
 	{
 		if (HnswShouldUnregisterMVCCSnapshot(IsMVCCSnapshot(snapshot), true))
 			UnregisterSnapshot(snapshot);
@@ -1829,6 +1831,21 @@ HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
 	return !hasDsmSegment;
 }
 
+static bool
+HnswShouldHaveParallelDsmSegmentFlag(bool hasDsmSegment, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDsmSegment);
+
+	return hasDsmSegment;
+}
+
+static bool
+HnswShouldHaveParallelDsmSegment(ParallelContext * pcxt, bool useRust)
+{
+	return HnswShouldHaveParallelDsmSegmentFlag(pcxt->seg != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fallback_without_dsm_segment);
 Datum
 vector_hnsw_should_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
@@ -1845,6 +1862,24 @@ vector_rust_hnsw_should_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
 	int32		hasDsmSegment = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFallbackWithoutDsmSegment(hasDsmSegment != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_parallel_dsm_segment);
+Datum
+vector_hnsw_should_have_parallel_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveParallelDsmSegmentFlag(hasDsmSegment != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_parallel_dsm_segment);
+Datum
+vector_rust_hnsw_should_have_parallel_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveParallelDsmSegmentFlag(hasDsmSegment != 0, true));
 }
 
 static bool
