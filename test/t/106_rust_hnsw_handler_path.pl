@@ -2670,6 +2670,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_skip_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_skip_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_skip_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_skip_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_default_vacuum_entrypoint_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_default_vacuum_entrypoint_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6613,6 +6623,18 @@ my $skip_vacuum_entrypoint_element_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entry_point, element_blkno, element_offno, entry_blkno, entry_offno);
 });
 is($skip_vacuum_entrypoint_element_parity, "t\nt\nt\nt");
+
+my $have_vacuum_skip_entrypoint_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_skip_entrypoint(has_entrypoint) =
+		   rust_hnsw_should_have_vacuum_skip_entrypoint(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_vacuum_skip_entrypoint_parity, "t\nt\nt\nt");
 
 my $use_default_vacuum_entrypoint_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_default_vacuum_entrypoint_tid(has_entrypoint) =
