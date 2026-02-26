@@ -1290,6 +1290,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_tuple_counter_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_tuple_counter_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_tuple_counter_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_tuple_counter_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_initialize_visited_hash(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_initialize_visited_hash'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4500,6 +4510,18 @@ my $track_tuple_counter_parity = $node->safe_psql("postgres", q{
 	) AS t(has_tuple_counter);
 });
 is($track_tuple_counter_parity, "t\nt\nt\nt");
+
+my $have_tuple_counter_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_tuple_counter_pointer(has_tuple_counter) =
+		   rust_hnsw_should_have_tuple_counter_pointer(has_tuple_counter)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_tuple_counter);
+});
+is($have_tuple_counter_pointer_parity, "t\nt\nt\nt");
 
 my $initialize_visited_hash_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_initialize_visited_hash(has_visited_hash) =
