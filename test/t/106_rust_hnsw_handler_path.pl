@@ -1330,6 +1330,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_visited_base_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_visited_base_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_visited_base_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_visited_base_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_memory_entry_distance(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_memory_entry_distance'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4508,6 +4518,18 @@ my $use_pointer_visited_hash_parity = $node->safe_psql("postgres", q{
 	) AS t(has_base_pointer);
 });
 is($use_pointer_visited_hash_parity, "t\nt\nt\nt");
+
+my $have_visited_base_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_visited_base_pointer(has_base_pointer) =
+		   rust_hnsw_should_have_visited_base_pointer(has_base_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_base_pointer);
+});
+is($have_visited_base_pointer_parity, "t\nt\nt\nt");
 
 my $use_memory_entry_distance_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_memory_entry_distance(in_memory) =
