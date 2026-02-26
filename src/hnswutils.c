@@ -137,6 +137,8 @@ static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
+static bool HnswShouldHaveSearchEntrypointPointerFlag(bool hasEntryPoint, bool useRust);
+static bool HnswShouldHaveSearchEntrypointPointer(HnswElement entryPoint, bool useRust);
 static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
 static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
 static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust);
@@ -839,6 +841,21 @@ HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
 
 	return inMemory;
+}
+
+static bool
+HnswShouldHaveSearchEntrypointPointerFlag(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+static bool
+HnswShouldHaveSearchEntrypointPointer(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveSearchEntrypointPointerFlag(entryPoint != NULL, useRust);
 }
 
 static bool
@@ -1860,6 +1877,24 @@ vector_rust_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnWithoutEntryPoint(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_entrypoint_pointer);
+Datum
+vector_hnsw_should_have_search_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_entrypoint_pointer);
+Datum
+vector_rust_hnsw_should_have_search_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_precompute_hash_for_neighbors);
@@ -4052,7 +4087,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 		PrecomputeHash(base, element);
 
 	/* No neighbors if no entry point */
-	if (HnswShouldReturnWithoutEntryPoint(entryPoint != NULL, true))
+	if (HnswShouldReturnWithoutEntryPoint(HnswShouldHaveSearchEntrypointPointer(entryPoint, true), true))
 		return;
 
 	/* Get entry point and level */
