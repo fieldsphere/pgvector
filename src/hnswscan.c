@@ -501,6 +501,21 @@ HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
 }
 
 static bool
+HnswShouldUseScanNormprocFlag(bool hasNormproc, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormproc);
+
+	return hasNormproc;
+}
+
+static bool
+HnswShouldUseScanNormproc(void *normprocinfo, bool useRust)
+{
+	return HnswShouldUseScanNormprocFlag(normprocinfo != NULL, useRust);
+}
+
+static bool
 HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
 {
 	if (useRust)
@@ -693,6 +708,24 @@ vector_rust_hnsw_should_normalize_scan_value(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldNormalizeScanValue(hasNormproc != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_normproc);
+Datum
+vector_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_normproc);
+Datum
+vector_rust_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, true));
+}
+
 static bool
 HnswShouldInitializeScanState(bool isFirstScan, bool useRust)
 {
@@ -856,7 +889,7 @@ GetScanValue(IndexScanDesc scan)
 		Assert(!VARATT_IS_EXTENDED(DatumGetPointer(value)));
 
 		/* Normalize if needed */
-		if (HnswShouldNormalizeScanValue(so->support.normprocinfo != NULL, true))
+		if (HnswShouldNormalizeScanValue(HnswShouldUseScanNormproc(so->support.normprocinfo, true), true))
 			value = HnswNormValue(so->typeInfo, so->support.collation, value);
 	}
 
