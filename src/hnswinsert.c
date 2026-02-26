@@ -49,6 +49,8 @@ static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
 static bool HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRust);
+static bool HnswShouldHaveValidOnDiskOffsetNumberFlag(bool offsetNumberValid, bool useRust);
+static bool HnswShouldHaveValidOnDiskOffsetNumber(OffsetNumber freeOffno, bool useRust);
 static bool HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust);
 static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
 static bool HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust);
@@ -1667,9 +1669,21 @@ HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRust)
 }
 
 static bool
+HnswShouldHaveValidOnDiskOffsetNumberFlag(bool offsetNumberValid, bool useRust)
+{
+	return HnswShouldHaveFreeOnDiskOffsetFlag(offsetNumberValid, useRust);
+}
+
+static bool
+HnswShouldHaveValidOnDiskOffsetNumber(OffsetNumber freeOffno, bool useRust)
+{
+	return HnswShouldHaveValidOnDiskOffsetNumberFlag(OffsetNumberIsValid(freeOffno), useRust);
+}
+
+static bool
 HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust)
 {
-	return HnswShouldHaveFreeOnDiskOffsetFlag(OffsetNumberIsValid(freeOffno), useRust);
+	return HnswShouldHaveValidOnDiskOffsetNumber(freeOffno, useRust);
 }
 
 static bool
@@ -1715,6 +1729,24 @@ vector_rust_hnsw_should_have_free_ondisk_offset(PG_FUNCTION_ARGS)
 	int32		freeOffsetValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveFreeOnDiskOffsetFlag(freeOffsetValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_valid_ondisk_offset_number);
+Datum
+vector_hnsw_should_have_valid_ondisk_offset_number(PG_FUNCTION_ARGS)
+{
+	int32		freeOffno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskOffsetNumber((OffsetNumber) freeOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_valid_ondisk_offset_number);
+Datum
+vector_rust_hnsw_should_have_valid_ondisk_offset_number(PG_FUNCTION_ARGS)
+{
+	int32		freeOffno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskOffsetNumber((OffsetNumber) freeOffno, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_free_ondisk_offsets);
