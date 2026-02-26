@@ -2510,6 +2510,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_vacuum_last_item(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_vacuum_last_item'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_vacuum_last_item(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_vacuum_last_item'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_contain_deleted_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_contain_deleted_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6581,6 +6591,18 @@ my $skip_non_element_vacuum_tuple_parity = $node->safe_psql("postgres", q{
 	) AS t(is_element_tuple);
 });
 is($skip_non_element_vacuum_tuple_parity, "t\nt\nt\nt");
+
+my $have_invalid_vacuum_last_item_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_vacuum_last_item(last_item_valid) =
+		   rust_hnsw_should_have_invalid_vacuum_last_item(last_item_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(last_item_valid);
+});
+is($have_invalid_vacuum_last_item_parity, "t\nt\nt\nt");
 
 my $contain_deleted_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_contain_deleted_tid(has_deleted_tid) =
