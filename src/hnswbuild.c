@@ -781,6 +781,21 @@ HnswShouldScanHeapForBuild(bool hasHeap, bool useRust)
 	return hasHeap;
 }
 
+static bool
+HnswShouldHaveBuildHeapFlag(bool hasHeap, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasHeap);
+
+	return hasHeap;
+}
+
+static bool
+HnswShouldHaveBuildHeap(Relation heap, bool useRust)
+{
+	return HnswShouldHaveBuildHeapFlag(heap != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_scan_heap_for_build);
 Datum
 vector_hnsw_should_scan_heap_for_build(PG_FUNCTION_ARGS)
@@ -797,6 +812,24 @@ vector_rust_hnsw_should_scan_heap_for_build(PG_FUNCTION_ARGS)
 	int32		hasHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldScanHeapForBuild(hasHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_heap);
+Datum
+vector_hnsw_should_have_build_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildHeapFlag(hasHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_heap);
+Datum
+vector_rust_hnsw_should_have_build_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildHeapFlag(hasHeap != 0, true));
 }
 
 static bool
@@ -2369,7 +2402,7 @@ BuildGraph(HnswBuildState * buildstate)
 	pgstat_progress_update_param(PROGRESS_CREATEIDX_SUBPHASE, PROGRESS_HNSW_PHASE_LOAD);
 
 	/* Calculate parallel workers */
-	if (HnswShouldScanHeapForBuild(buildstate->heap != NULL, true))
+	if (HnswShouldScanHeapForBuild(HnswShouldHaveBuildHeap(buildstate->heap, true), true))
 		parallel_workers = ComputeParallelWorkers(buildstate->heap, buildstate->index);
 
 	/* Attempt to launch parallel worker scan when required */
@@ -2377,7 +2410,7 @@ BuildGraph(HnswBuildState * buildstate)
 		HnswBeginParallel(buildstate, buildstate->indexInfo->ii_Concurrent, parallel_workers);
 
 	/* Add tuples to graph */
-	if (HnswShouldScanHeapForBuild(buildstate->heap != NULL, true))
+	if (HnswShouldScanHeapForBuild(HnswShouldHaveBuildHeap(buildstate->heap, true), true))
 	{
 		if (HnswShouldUseParallelHeapScan(HnswShouldHaveBuildLeader(buildstate->hnswleader, true), true))
 			buildstate->reltuples = ParallelHeapScan(buildstate);
