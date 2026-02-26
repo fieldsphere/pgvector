@@ -780,6 +780,15 @@ HnswShouldMatchMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bo
 }
 
 static bool
+HnswShouldMatchMarkDeletedBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
+
+	return leftBuffer == rightBuffer;
+}
+
+static bool
 HnswShouldReuseMarkDeletedBufferForNeighborPage(bool samePage, bool useRust)
 {
 	if (useRust)
@@ -824,6 +833,26 @@ vector_rust_hnsw_should_match_markdeleted_neighbor_page(PG_FUNCTION_ARGS)
 	int32		elementPage = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldMatchMarkDeletedNeighborPage(neighborPage, elementPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_markdeleted_buffers);
+Datum
+vector_hnsw_should_match_markdeleted_buffers(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchMarkDeletedBuffers(leftBuffer, rightBuffer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_match_markdeleted_buffers);
+Datum
+vector_rust_hnsw_should_match_markdeleted_buffers(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchMarkDeletedBuffers(leftBuffer, rightBuffer, true));
 }
 
 static bool
@@ -1574,6 +1603,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			BlockNumber neighborPage;
 			OffsetNumber neighborOffno;
 			bool		samePage;
+			bool		sameBuffer;
 
 			/* Skip neighbor tuples */
 			if (HnswShouldSkipNonElementMarkDeletedTuple(HnswIsElementTuple(etup), true))
@@ -1636,7 +1666,8 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 
 			/* Commit */
 			GenericXLogFinish(state);
-			if (HnswShouldReleaseMarkDeletedNeighborBuffer(nbuf == buf, true))
+			sameBuffer = HnswShouldMatchMarkDeletedBuffers((int32) nbuf, (int32) buf, true);
+			if (HnswShouldReleaseMarkDeletedNeighborBuffer(sameBuffer, true))
 				UnlockReleaseBuffer(nbuf);
 
 			/* Set to first free page */
