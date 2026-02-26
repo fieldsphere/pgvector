@@ -108,6 +108,8 @@ static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
+static bool HnswShouldHaveExistingNeighborCheckFlag(bool shouldCheckExisting, bool useRust);
+static bool HnswShouldHaveExistingNeighborCheck(bool checkExisting, bool useRust);
 static bool HnswShouldHaveExistingNeighborConnectionFlag(bool hasConnection, bool useRust);
 static bool HnswShouldHaveExistingNeighborConnection(bool connectionExists, bool useRust);
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
@@ -2865,6 +2867,21 @@ vector_rust_hnsw_should_probe_for_free_neighbor_slot(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveExistingNeighborCheckFlag(bool shouldCheckExisting, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(shouldCheckExisting);
+
+	return shouldCheckExisting;
+}
+
+static bool
+HnswShouldHaveExistingNeighborCheck(bool checkExisting, bool useRust)
+{
+	return HnswShouldHaveExistingNeighborCheckFlag(checkExisting, useRust);
+}
+
+static bool
 HnswShouldHaveExistingNeighborConnectionFlag(bool hasConnection, bool useRust)
 {
 	if (useRust)
@@ -2882,11 +2899,8 @@ HnswShouldHaveExistingNeighborConnection(bool connectionExists, bool useRust)
 static bool
 HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(checkExisting) &&
-			HnswShouldHaveExistingNeighborConnection(connectionExists, true);
-
-	return checkExisting && HnswShouldHaveExistingNeighborConnection(connectionExists, false);
+	return HnswShouldHaveExistingNeighborCheck(checkExisting, useRust) &&
+		HnswShouldHaveExistingNeighborConnection(connectionExists, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_existing_neighbor_update);
@@ -2907,6 +2921,24 @@ vector_rust_hnsw_should_skip_existing_neighbor_update(PG_FUNCTION_ARGS)
 	int32		connectionExists = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSkipExistingNeighborUpdate(checkExisting != 0, connectionExists != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_existing_neighbor_check);
+Datum
+vector_hnsw_should_have_existing_neighbor_check(PG_FUNCTION_ARGS)
+{
+	int32		checkExisting = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborCheck(checkExisting != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_existing_neighbor_check);
+Datum
+vector_rust_hnsw_should_have_existing_neighbor_check(PG_FUNCTION_ARGS)
+{
+	int32		checkExisting = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborCheck(checkExisting != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_existing_neighbor_connection);
