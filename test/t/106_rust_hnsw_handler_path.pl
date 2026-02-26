@@ -2050,6 +2050,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_expected_meta_magic(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_expected_meta_magic'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_expected_meta_magic(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_expected_meta_magic'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_force_meta_entry_update(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_force_meta_entry_update'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5529,6 +5539,18 @@ my $reject_invalid_meta_magic_parity = $node->safe_psql("postgres", q{
 	) AS t(has_expected_magic);
 });
 is($reject_invalid_meta_magic_parity, "t\nt\nt\nt");
+
+my $have_expected_meta_magic_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_expected_meta_magic(magic_number) =
+		   rust_hnsw_should_have_expected_meta_magic(magic_number)
+	FROM (VALUES
+		(0),
+		(305419896),
+		(-1),
+		(1)
+	) AS t(magic_number);
+});
+is($have_expected_meta_magic_parity, "t\nt\nt\nt");
 
 my $force_meta_entry_update_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_force_meta_entry_update(update_entry_mode) =
