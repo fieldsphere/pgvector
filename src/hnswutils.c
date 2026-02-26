@@ -166,6 +166,8 @@ static bool HnswShouldUseSkipElementForExisting(bool existing, bool useRust);
 static bool HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust);
 static int HnswGetSkipElementBlknoForCompare(HnswElement skipElement, bool useRust);
 static int HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust);
+static bool HnswShouldHaveTypeInfoProcInfoFlag(bool hasProcInfo, bool useRust);
+static bool HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust);
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
@@ -1093,6 +1095,21 @@ HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust)
 		return 0;
 
 	return skipElement->offno;
+}
+
+static bool
+HnswShouldHaveTypeInfoProcInfoFlag(bool hasProcInfo, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasProcInfo);
+
+	return hasProcInfo;
+}
+
+static bool
+HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust)
+{
+	return HnswShouldHaveTypeInfoProcInfoFlag(procinfo != NULL, useRust);
 }
 
 static bool
@@ -2350,6 +2367,24 @@ vector_rust_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
 	int32		hasProcInfo = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_typeinfo_procinfo_pointer);
+Datum
+vector_hnsw_should_have_typeinfo_procinfo_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_typeinfo_procinfo_pointer);
+Datum
+vector_rust_hnsw_should_have_typeinfo_procinfo_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_sparsevec_excess_nnz);
@@ -4450,7 +4485,7 @@ HnswGetTypeInfo(Relation index)
 {
 	FmgrInfo   *procinfo = HnswOptionalProcInfo(index, HNSW_TYPE_INFO_PROC);
 
-	if (HnswShouldUseDefaultTypeInfo(procinfo != NULL, true))
+	if (HnswShouldUseDefaultTypeInfo(HnswShouldHaveTypeInfoProcInfo(procinfo, true), true))
 	{
 		static const HnswTypeInfo typeInfo = {
 			.maxDimensions = HNSW_MAX_DIM,
