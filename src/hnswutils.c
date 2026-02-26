@@ -635,6 +635,24 @@ HnswShouldUpdateElementMaxDistance(bool hasDistancePointer, bool hasMaxDistanceP
 }
 
 static bool
+HnswShouldUseDefaultDistanceValue(bool hasDistancePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDistancePointer);
+
+	return !hasDistancePointer;
+}
+
+static bool
+HnswShouldUseDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasMaxDistancePointer);
+
+	return !hasMaxDistancePointer;
+}
+
+static bool
 HnswShouldInitializeLoadedElement(bool hasElement, bool useRust)
 {
 	if (useRust)
@@ -1314,6 +1332,42 @@ vector_rust_hnsw_should_update_element_max_distance(PG_FUNCTION_ARGS)
 	float8		maxDistanceValue = PG_GETARG_FLOAT8(3);
 
 	PG_RETURN_BOOL(HnswShouldUpdateElementMaxDistance(hasDistancePointer != 0, hasMaxDistancePointer != 0, distanceValue, maxDistanceValue, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_distance_value);
+Datum
+vector_hnsw_should_use_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultDistanceValue(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_distance_value);
+Datum
+vector_rust_hnsw_should_use_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultDistanceValue(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_max_distance_value);
+Datum
+vector_hnsw_should_use_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_max_distance_value);
+Datum
+vector_rust_hnsw_should_use_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_loaded_element);
@@ -2537,6 +2591,8 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	Buffer		buf;
 	Page		page;
 	HnswElementTuple etup;
+	double		distanceValueForCompare = 0;
+	double		maxDistanceValueForCompare = 0;
 
 	/* Read vector */
 	buf = ReadBuffer(index, blkno);
@@ -2557,10 +2613,14 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	}
 
 	/* Load element */
+	if (!HnswShouldUseDefaultDistanceValue(distance != NULL, true))
+		distanceValueForCompare = *distance;
+
+	if (!HnswShouldUseDefaultMaxDistanceValue(maxDistance != NULL, true))
+		maxDistanceValueForCompare = *maxDistance;
+
 	if (HnswShouldUpdateElementMaxDistance(distance != NULL, maxDistance != NULL,
-										   distance != NULL ? *distance : 0,
-										   maxDistance != NULL ? *maxDistance : 0,
-										   true))
+										   distanceValueForCompare, maxDistanceValueForCompare, true))
 	{
 		if (HnswShouldInitializeLoadedElement(*element != NULL, true))
 			*element = HnswInitElementFromBlock(blkno, offno);
