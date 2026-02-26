@@ -885,12 +885,22 @@ HnswInsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid
 }
 
 static bool
+HnswShouldHaveHigherOnDiskEntrypointLevel(int32 elementLevel, int32 entryLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryLevel);
+
+	return elementLevel > entryLevel;
+}
+
+static bool
 HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(entryPointIsNull, elementLevel, entryLevel);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
+			HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, true);
 
-	return entryPointIsNull || elementLevel > entryLevel;
+	return entryPointIsNull || HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, false);
 }
 
 static bool
@@ -970,6 +980,26 @@ vector_rust_hnsw_should_update_entrypoint_ondisk(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPointOnDisk(entryPointIsNull != 0, elementLevel, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_ondisk_entrypoint_level);
+Datum
+vector_hnsw_should_have_higher_ondisk_entrypoint_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_higher_ondisk_entrypoint_level);
+Datum
+vector_rust_hnsw_should_have_higher_ondisk_entrypoint_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint);
