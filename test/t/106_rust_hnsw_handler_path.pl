@@ -2930,6 +2930,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_ondisk_buffer(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_ondisk_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_ondisk_buffer(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_ondisk_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_release_reused_neighbor_buffer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_release_reused_neighbor_buffer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6625,6 +6635,18 @@ my $match_ondisk_buffers_parity = $node->safe_psql("postgres", q{
 	) AS t(left_buffer, right_buffer);
 });
 is($match_ondisk_buffers_parity, "t\nt\nt\nt");
+
+my $have_matching_ondisk_buffer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_ondisk_buffer(left_buffer, right_buffer) =
+		   rust_hnsw_should_have_matching_ondisk_buffer(left_buffer, right_buffer)
+	FROM (VALUES
+		(1, 1),
+		(7, 9),
+		(0, 0),
+		(20, 15)
+	) AS t(left_buffer, right_buffer);
+});
+is($have_matching_ondisk_buffer_parity, "t\nt\nt\nt");
 
 my $release_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_reused_neighbor_buffer(same_buffer) =
