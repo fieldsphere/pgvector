@@ -121,6 +121,8 @@ static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust
 static bool HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust);
 static bool HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust);
 static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust);
+static bool HnswShouldHaveElementHeapTidItemPointerFlag(bool heaptidValid, bool useRust);
+static bool HnswShouldHaveElementHeapTidItemPointer(ItemPointer heaptid, bool useRust);
 static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust);
 static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
 static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
@@ -604,7 +606,7 @@ HnswLoadElementFromTuple(HnswElement element, HnswElementTuple etup, bool loadHe
 		for (int i = 0; i < HNSW_HEAPTIDS; i++)
 		{
 			/* Can stop at first invalid */
-			if (HnswShouldStopLoadingElementHeapTids(ItemPointerIsValid(&etup->heaptids[i]), true))
+			if (HnswShouldStopLoadingElementHeapTids(HnswShouldHaveElementHeapTidItemPointer(&etup->heaptids[i], true), true))
 				break;
 
 			HnswAddHeapTid(element, &etup->heaptids[i]);
@@ -699,6 +701,21 @@ HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadHeaptids);
 
 	return shouldLoadHeaptids;
+}
+
+static bool
+HnswShouldHaveElementHeapTidItemPointerFlag(bool heaptidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidValid);
+
+	return heaptidValid;
+}
+
+static bool
+HnswShouldHaveElementHeapTidItemPointer(ItemPointer heaptid, bool useRust)
+{
+	return HnswShouldHaveElementHeapTidItemPointerFlag(ItemPointerIsValid(heaptid), useRust);
 }
 
 static bool
@@ -1597,6 +1614,24 @@ vector_rust_hnsw_should_stop_loading_element_heaptids(PG_FUNCTION_ARGS)
 	int32		heaptidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopLoadingElementHeapTids(heaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_heaptid_itempointer);
+Datum
+vector_hnsw_should_have_element_heaptid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_heaptid_itempointer);
+Datum
+vector_rust_hnsw_should_have_element_heaptid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_count_without_skip_element);
