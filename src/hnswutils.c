@@ -135,6 +135,8 @@ static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRus
 static bool HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldHaveDiscardedHeapPointer(pairingheap **discarded, bool useRust);
 static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldHaveTupleCounterPointerFlag(bool hasTupleCounter, bool useRust);
+static bool HnswShouldHaveTupleCounterPointer(int64 *tuples, bool useRust);
 static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
 static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
 static bool HnswShouldInitializeVisitedState(bool initVisited, bool useRust);
@@ -893,12 +895,24 @@ HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
 }
 
 static bool
-HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
+HnswShouldHaveTupleCounterPointerFlag(bool hasTupleCounter, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasTupleCounter);
 
 	return hasTupleCounter;
+}
+
+static bool
+HnswShouldHaveTupleCounterPointer(int64 *tuples, bool useRust)
+{
+	return HnswShouldHaveTupleCounterPointerFlag(tuples != NULL, useRust);
+}
+
+static bool
+HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
+{
+	return HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter, useRust);
 }
 
 static bool
@@ -2028,6 +2042,24 @@ vector_rust_hnsw_should_track_tuple_counter(PG_FUNCTION_ARGS)
 	int32		hasTupleCounter = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldTrackTupleCounter(hasTupleCounter != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_tuple_counter_pointer);
+Datum
+vector_hnsw_should_have_tuple_counter_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_tuple_counter_pointer);
+Datum
+vector_rust_hnsw_should_have_tuple_counter_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_visited_hash);
@@ -3592,6 +3624,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	int			unvisitedLength;
 	bool		inMemory = index == NULL;
 	bool		hasDiscardedHeapPointer = HnswShouldHaveDiscardedHeapPointer(discarded, true);
+	bool		hasTupleCounterPointer = HnswShouldHaveTupleCounterPointer(tuples, true);
 
 	if (HnswShouldInitializeVisitedHash(v != NULL, true))
 	{
@@ -3625,7 +3658,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			AddToVisited(base, v, sc->element, inMemory, &found);
 
 			/* OK to count elements instead of tuples */
-			if (HnswShouldTrackTupleCounter(tuples != NULL, true))
+			if (HnswShouldTrackTupleCounter(hasTupleCounterPointer, true))
 				(*tuples)++;
 		}
 
@@ -3658,7 +3691,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			HnswLoadUnvisitedFromDisk(cElement, unvisited, &unvisitedLength, v, index, m, lm, lc);
 
 		/* OK to count elements instead of tuples */
-		if (HnswShouldTrackTupleCounter(tuples != NULL, true))
+		if (HnswShouldTrackTupleCounter(hasTupleCounterPointer, true))
 			(*tuples) += unvisitedLength;
 
 		for (int i = 0; i < unvisitedLength; i++)
