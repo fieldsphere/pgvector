@@ -59,6 +59,7 @@ static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
 static bool HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust);
+static bool HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust);
 static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
 static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust);
@@ -124,6 +125,7 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 			Size		pageFree;
 			Size		npageFree;
 			bool		samePage;
+			bool		sameBuffer;
 
 			samePage = HnswShouldMatchNeighborPages((int32) neighborPage, (int32) elementPage, true);
 
@@ -176,7 +178,8 @@ HnswFreeOffset(Relation index, Buffer buf, Page page, HnswElement element, Size 
 				*tupleVersion = etup->version;
 				return true;
 			}
-			else if (HnswShouldReleaseReusedNeighborBuffer(*nbuf == buf, true))
+			sameBuffer = HnswShouldMatchOnDiskBuffers((int32) *nbuf, (int32) buf, true);
+			if (HnswShouldReleaseReusedNeighborBuffer(sameBuffer, true))
 				UnlockReleaseBuffer(*nbuf);
 		}
 	}
@@ -226,6 +229,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	HnswNeighborTuple ntup;
 	Buffer		nbuf;
 	Page		npage;
+	bool		sameBuffer;
 	OffsetNumber freeOffno = InvalidOffsetNumber;
 	OffsetNumber freeNeighborOffno = InvalidOffsetNumber;
 	BlockNumber newInsertPage = InvalidBlockNumber;
@@ -283,7 +287,8 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 		/* Next, try space from a deleted element */
 		if (HnswShouldProcessFreeOffsetResult(HnswFreeOffset(index, buf, page, e, etupSize, ntupSize, &nbuf, &npage, &freeOffno, &freeNeighborOffno, &newInsertPage, &tupleVersion), true))
 		{
-			if (HnswShouldRegisterReusedNeighborBuffer(nbuf == buf, true))
+			sameBuffer = HnswShouldMatchOnDiskBuffers((int32) nbuf, (int32) buf, true);
+			if (HnswShouldRegisterReusedNeighborBuffer(sameBuffer, true))
 			{
 				if (HnswShouldUseBuildPathForReusedOnDiskBuffer(building, true))
 					npage = BufferGetPage(nbuf);
@@ -378,7 +383,8 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	else
 	{
 		e->offno = OffsetNumberNext(PageGetMaxOffsetNumber(page));
-		if (HnswShouldUseNextNeighborOffset(nbuf == buf, true))
+		sameBuffer = HnswShouldMatchOnDiskBuffers((int32) nbuf, (int32) buf, true);
+		if (HnswShouldUseNextNeighborOffset(sameBuffer, true))
 			e->neighborOffno = OffsetNumberNext(e->offno);
 		else
 			e->neighborOffno = FirstOffsetNumber;
@@ -409,16 +415,17 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	}
 
 	/* Commit */
+	sameBuffer = HnswShouldMatchOnDiskBuffers((int32) nbuf, (int32) buf, true);
 	if (HnswShouldCommitOnDiskAddElementWithBufferDirty(building, true))
 	{
 		MarkBufferDirty(buf);
-		if (HnswShouldMarkOnDiskNeighborBufferDirty(nbuf == buf, true))
+		if (HnswShouldMarkOnDiskNeighborBufferDirty(sameBuffer, true))
 			MarkBufferDirty(nbuf);
 	}
 	else
 		GenericXLogFinish(state);
 	UnlockReleaseBuffer(buf);
-	if (HnswShouldReleaseOnDiskNeighborBuffer(nbuf == buf, true))
+	if (HnswShouldReleaseOnDiskNeighborBuffer(sameBuffer, true))
 		UnlockReleaseBuffer(nbuf);
 
 	/* Update the insert page */
@@ -1913,6 +1920,15 @@ HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust
 	return neighborPage == elementPage;
 }
 
+static bool
+HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
+
+	return leftBuffer == rightBuffer;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_element_buffer_for_neighbor_page);
 Datum
 vector_hnsw_should_reuse_element_buffer_for_neighbor_page(PG_FUNCTION_ARGS)
@@ -1949,6 +1965,26 @@ vector_rust_hnsw_should_match_neighbor_pages(PG_FUNCTION_ARGS)
 	int32		elementPage = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldMatchNeighborPages(neighborPage, elementPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_ondisk_buffers);
+Datum
+vector_hnsw_should_match_ondisk_buffers(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchOnDiskBuffers(leftBuffer, rightBuffer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_match_ondisk_buffers);
+Datum
+vector_rust_hnsw_should_match_ondisk_buffers(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchOnDiskBuffers(leftBuffer, rightBuffer, true));
 }
 
 static bool
