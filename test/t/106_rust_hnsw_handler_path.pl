@@ -160,6 +160,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_decreasing_scan_distance(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_decreasing_scan_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_decreasing_scan_distance(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_decreasing_scan_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_without_discarded(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_without_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3382,6 +3392,18 @@ my $skip_strict_out_of_order_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode, distance, previous_distance);
 });
 is($skip_strict_out_of_order_parity, "t\nt\nt\nt");
+
+my $have_decreasing_scan_distance_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_decreasing_scan_distance(distance, previous_distance) =
+		   rust_hnsw_should_have_decreasing_scan_distance(distance, previous_distance)
+	FROM (VALUES
+		(0.1::double precision, 0.2::double precision),
+		(0.2::double precision, 0.2::double precision),
+		(0.3::double precision, 0.2::double precision),
+		(-1.0::double precision, 0.0::double precision)
+	) AS t(distance, previous_distance);
+});
+is($have_decreasing_scan_distance_parity, "t\nt\nt\nt");
 
 my $stop_without_discarded_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_without_discarded(discarded_is_null) =
