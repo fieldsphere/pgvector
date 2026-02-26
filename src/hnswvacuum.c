@@ -336,6 +336,21 @@ HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, in
 }
 
 static bool
+HnswShouldHaveVacuumEntrypointFlag(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+static bool
+HnswShouldHaveVacuumEntrypoint(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveVacuumEntrypointFlag(entryPoint != NULL, useRust);
+}
+
+static bool
 HnswShouldUseDefaultVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
 {
 	if (useRust)
@@ -347,7 +362,7 @@ HnswShouldUseDefaultVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
 static int32
 HnswGetVacuumEntrypointBlknoForCompare(HnswElement entryPoint, bool useRust)
 {
-	if (HnswShouldUseDefaultVacuumEntrypointTid(entryPoint != NULL, useRust))
+	if (HnswShouldUseDefaultVacuumEntrypointTid(HnswShouldHaveVacuumEntrypoint(entryPoint, useRust), useRust))
 		return -1;
 
 	return (int32) entryPoint->blkno;
@@ -356,7 +371,7 @@ HnswGetVacuumEntrypointBlknoForCompare(HnswElement entryPoint, bool useRust)
 static int32
 HnswGetVacuumEntrypointOffnoForCompare(HnswElement entryPoint, bool useRust)
 {
-	if (HnswShouldUseDefaultVacuumEntrypointTid(entryPoint != NULL, useRust))
+	if (HnswShouldUseDefaultVacuumEntrypointTid(HnswShouldHaveVacuumEntrypoint(entryPoint, useRust), useRust))
 		return -1;
 
 	return (int32) entryPoint->offno;
@@ -454,7 +469,7 @@ HnswShouldUseDefaultVacuumEntryLevel(bool hasEntryPoint, bool useRust)
 static int32
 HnswGetVacuumEntryLevelForPromotion(HnswElement entryPoint, bool useRust)
 {
-	if (HnswShouldUseDefaultVacuumEntryLevel(entryPoint != NULL, useRust))
+	if (HnswShouldUseDefaultVacuumEntryLevel(HnswShouldHaveVacuumEntrypoint(entryPoint, useRust), useRust))
 		return 0;
 
 	return entryPoint->level;
@@ -687,6 +702,24 @@ vector_rust_hnsw_should_process_nonnull_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldProcessNonnullVacuumEntrypoint(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_entrypoint);
+Datum
+vector_hnsw_should_have_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypointFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_entrypoint);
+Datum
+vector_rust_hnsw_should_have_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypointFlag(hasEntryPoint != 0, true));
 }
 
 static bool
@@ -1207,7 +1240,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 			HnswElementTuple etup = (HnswElementTuple) PageGetItem(page, PageGetItemId(page, offno));
 			int			idx = 0;
 			bool		itemUpdated = false;
-			bool		isEntryPoint = HnswShouldMatchVacuumEntrypointTuple(entryPoint != NULL,
+			bool		isEntryPoint = HnswShouldMatchVacuumEntrypointTuple(HnswShouldHaveVacuumEntrypoint(entryPoint, true),
 																		(int32) blkno,
 																		(int32) offno,
 																		HnswGetVacuumEntrypointBlknoForCompare(entryPoint, true),
@@ -1353,7 +1386,7 @@ RepairGraphElement(HnswVacuumState * vacuumstate, HnswElement element, HnswEleme
 	char	   *base = NULL;
 
 	/* Skip if element is entry point */
-	if (HnswShouldSkipVacuumEntryPointElement(entryPoint != NULL, (int32) element->blkno, (int32) element->offno,
+	if (HnswShouldSkipVacuumEntryPointElement(HnswShouldHaveVacuumEntrypoint(entryPoint, true), (int32) element->blkno, (int32) element->offno,
 											  HnswGetVacuumEntrypointBlknoForCompare(entryPoint, true),
 											  HnswGetVacuumEntrypointOffnoForCompare(entryPoint, true), true))
 		return;
@@ -1431,7 +1464,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 	/* Get latest entry point */
 	entryPoint = HnswGetEntryPoint(index);
 
-	if (HnswShouldProcessNonnullVacuumEntrypoint(entryPoint != NULL, true))
+	if (HnswShouldProcessNonnullVacuumEntrypoint(HnswShouldHaveVacuumEntrypoint(entryPoint, true), true))
 	{
 		ItemPointerData epData;
 
@@ -1556,7 +1589,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 			entryPoint = HnswGetEntryPoint(index);
 
 			/* Prevent concurrent inserts when likely updating entry point */
-			if (HnswShouldPromoteVacuumEntryPoint(entryPoint == NULL, element->level, HnswGetVacuumEntryLevelForPromotion(entryPoint, true), true))
+			if (HnswShouldPromoteVacuumEntryPoint(!HnswShouldHaveVacuumEntrypoint(entryPoint, true), element->level, HnswGetVacuumEntryLevelForPromotion(entryPoint, true), true))
 			{
 				/* Release shared lock */
 				UnlockPage(index, HNSW_UPDATE_LOCK, lockmode);
@@ -1576,7 +1609,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 			 * Update metapage if needed. Should only happen if entry point
 			 * was replaced and highest point was outdated.
 			 */
-			if (HnswShouldPromoteVacuumEntryPoint(entryPoint == NULL, element->level, HnswGetVacuumEntryLevelForPromotion(entryPoint, true), true))
+			if (HnswShouldPromoteVacuumEntryPoint(!HnswShouldHaveVacuumEntrypoint(entryPoint, true), element->level, HnswGetVacuumEntryLevelForPromotion(entryPoint, true), true))
 				HnswUpdateMetaPage(index, HNSW_UPDATE_ENTRY_GREATER, element, InvalidBlockNumber, MAIN_FORKNUM, false);
 
 			/* Release lock */
