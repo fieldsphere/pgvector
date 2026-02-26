@@ -1060,6 +1060,26 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_element_distance_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_element_distance_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_element_distance_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_element_distance_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_element_max_distance_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_element_max_distance_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_element_max_distance_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_element_max_distance_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_update_element_max_distance(integer, integer, double precision, double precision) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_update_element_max_distance'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4144,6 +4164,30 @@ my $calculate_element_distance_parity = $node->safe_psql("postgres", q{
 	) AS t(has_distance_pointer);
 });
 is($calculate_element_distance_parity, "t\nt\nt\nt");
+
+my $have_element_distance_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_element_distance_pointer(has_distance_pointer) =
+		   rust_hnsw_should_have_element_distance_pointer(has_distance_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_distance_pointer);
+});
+is($have_element_distance_pointer_parity, "t\nt\nt\nt");
+
+my $have_element_max_distance_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_element_max_distance_pointer(has_max_distance_pointer) =
+		   rust_hnsw_should_have_element_max_distance_pointer(has_max_distance_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_max_distance_pointer);
+});
+is($have_element_max_distance_pointer_parity, "t\nt\nt\nt");
 
 my $update_element_max_distance_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_update_element_max_distance(has_distance, has_max_distance, distance_value, max_distance_value) =
