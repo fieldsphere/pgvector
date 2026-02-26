@@ -1030,6 +1030,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_load_element_with_max_distance_cap(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_load_element_with_max_distance_cap'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_load_element_with_max_distance_cap(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_load_element_with_max_distance_cap'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_track_tuple_counter(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_track_tuple_counter'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3508,6 +3518,18 @@ my $initialize_discarded_heap_parity = $node->safe_psql("postgres", q{
 	) AS t(has_discarded_heap);
 });
 is($initialize_discarded_heap_parity, "t\nt\nt\nt");
+
+my $load_element_with_max_distance_cap_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_load_element_with_max_distance_cap(always_add, track_discarded) =
+		   rust_hnsw_should_load_element_with_max_distance_cap(always_add, track_discarded)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(0, 1),
+		(1, 1)
+	) AS t(always_add, track_discarded);
+});
+is($load_element_with_max_distance_cap_parity, "t\nt\nt\nt");
 
 my $track_tuple_counter_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_track_tuple_counter(has_tuple_counter) =
