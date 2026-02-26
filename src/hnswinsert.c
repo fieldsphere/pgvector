@@ -107,6 +107,7 @@ static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementT
 static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
+static bool HnswShouldHaveNeighborCountBeforeLayerM(int32 neighborCount, int32 layerM, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
 static bool HnswShouldHaveExistingNeighborCheckFlag(bool shouldCheckExisting, bool useRust);
 static bool HnswShouldHaveExistingNeighborCheck(bool checkExisting, bool useRust);
@@ -2838,12 +2839,18 @@ vector_rust_hnsw_should_prune_deleted_insert_element(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust)
+HnswShouldHaveNeighborCountBeforeLayerM(int32 neighborCount, int32 layerM, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) neighborCount, (int64) layerM);
 
 	return neighborCount < layerM;
+}
+
+static bool
+HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust)
+{
+	return HnswShouldHaveNeighborCountBeforeLayerM(neighborCount, layerM, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_probe_for_free_neighbor_slot);
@@ -2864,6 +2871,26 @@ vector_rust_hnsw_should_probe_for_free_neighbor_slot(PG_FUNCTION_ARGS)
 	int32		layerM = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldProbeForFreeNeighborSlot(neighborCount, layerM, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_neighbor_count_before_layer_m);
+Datum
+vector_hnsw_should_have_neighbor_count_before_layer_m(PG_FUNCTION_ARGS)
+{
+	int32		neighborCount = PG_GETARG_INT32(0);
+	int32		layerM = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveNeighborCountBeforeLayerM(neighborCount, layerM, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_neighbor_count_before_layer_m);
+Datum
+vector_rust_hnsw_should_have_neighbor_count_before_layer_m(PG_FUNCTION_ARGS)
+{
+	int32		neighborCount = PG_GETARG_INT32(0);
+	int32		layerM = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveNeighborCountBeforeLayerM(neighborCount, layerM, true));
 }
 
 static bool
