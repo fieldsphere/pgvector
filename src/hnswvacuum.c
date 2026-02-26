@@ -1555,12 +1555,24 @@ vector_rust_hnsw_should_have_matching_markdeleted_buffers(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldReleaseMarkDeletedNeighborBuffer(bool sameBuffer, bool useRust)
+HnswShouldHaveDistinctMarkDeletedBuffersFlag(bool buffersMatch, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
+		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(buffersMatch);
 
-	return !sameBuffer;
+	return !buffersMatch;
+}
+
+static bool
+HnswShouldHaveDistinctMarkDeletedBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust)
+{
+	return HnswShouldHaveDistinctMarkDeletedBuffersFlag(HnswShouldHaveMatchingMarkDeletedBuffers(leftBuffer, rightBuffer, useRust), useRust);
+}
+
+static bool
+HnswShouldReleaseMarkDeletedNeighborBuffer(bool sameBuffer, bool useRust)
+{
+	return HnswShouldHaveDistinctMarkDeletedBuffersFlag(sameBuffer, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_markdeleted_neighbor_buffer);
@@ -1579,6 +1591,26 @@ vector_rust_hnsw_should_release_markdeleted_neighbor_buffer(PG_FUNCTION_ARGS)
 	int32		sameBuffer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReleaseMarkDeletedNeighborBuffer(sameBuffer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_distinct_markdeleted_buffers);
+Datum
+vector_hnsw_should_have_distinct_markdeleted_buffers(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctMarkDeletedBuffers(leftBuffer, rightBuffer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_distinct_markdeleted_buffers);
+Datum
+vector_rust_hnsw_should_have_distinct_markdeleted_buffers(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctMarkDeletedBuffers(leftBuffer, rightBuffer, true));
 }
 
 static bool
