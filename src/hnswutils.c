@@ -141,6 +141,10 @@ static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
+static bool HnswShouldHaveElementDistancePointerFlag(bool hasDistancePointer, bool useRust);
+static bool HnswShouldHaveElementDistancePointer(const double *distance, bool useRust);
+static bool HnswShouldHaveElementMaxDistancePointerFlag(bool hasMaxDistancePointer, bool useRust);
+static bool HnswShouldHaveElementMaxDistancePointer(const double *maxDistance, bool useRust);
 static bool HnswShouldHaveSearchEntrypointPointerFlag(bool hasEntryPoint, bool useRust);
 static bool HnswShouldHaveSearchEntrypointPointer(HnswElement entryPoint, bool useRust);
 static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
@@ -643,12 +647,39 @@ HnswShouldZeroDistanceForNullQueryValue(bool hasQueryValue, bool useRust)
 }
 
 static bool
-HnswShouldCalculateElementDistance(bool hasDistancePointer, bool useRust)
+HnswShouldHaveElementDistancePointerFlag(bool hasDistancePointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasDistancePointer);
 
 	return hasDistancePointer;
+}
+
+static bool
+HnswShouldHaveElementDistancePointer(const double *distance, bool useRust)
+{
+	return HnswShouldHaveElementDistancePointerFlag(distance != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveElementMaxDistancePointerFlag(bool hasMaxDistancePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasMaxDistancePointer);
+
+	return hasMaxDistancePointer;
+}
+
+static bool
+HnswShouldHaveElementMaxDistancePointer(const double *maxDistance, bool useRust)
+{
+	return HnswShouldHaveElementMaxDistancePointerFlag(maxDistance != NULL, useRust);
+}
+
+static bool
+HnswShouldCalculateElementDistance(bool hasDistancePointer, bool useRust)
+{
+	return HnswShouldHaveElementDistancePointerFlag(hasDistancePointer, useRust);
 }
 
 static bool
@@ -1499,6 +1530,42 @@ vector_rust_hnsw_should_calculate_element_distance(PG_FUNCTION_ARGS)
 	int32		hasDistancePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldCalculateElementDistance(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_distance_pointer);
+Datum
+vector_hnsw_should_have_element_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_distance_pointer);
+Datum
+vector_rust_hnsw_should_have_element_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_max_distance_pointer);
+Datum
+vector_hnsw_should_have_element_max_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_max_distance_pointer);
+Datum
+vector_rust_hnsw_should_have_element_max_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_element_max_distance);
@@ -3000,6 +3067,8 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	HnswElementTuple etup;
 	double		distanceValueForCompare = 0;
 	double		maxDistanceValueForCompare = 0;
+	bool		hasDistancePointer;
+	bool		hasMaxDistancePointer;
 
 	/* Read vector */
 	buf = ReadBuffer(index, blkno);
@@ -3010,8 +3079,11 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 
 	Assert(HnswIsElementTuple(etup));
 
+	hasDistancePointer = HnswShouldHaveElementDistancePointer(distance, true);
+	hasMaxDistancePointer = HnswShouldHaveElementMaxDistancePointer(maxDistance, true);
+
 	/* Calculate distance */
-	if (HnswShouldCalculateElementDistance(distance != NULL, true))
+	if (HnswShouldCalculateElementDistance(hasDistancePointer, true))
 	{
 		if (HnswShouldZeroDistanceForNullQueryValue(DatumGetPointer(q->value) != NULL, true))
 			*distance = 0;
@@ -3020,13 +3092,13 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	}
 
 	/* Load element */
-	if (!HnswShouldUseDefaultDistanceValue(distance != NULL, true))
+	if (!HnswShouldUseDefaultDistanceValue(hasDistancePointer, true))
 		distanceValueForCompare = *distance;
 
-	if (!HnswShouldUseDefaultMaxDistanceValue(maxDistance != NULL, true))
+	if (!HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer, true))
 		maxDistanceValueForCompare = *maxDistance;
 
-	if (HnswShouldUpdateElementMaxDistance(distance != NULL, maxDistance != NULL,
+	if (HnswShouldUpdateElementMaxDistance(hasDistancePointer, hasMaxDistancePointer,
 										   distanceValueForCompare, maxDistanceValueForCompare, true))
 	{
 		if (HnswShouldInitializeLoadedElement(*element != NULL, true))
