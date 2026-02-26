@@ -64,6 +64,7 @@ static bool HnswShouldHaveValidOnDiskOffsetNumber(OffsetNumber freeOffno, bool u
 static bool HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust);
 static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
 static bool HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust);
+static bool HnswShouldHaveOnDiskSpaceForCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust);
 static bool HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskAddElement(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskPageAppendWithBufferDirty(bool building, bool useRust);
@@ -1955,12 +1956,18 @@ vector_rust_hnsw_should_process_free_offset_result(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust)
+HnswShouldHaveOnDiskSpaceForCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust)
 {
 	if (useRust)
 		return !vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, combinedSize);
 
 	return freeSpace >= combinedSize;
+}
+
+static bool
+HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust)
+{
+	return HnswShouldHaveOnDiskSpaceForCombinedTuple(freeSpace, combinedSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fit_ondisk_combined_tuple);
@@ -1981,6 +1988,26 @@ vector_rust_hnsw_should_fit_ondisk_combined_tuple(PG_FUNCTION_ARGS)
 	int64		combinedSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldFitOnDiskCombinedTuple(freeSpace, combinedSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_space_for_combined_tuple);
+Datum
+vector_hnsw_should_have_ondisk_space_for_combined_tuple(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		combinedSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskSpaceForCombinedTuple(freeSpace, combinedSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_space_for_combined_tuple);
+Datum
+vector_rust_hnsw_should_have_ondisk_space_for_combined_tuple(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		combinedSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskSpaceForCombinedTuple(freeSpace, combinedSize, true));
 }
 
 static bool
