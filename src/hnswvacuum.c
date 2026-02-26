@@ -353,6 +353,39 @@ vector_rust_hnsw_should_skip_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveVacuumNeighborTidFlag(bool neighborTidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(neighborTidValid);
+
+	return neighborTidValid;
+}
+
+static bool
+HnswShouldHaveVacuumNeighborTid(ItemPointer indextid, bool useRust)
+{
+	return HnswShouldHaveVacuumNeighborTidFlag(ItemPointerIsValid(indextid), useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_neighbor_tid);
+Datum
+vector_hnsw_should_have_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumNeighborTidFlag(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_neighbor_tid);
+Datum
+vector_rust_hnsw_should_have_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumNeighborTidFlag(neighborTidValid != 0, true));
+}
+
+static bool
 HnswShouldFlagDeletedVacuumNeighbor(bool isDeletedNeighbor, bool useRust)
 {
 	if (useRust)
@@ -1590,7 +1623,7 @@ NeedsUpdated(HnswVacuumState * vacuumstate, HnswElement element)
 	{
 		ItemPointer indextid = &ntup->indextids[i];
 
-		if (HnswShouldSkipInvalidVacuumNeighborTid(ItemPointerIsValid(indextid), true))
+		if (HnswShouldSkipInvalidVacuumNeighborTid(HnswShouldHaveVacuumNeighborTid(indextid, true), true))
 			continue;
 
 		/* Check if in deleted list */
@@ -1609,7 +1642,7 @@ NeedsUpdated(HnswVacuumState * vacuumstate, HnswElement element)
 
 		/* Keep clang-tidy happy */
 		Assert(ntup->count > 0);
-		lastItemValid = ItemPointerIsValid(&ntup->indextids[ntup->count - 1]);
+		lastItemValid = HnswShouldHaveVacuumNeighborTid(&ntup->indextids[ntup->count - 1], true);
 		needsUpdated = HnswShouldRepairUnderfilledLayer0(lastItemValid, true);
 	}
 
