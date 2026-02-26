@@ -23,9 +23,36 @@
  * Check if deleted list contains an index TID
  */
 static bool
+HnswShouldContainDeletedTid(bool hasDeletedTid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDeletedTid);
+
+	return hasDeletedTid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_contain_deleted_tid);
+Datum
+vector_hnsw_should_contain_deleted_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasDeletedTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldContainDeletedTid(hasDeletedTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_contain_deleted_tid);
+Datum
+vector_rust_hnsw_should_contain_deleted_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasDeletedTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldContainDeletedTid(hasDeletedTid != 0, true));
+}
+
+static bool
 DeletedContains(tidhash_hash * deleted, ItemPointer indextid)
 {
-	return tidhash_lookup(deleted, *indextid) != NULL;
+	return HnswShouldContainDeletedTid(tidhash_lookup(deleted, *indextid) != NULL, true);
 }
 
 static bool
