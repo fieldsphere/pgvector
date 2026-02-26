@@ -1700,6 +1700,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_norm_procinfo(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_norm_procinfo'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_norm_procinfo(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_norm_procinfo'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_invalid_norm(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_invalid_norm'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4578,6 +4588,18 @@ my $normalize_index_value_parity = $node->safe_psql("postgres", q{
 	) AS t(has_norm_procinfo);
 });
 is($normalize_index_value_parity, "t\nt\nt\nt");
+
+my $have_norm_procinfo_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_norm_procinfo(has_norm_procinfo) =
+		   rust_hnsw_should_have_norm_procinfo(has_norm_procinfo)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_norm_procinfo);
+});
+is($have_norm_procinfo_parity, "t\nt\nt\nt");
 
 my $reject_invalid_norm_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_invalid_norm(has_valid_norm) =
