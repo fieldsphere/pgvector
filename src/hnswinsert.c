@@ -17,6 +17,8 @@
 
 static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust);
 static bool HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust);
+static bool HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust);
+static bool HnswShouldHaveOnDiskEntrypoint(HnswElement entryPoint, bool useRust);
 static int HnswGetOnDiskEntryLevelForUpdate(HnswElement entryPoint, bool useRust);
 static bool HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust);
 static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust);
@@ -776,7 +778,7 @@ UpdateGraphOnDisk(Relation index, HnswSupport * support, HnswElement element, in
 	HnswUpdateNeighborsOnDisk(index, support, element, m, false, building);
 
 	/* Update entry point if needed */
-	if (HnswShouldUpdateEntryPointOnDisk(entryPoint == NULL, element->level, HnswGetOnDiskEntryLevelForUpdate(entryPoint, true), true))
+	if (HnswShouldUpdateEntryPointOnDisk(!HnswShouldHaveOnDiskEntrypoint(entryPoint, true), element->level, HnswGetOnDiskEntryLevelForUpdate(entryPoint, true), true))
 		HnswUpdateMetaPage(index, HNSW_UPDATE_ENTRY_GREATER, element, InvalidBlockNumber, MAIN_FORKNUM, building);
 }
 
@@ -808,7 +810,7 @@ HnswInsertTupleOnDisk(Relation index, HnswSupport * support, Datum value, ItemPo
 	HnswPtrStore(base, element->value, (char *) DatumGetPointer(value));
 
 	/* Prevent concurrent inserts when likely updating entry point */
-	if (HnswShouldUpdateEntryPointOnDisk(entryPoint == NULL, element->level, HnswGetOnDiskEntryLevelForUpdate(entryPoint, true), true))
+	if (HnswShouldUpdateEntryPointOnDisk(!HnswShouldHaveOnDiskEntrypoint(entryPoint, true), element->level, HnswGetOnDiskEntryLevelForUpdate(entryPoint, true), true))
 	{
 		/* Release shared lock */
 		UnlockPage(index, HNSW_UPDATE_LOCK, lockmode);
@@ -870,10 +872,25 @@ HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
 	return !hasEntryPoint;
 }
 
+static bool
+HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+static bool
+HnswShouldHaveOnDiskEntrypoint(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveOnDiskEntrypointFlag(entryPoint != NULL, useRust);
+}
+
 static int
 HnswGetOnDiskEntryLevelForUpdate(HnswElement entryPoint, bool useRust)
 {
-	if (HnswShouldUseDefaultOnDiskEntryLevel(entryPoint != NULL, useRust))
+	if (HnswShouldUseDefaultOnDiskEntryLevel(HnswShouldHaveOnDiskEntrypoint(entryPoint, useRust), useRust))
 		return -1;
 
 	return entryPoint->level;
@@ -899,6 +916,24 @@ vector_rust_hnsw_should_update_entrypoint_ondisk(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPointOnDisk(entryPointIsNull != 0, elementLevel, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint);
+Datum
+vector_hnsw_should_have_ondisk_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_entrypoint);
+Datum
+vector_rust_hnsw_should_have_ondisk_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_ondisk_entry_level);
