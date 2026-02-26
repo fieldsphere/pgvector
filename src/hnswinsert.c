@@ -83,6 +83,8 @@ static bool HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust)
 static bool HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
 static bool HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust);
+static bool HnswShouldHaveMatchingOnDiskBufferFlag(bool hasMatchingBuffer, bool useRust);
+static bool HnswShouldHaveMatchingOnDiskBuffer(int32 leftBuffer, int32 rightBuffer, bool useRust);
 static bool HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust);
 static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
@@ -2298,12 +2300,27 @@ HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust
 }
 
 static bool
-HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust)
+HnswShouldHaveMatchingOnDiskBufferFlag(bool hasMatchingBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingBuffer);
+
+	return hasMatchingBuffer;
+}
+
+static bool
+HnswShouldHaveMatchingOnDiskBuffer(int32 leftBuffer, int32 rightBuffer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
 
-	return leftBuffer == rightBuffer;
+	return HnswShouldHaveMatchingOnDiskBufferFlag(leftBuffer == rightBuffer, false);
+}
+
+static bool
+HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust)
+{
+	return HnswShouldHaveMatchingOnDiskBuffer(leftBuffer, rightBuffer, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_element_buffer_for_neighbor_page);
@@ -2362,6 +2379,26 @@ vector_rust_hnsw_should_match_ondisk_buffers(PG_FUNCTION_ARGS)
 	int32		rightBuffer = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldMatchOnDiskBuffers(leftBuffer, rightBuffer, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_ondisk_buffer);
+Datum
+vector_hnsw_should_have_matching_ondisk_buffer(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingOnDiskBuffer(leftBuffer, rightBuffer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_ondisk_buffer);
+Datum
+vector_rust_hnsw_should_have_matching_ondisk_buffer(PG_FUNCTION_ARGS)
+{
+	int32		leftBuffer = PG_GETARG_INT32(0);
+	int32		rightBuffer = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingOnDiskBuffer(leftBuffer, rightBuffer, true));
 }
 
 static bool
