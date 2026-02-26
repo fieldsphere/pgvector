@@ -971,6 +971,16 @@ HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint,
 	return isHigherLevel && !isEntryPoint;
 }
 
+static bool
+HnswShouldMatchVacuumEntrypointTuple(bool hasEntryPoint, int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint) &&
+			vector_rust_hnsw_should_match_neighbor_connection_kernel(blkno, offno, entryBlkno, entryOffno);
+
+	return hasEntryPoint && blkno == entryBlkno && offno == entryOffno;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_vacuum_highest_non_entrypoint);
 Datum
 vector_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
@@ -989,6 +999,32 @@ vector_rust_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
 	int32		isEntryPoint = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldTrackVacuumHighestNonEntrypoint(isHigherLevel != 0, isEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_vacuum_entrypoint_tuple);
+Datum
+vector_hnsw_should_match_vacuum_entrypoint_tuple(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	int32		blkno = PG_GETARG_INT32(1);
+	int32		offno = PG_GETARG_INT32(2);
+	int32		entryBlkno = PG_GETARG_INT32(3);
+	int32		entryOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldMatchVacuumEntrypointTuple(hasEntryPoint != 0, blkno, offno, entryBlkno, entryOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_match_vacuum_entrypoint_tuple);
+Datum
+vector_rust_hnsw_should_match_vacuum_entrypoint_tuple(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	int32		blkno = PG_GETARG_INT32(1);
+	int32		offno = PG_GETARG_INT32(2);
+	int32		entryBlkno = PG_GETARG_INT32(3);
+	int32		entryOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldMatchVacuumEntrypointTuple(hasEntryPoint != 0, blkno, offno, entryBlkno, entryOffno, true));
 }
 
 static bool
@@ -1171,9 +1207,12 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 			HnswElementTuple etup = (HnswElementTuple) PageGetItem(page, PageGetItemId(page, offno));
 			int			idx = 0;
 			bool		itemUpdated = false;
-			bool		isEntryPoint = entryPoint != NULL &&
-			blkno == entryPoint->blkno &&
-			offno == entryPoint->offno;
+			bool		isEntryPoint = HnswShouldMatchVacuumEntrypointTuple(entryPoint != NULL,
+																		(int32) blkno,
+																		(int32) offno,
+																		HnswGetVacuumEntrypointBlknoForCompare(entryPoint, true),
+																		HnswGetVacuumEntrypointOffnoForCompare(entryPoint, true),
+																		true);
 
 			/* Skip neighbor tuples */
 			if (HnswShouldSkipNonElementVacuumTuple(HnswIsElementTuple(etup), true))
