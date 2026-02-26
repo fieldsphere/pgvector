@@ -137,6 +137,8 @@ static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
 static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
 static bool HnswShouldInitializeVisitedState(bool initVisited, bool useRust);
 static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
+static bool HnswShouldHaveVisitedBasePointerFlag(bool hasBasePointer, bool useRust);
+static bool HnswShouldHaveVisitedBasePointer(const void *base, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
@@ -909,12 +911,24 @@ HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 }
 
 static bool
-HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
+HnswShouldHaveVisitedBasePointerFlag(bool hasBasePointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
 
 	return hasBasePointer;
+}
+
+static bool
+HnswShouldHaveVisitedBasePointer(const void *base, bool useRust)
+{
+	return HnswShouldHaveVisitedBasePointerFlag(base != NULL, useRust);
+}
+
+static bool
+HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHaveVisitedBasePointerFlag(hasBasePointer, useRust);
 }
 
 static bool
@@ -2038,6 +2052,24 @@ vector_rust_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
 	int32		hasBasePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_base_pointer);
+Datum
+vector_hnsw_should_have_visited_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_base_pointer);
+Datum
+vector_rust_hnsw_should_have_visited_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_memory_entry_distance);
@@ -3290,11 +3322,13 @@ CompareFurthestCandidates(const pairingheap_node *a, const pairingheap_node *b, 
 static inline void
 InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 {
+	bool		hasBasePointer = HnswShouldHaveVisitedBasePointer((const void *) base, true);
+
 	if (HnswShouldUseTidVisitedHash(inMemory, true))
 		v->tids = tidhash_create(CurrentMemoryContext, ef * m * 2, NULL);
-	else if (HnswShouldUseOffsetVisitedHash(base != NULL, true))
+	else if (HnswShouldUseOffsetVisitedHash(hasBasePointer, true))
 		v->offsets = offsethash_create(CurrentMemoryContext, ef * m * 2, NULL);
-	else if (HnswShouldUsePointerVisitedHash(base != NULL, true))
+	else if (HnswShouldUsePointerVisitedHash(hasBasePointer, true))
 		v->pointers = pointerhash_create(CurrentMemoryContext, ef * m * 2, NULL);
 }
 
@@ -3304,6 +3338,8 @@ InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 static inline void
 AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMemory, bool *found)
 {
+	bool		hasBasePointer = HnswShouldHaveVisitedBasePointer((const void *) base, true);
+
 	if (HnswShouldUseTidVisitedHash(inMemory, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
@@ -3312,13 +3348,13 @@ AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMem
 		ItemPointerSet(&indextid, element->blkno, element->offno);
 		tidhash_insert(v->tids, indextid, found);
 	}
-	else if (HnswShouldUseOffsetVisitedHash(base != NULL, true))
+	else if (HnswShouldUseOffsetVisitedHash(hasBasePointer, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 
 		offsethash_insert_hash(v->offsets, HnswPtrOffset(elementPtr), element->hash, found);
 	}
-	else if (HnswShouldUsePointerVisitedHash(base != NULL, true))
+	else if (HnswShouldUsePointerVisitedHash(hasBasePointer, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 
@@ -4295,10 +4331,12 @@ static void
 PrecomputeHash(char *base, HnswElement element)
 {
 	HnswElementPtr ptr;
+	bool		hasBasePointer;
 
 	HnswPtrStore(base, ptr, element);
+	hasBasePointer = HnswShouldHaveVisitedBasePointer((const void *) base, true);
 
-	if (HnswShouldUsePointerHashForBase(base != NULL, true))
+	if (HnswShouldUsePointerHashForBase(hasBasePointer, true))
 		element->hash = hash_pointer((uintptr_t) HnswPtrPointer(ptr));
 	else
 		element->hash = hash_offset(HnswPtrOffset(ptr));
