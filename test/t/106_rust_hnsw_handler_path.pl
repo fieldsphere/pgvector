@@ -1690,6 +1690,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_search_element_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_search_element_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_search_element_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_search_element_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_copy_tuple_slot_by_index(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_copy_tuple_slot_by_index'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5010,6 +5020,18 @@ my $skip_missing_search_element_parity = $node->safe_psql("postgres", q{
 	) AS t(has_element);
 });
 is($skip_missing_search_element_parity, "t\nt\nt\nt");
+
+my $have_search_element_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_search_element_pointer(has_element) =
+		   rust_hnsw_should_have_search_element_pointer(has_element)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_element);
+});
+is($have_search_element_pointer_parity, "t\nt\nt\nt");
 
 my $copy_tuple_slot_by_index_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_copy_tuple_slot_by_index(slot_index, slot_limit) =
