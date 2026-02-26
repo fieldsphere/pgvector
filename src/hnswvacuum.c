@@ -597,6 +597,44 @@ vector_rust_hnsw_should_reset_vacuum_highest_point(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveVacuumHighestPointBlockFlag(bool highestPointValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(highestPointValid);
+
+	return highestPointValid;
+}
+
+static bool
+HnswShouldHaveVacuumHighestPointBlock(HnswElement highestPoint, bool useRust)
+{
+	bool		highestPointValid = false;
+
+	if (highestPoint != NULL)
+		highestPointValid = BlockNumberIsValid(highestPoint->blkno);
+
+	return HnswShouldHaveVacuumHighestPointBlockFlag(highestPointValid, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_block);
+Datum
+vector_hnsw_should_have_vacuum_highest_point_block(PG_FUNCTION_ARGS)
+{
+	int32		highestPointValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointBlockFlag(highestPointValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_highest_point_block);
+Datum
+vector_rust_hnsw_should_have_vacuum_highest_point_block(PG_FUNCTION_ARGS)
+{
+	int32		highestPointValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointBlockFlag(highestPointValid != 0, true));
+}
+
+static bool
 HnswShouldRepairVacuumHighestPoint(bool needsUpdated, bool useRust)
 {
 	if (useRust)
@@ -1555,7 +1593,7 @@ RepairGraphEntryPoint(HnswVacuumState * vacuumstate)
 	HnswElement entryPoint;
 	MemoryContext oldCtx = MemoryContextSwitchTo(vacuumstate->tmpCtx);
 
-	if (HnswShouldResetVacuumHighestPoint(BlockNumberIsValid(highestPoint->blkno), true))
+	if (HnswShouldResetVacuumHighestPoint(HnswShouldHaveVacuumHighestPointBlock(highestPoint, true), true))
 		highestPoint = NULL;
 
 	/*
