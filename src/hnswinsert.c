@@ -110,6 +110,8 @@ static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRu
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
 static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connectionExists, bool useRust);
 static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust);
+static bool HnswShouldHaveNonNegativeUpdateIndexFlag(bool isNonNegative, bool useRust);
+static bool HnswShouldHaveNonNegativeUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
 static bool HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust);
@@ -2915,12 +2917,25 @@ vector_rust_hnsw_should_probe_undecided_update_index(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust)
+HnswShouldHaveNonNegativeUpdateIndexFlag(bool isNonNegative, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_apply_neighbor_update_slot_kernel(updateIndex, tupleCount);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNonNegative);
 
-	return updateIndex >= 0 && updateIndex < tupleCount;
+	return isNonNegative;
+}
+
+static bool
+HnswShouldHaveNonNegativeUpdateIndex(int32 updateIndex, bool useRust)
+{
+	return HnswShouldHaveNonNegativeUpdateIndexFlag(updateIndex >= 0, useRust);
+}
+
+static bool
+HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust)
+{
+	return HnswShouldHaveNonNegativeUpdateIndex(updateIndex, useRust) &&
+		updateIndex < tupleCount;
 }
 
 static bool
@@ -2950,6 +2965,24 @@ vector_rust_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
 	int32		tupleCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldApplyNeighborUpdateSlot(updateIndex, tupleCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonnegative_update_index);
+Datum
+vector_hnsw_should_have_nonnegative_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndex(updateIndex, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonnegative_update_index);
+Datum
+vector_rust_hnsw_should_have_nonnegative_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndex(updateIndex, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_connection_from_candidate_index);
