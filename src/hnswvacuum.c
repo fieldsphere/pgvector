@@ -1612,13 +1612,25 @@ HnswShouldHaveHigherVacuumElementLevel(int32 elementLevel, int32 highestLevel, b
 }
 
 static bool
-HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint, bool useRust)
+HnswShouldHaveVacuumNonEntrypointFlag(bool isEntryPoint, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isHigherLevel) &&
-			vector_rust_hnsw_should_assign_new_lock_tranche_kernel(isEntryPoint);
+		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(isEntryPoint);
 
-	return isHigherLevel && !isEntryPoint;
+	return !isEntryPoint;
+}
+
+static bool
+HnswShouldHaveVacuumNonEntrypoint(bool isEntryPoint, bool useRust)
+{
+	return HnswShouldHaveVacuumNonEntrypointFlag(isEntryPoint, useRust);
+}
+
+static bool
+HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint, bool useRust)
+{
+	return HnswShouldHaveHigherVacuumElementLevelFlag(isHigherLevel, useRust) &&
+		HnswShouldHaveVacuumNonEntrypoint(isEntryPoint, useRust);
 }
 
 static bool
@@ -1667,6 +1679,24 @@ vector_rust_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
 	int32		isEntryPoint = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldTrackVacuumHighestNonEntrypoint(isHigherLevel != 0, isEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_non_entrypoint);
+Datum
+vector_hnsw_should_have_vacuum_non_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		isEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumNonEntrypoint(isEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_non_entrypoint);
+Datum
+vector_rust_hnsw_should_have_vacuum_non_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		isEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumNonEntrypoint(isEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_vacuum_element_level);
