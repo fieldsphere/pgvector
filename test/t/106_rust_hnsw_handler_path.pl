@@ -2260,6 +2260,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_valid_ondisk_block_number(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_valid_ondisk_block_number'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_valid_ondisk_block_number(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_valid_ondisk_block_number'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_set_initial_ondisk_insert_page(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_set_initial_ondisk_insert_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5971,6 +5981,18 @@ my $have_ondisk_block_number_parity = $node->safe_psql("postgres", q{
 	) AS t(block_number);
 });
 is($have_ondisk_block_number_parity, "t\nt\nt\nt");
+
+my $have_valid_ondisk_block_number_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_valid_ondisk_block_number(block_number) =
+		   rust_hnsw_should_have_valid_ondisk_block_number(block_number)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1),
+		(42)
+	) AS t(block_number);
+});
+is($have_valid_ondisk_block_number_parity, "t\nt\nt\nt");
 
 my $set_initial_ondisk_insert_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_set_initial_ondisk_insert_page(has_insert_page, has_space) =
