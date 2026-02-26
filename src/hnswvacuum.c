@@ -540,18 +540,30 @@ HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, in
 }
 
 static bool
-HnswShouldHaveVacuumEntrypointFlag(bool hasEntryPoint, bool useRust)
+HnswShouldHaveVacuumPointerFlag(bool hasPointer, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 
-	return hasEntryPoint;
+	return hasPointer;
+}
+
+static bool
+HnswShouldHaveVacuumPointer(const void *pointer, bool useRust)
+{
+	return HnswShouldHaveVacuumPointerFlag(pointer != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveVacuumEntrypointFlag(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveVacuumPointerFlag(hasEntryPoint, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumEntrypoint(HnswElement entryPoint, bool useRust)
 {
-	return HnswShouldHaveVacuumEntrypointFlag(entryPoint != NULL, useRust);
+	return HnswShouldHaveVacuumPointer((const void *) entryPoint, useRust);
 }
 
 static bool
@@ -758,16 +770,13 @@ HnswShouldHaveVacuumHighestPointBlockFlag(bool highestPointValid, bool useRust)
 static bool
 HnswShouldHaveVacuumHighestPointPointerFlag(bool hasHighestPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasHighestPoint);
-
-	return hasHighestPoint;
+	return HnswShouldHaveVacuumPointerFlag(hasHighestPoint, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumHighestPointPointer(HnswElement highestPoint, bool useRust)
 {
-	return HnswShouldHaveVacuumHighestPointPointerFlag(highestPoint != NULL, useRust);
+	return HnswShouldHaveVacuumPointer((const void *) highestPoint, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_pointer);
@@ -786,6 +795,24 @@ vector_rust_hnsw_should_have_vacuum_highest_point_pointer(PG_FUNCTION_ARGS)
 	int32		hasHighestPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_pointer);
+Datum
+vector_hnsw_should_have_vacuum_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_pointer);
+Datum
+vector_rust_hnsw_should_have_vacuum_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumPointerFlag(hasPointer != 0, true));
 }
 
 static bool
@@ -955,16 +982,13 @@ HnswShouldRepairNonnullVacuumHighestPoint(bool hasHighestPoint, bool useRust)
 static bool
 HnswShouldHaveVacuumHighestPointFlag(bool hasHighestPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasHighestPoint);
-
-	return hasHighestPoint;
+	return HnswShouldHaveVacuumPointerFlag(hasHighestPoint, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumHighestPoint(HnswElement highestPoint, bool useRust)
 {
-	return HnswShouldHaveVacuumHighestPointFlag(highestPoint != NULL, useRust);
+	return HnswShouldHaveVacuumPointer((const void *) highestPoint, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_nonnull_vacuum_highest_point);
@@ -1458,16 +1482,13 @@ HnswShouldInitVacuumStatsWhenMissing(bool hasStats, bool useRust)
 static bool
 HnswShouldHaveVacuumStatsFlag(bool hasStats, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasStats);
-
-	return hasStats;
+	return HnswShouldHaveVacuumPointerFlag(hasStats, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumStats(IndexBulkDeleteResult *stats, bool useRust)
 {
-	return HnswShouldHaveVacuumStatsFlag(stats != NULL, useRust);
+	return HnswShouldHaveVacuumPointer((const void *) stats, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_init_vacuum_stats_when_missing);
