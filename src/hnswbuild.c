@@ -81,6 +81,8 @@
 static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
 static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust);
+static bool HnswShouldHaveBuildPointerFlag(bool hasPointer, bool useRust);
+static bool HnswShouldHaveBuildPointer(const void *pointer, bool useRust);
 static bool HnswShouldHaveDebugQueryString(const char *debugQueryString, bool useRust);
 static bool HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust);
 static bool HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust);
@@ -552,18 +554,30 @@ HnswShouldUseDefaultEntryLevel(bool hasEntryPoint, bool useRust)
 }
 
 static bool
-HnswShouldHaveBuildEntrypointFlag(bool hasEntryPoint, bool useRust)
+HnswShouldHaveBuildPointerFlag(bool hasPointer, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 
-	return hasEntryPoint;
+	return hasPointer;
+}
+
+static bool
+HnswShouldHaveBuildPointer(const void *pointer, bool useRust)
+{
+	return HnswShouldHaveBuildPointerFlag(pointer != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveBuildEntrypointFlag(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveBuildPointerFlag(hasEntryPoint, useRust);
 }
 
 static bool
 HnswShouldHaveBuildEntrypoint(HnswElement entryPoint, bool useRust)
 {
-	return HnswShouldHaveBuildEntrypointFlag(entryPoint != NULL, useRust);
+	return HnswShouldHaveBuildPointer((const void *) entryPoint, useRust);
 }
 
 static int
@@ -631,6 +645,24 @@ vector_rust_hnsw_should_have_build_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_pointer);
+Datum
+vector_hnsw_should_have_build_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_pointer);
+Datum
+vector_rust_hnsw_should_have_build_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPointerFlag(hasPointer != 0, true));
 }
 
 static bool
@@ -726,16 +758,13 @@ HnswShouldEndParallelBuild(bool hasLeader, bool useRust)
 static bool
 HnswShouldHaveBuildLeaderFlag(bool hasLeader, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasLeader);
-
-	return hasLeader;
+	return HnswShouldHaveBuildPointerFlag(hasLeader, useRust);
 }
 
 static bool
 HnswShouldHaveBuildLeader(HnswLeader * hnswleader, bool useRust)
 {
-	return HnswShouldHaveBuildLeaderFlag(hnswleader != NULL, useRust);
+	return HnswShouldHaveBuildPointer((const void *) hnswleader, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_end_parallel_build);
@@ -786,16 +815,13 @@ HnswShouldScanHeapForBuild(bool hasHeap, bool useRust)
 static bool
 HnswShouldHaveBuildHeapFlag(bool hasHeap, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasHeap);
-
-	return hasHeap;
+	return HnswShouldHaveBuildPointerFlag(hasHeap, useRust);
 }
 
 static bool
 HnswShouldHaveBuildHeap(Relation heap, bool useRust)
 {
-	return HnswShouldHaveBuildHeapFlag(heap != NULL, useRust);
+	return HnswShouldHaveBuildPointer((const void *) heap, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_scan_heap_for_build);
@@ -1722,10 +1748,7 @@ HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust)
 static bool
 HnswShouldHaveDebugQueryString(const char *debugQueryString, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(debugQueryString != NULL);
-
-	return debugQueryString != NULL;
+	return HnswShouldHaveBuildPointer((const void *) debugQueryString, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_debug_query_string);
@@ -1834,16 +1857,13 @@ HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
 static bool
 HnswShouldHaveParallelDsmSegmentFlag(bool hasDsmSegment, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDsmSegment);
-
-	return hasDsmSegment;
+	return HnswShouldHaveBuildPointerFlag(hasDsmSegment, useRust);
 }
 
 static bool
 HnswShouldHaveParallelDsmSegment(ParallelContext * pcxt, bool useRust)
 {
-	return HnswShouldHaveParallelDsmSegmentFlag(pcxt->seg != NULL, useRust);
+	return HnswShouldHaveBuildPointer((const void *) pcxt->seg, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fallback_without_dsm_segment);
