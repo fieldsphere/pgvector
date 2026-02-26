@@ -760,6 +760,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_entrypoint(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_build_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_build_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3384,6 +3394,18 @@ my $update_entrypoint_ondisk_parity = $node->safe_psql("postgres", q{
 	) AS t(entrypoint_is_null, element_level, entry_level);
 });
 is($update_entrypoint_ondisk_parity, "t\nt\nt\nt");
+
+my $have_ondisk_entrypoint_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_entrypoint(has_entrypoint) =
+		   rust_hnsw_should_have_ondisk_entrypoint(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_ondisk_entrypoint_parity, "t\nt\nt\nt");
 
 my $have_build_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_build_entrypoint(has_entrypoint) =
