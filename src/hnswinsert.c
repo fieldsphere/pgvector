@@ -44,6 +44,8 @@ static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pag
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
+static bool HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRust);
+static bool HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust);
 static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
 static bool HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust);
 static bool HnswShouldFitOnDiskCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust);
@@ -393,7 +395,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	if (HnswShouldUseNeighborPageAsInsertPage(HnswShouldHaveOnDiskInsertPage(newInsertPage, true), true))
 		newInsertPage = e->neighborPage;
 
-	if (HnswShouldUseFreeOnDiskOffsets(OffsetNumberIsValid(freeOffno), true))
+	if (HnswShouldUseFreeOnDiskOffsets(HnswShouldHaveFreeOnDiskOffset(freeOffno, true), true))
 	{
 		e->offno = freeOffno;
 		e->neighborOffno = freeNeighborOffno;
@@ -411,7 +413,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 	ItemPointerSet(&etup->neighbortid, e->neighborPage, e->neighborOffno);
 
 	/* Add element and neighbors */
-	if (HnswShouldUseFreeOnDiskOffsets(OffsetNumberIsValid(freeOffno), true))
+	if (HnswShouldUseFreeOnDiskOffsets(HnswShouldHaveFreeOnDiskOffset(freeOffno, true), true))
 	{
 		if (HnswShouldRejectOnDiskElementOverwrite(PageIndexTupleOverwrite(page, e->offno, (Item) etup, etupSize), true))
 			elog(ERROR, "failed to add index item to \"%s\"", RelationGetRelationName(index));
@@ -1547,6 +1549,21 @@ vector_rust_hnsw_should_use_next_neighbor_offset(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(freeOffsetValid);
+
+	return freeOffsetValid;
+}
+
+static bool
+HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust)
+{
+	return HnswShouldHaveFreeOnDiskOffsetFlag(OffsetNumberIsValid(freeOffno), useRust);
+}
+
+static bool
 HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
 {
 	if (useRust)
@@ -1571,6 +1588,24 @@ vector_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
 	int32		freeOffsetValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskOffsets(freeOffsetValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_free_ondisk_offset);
+Datum
+vector_hnsw_should_have_free_ondisk_offset(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFreeOnDiskOffsetFlag(freeOffsetValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_free_ondisk_offset);
+Datum
+vector_rust_hnsw_should_have_free_ondisk_offset(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFreeOnDiskOffsetFlag(freeOffsetValid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_free_ondisk_offsets);
