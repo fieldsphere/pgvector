@@ -900,6 +900,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_boundary_duplicate_insert_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_boundary_duplicate_insert_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_boundary_duplicate_insert_slot(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_boundary_duplicate_insert_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4172,6 +4182,18 @@ my $reject_ondisk_duplicate_insert_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(free_slot_index, max_heaptids);
 });
 is($reject_ondisk_duplicate_insert_slot_parity, "t\nt\nt\nt");
+
+my $have_boundary_duplicate_insert_slot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_boundary_duplicate_insert_slot(free_slot_index, max_heaptids) =
+		   rust_hnsw_should_have_boundary_duplicate_insert_slot(free_slot_index, max_heaptids)
+	FROM (VALUES
+		(0, 10),
+		(3, 10),
+		(10, 10),
+		(1, 2)
+	) AS t(free_slot_index, max_heaptids);
+});
+is($have_boundary_duplicate_insert_slot_parity, "t\nt\nt\nt");
 
 my $commit_ondisk_duplicate_with_buffer_dirty_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(building) =
