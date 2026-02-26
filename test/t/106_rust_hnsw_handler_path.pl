@@ -1130,6 +1130,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_element_heaptid_itempointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_element_heaptid_itempointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_element_heaptid_itempointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_element_heaptid_itempointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_count_without_skip_element(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_count_without_skip_element'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4198,6 +4208,18 @@ my $stop_loading_element_heaptids_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptid_valid);
 });
 is($stop_loading_element_heaptids_parity, "t\nt\nt\nt");
+
+my $have_element_heaptid_itempointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_element_heaptid_itempointer(heaptid_valid) =
+		   rust_hnsw_should_have_element_heaptid_itempointer(heaptid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(heaptid_valid);
+});
+is($have_element_heaptid_itempointer_parity, "t\nt\nt\nt");
 
 my $count_without_skip_element_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_count_without_skip_element(has_skip_element) =
