@@ -146,6 +146,9 @@ static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
 static bool HnswShouldUseSkipElementForExisting(bool existing, bool useRust);
+static bool HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust);
+static int HnswGetSkipElementBlknoForCompare(HnswElement skipElement, bool useRust);
+static int HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust);
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
@@ -895,6 +898,33 @@ HnswShouldUseSkipElementForExisting(bool existing, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
 
 	return existing;
+}
+
+static bool
+HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
+
+	return !hasSkipElement;
+}
+
+static int
+HnswGetSkipElementBlknoForCompare(HnswElement skipElement, bool useRust)
+{
+	if (HnswShouldUseDefaultSkipElementTid(skipElement != NULL, useRust))
+		return 0;
+
+	return skipElement->blkno;
+}
+
+static int
+HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust)
+{
+	if (HnswShouldUseDefaultSkipElementTid(skipElement != NULL, useRust))
+		return 0;
+
+	return skipElement->offno;
 }
 
 static bool
@@ -1816,6 +1846,24 @@ vector_rust_hnsw_should_use_skip_element_for_existing(PG_FUNCTION_ARGS)
 	int32		existing = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseSkipElementForExisting(existing != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_skip_element_tid);
+Datum
+vector_hnsw_should_use_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultSkipElementTid(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_skip_element_tid);
+Datum
+vector_rust_hnsw_should_use_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultSkipElementTid(hasSkipElement != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_type_info);
@@ -3584,7 +3632,9 @@ RemoveElements(char *base, List *w, HnswElement skipElement)
 		HnswElement hce = HnswPtrAccess(base, hc->element);
 
 		/* Skip self for vacuuming update */
-		if (HnswShouldSkipSelfForVacuumUpdate(skipElement != NULL, hce->blkno, hce->offno, skipElement != NULL ? skipElement->blkno : 0, skipElement != NULL ? skipElement->offno : 0, true))
+		if (HnswShouldSkipSelfForVacuumUpdate(skipElement != NULL, hce->blkno, hce->offno,
+											  HnswGetSkipElementBlknoForCompare(skipElement, true),
+											  HnswGetSkipElementOffnoForCompare(skipElement, true), true))
 			continue;
 
 		if (HnswShouldKeepElementWithHeapTids(hce->heaptidsLength, true))
