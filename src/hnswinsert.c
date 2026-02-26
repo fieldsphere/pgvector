@@ -40,6 +40,8 @@ static bool HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize,
 static bool HnswShouldAbortOnDiskElementMoveNext(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRust);
+static bool HnswShouldHaveChangedOnDiskInsertPageFlag(bool pageChanged, bool useRust);
+static bool HnswShouldHaveChangedOnDiskInsertPage(BlockNumber newInsertPage, BlockNumber insertPage, bool useRust);
 static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust);
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
@@ -450,7 +452,7 @@ AddElementOnDisk(Relation index, HnswElement e, int m, BlockNumber insertPage, B
 
 	/* Update the insert page */
 	if (HnswShouldUpdateAddElementInsertPage(HnswShouldHaveOnDiskInsertPage(newInsertPage, true),
-											 newInsertPage != insertPage,
+											 HnswShouldHaveChangedOnDiskInsertPage(newInsertPage, insertPage, true),
 											 true))
 		*updatedInsertPage = newInsertPage;
 }
@@ -1464,6 +1466,21 @@ vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveChangedOnDiskInsertPageFlag(bool pageChanged, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(pageChanged);
+
+	return pageChanged;
+}
+
+static bool
+HnswShouldHaveChangedOnDiskInsertPage(BlockNumber newInsertPage, BlockNumber insertPage, bool useRust)
+{
+	return HnswShouldHaveChangedOnDiskInsertPageFlag(newInsertPage != insertPage, useRust);
+}
+
+static bool
 HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust)
 {
 	bool		shouldUpdate = hasNewInsertPage && pageChanged;
@@ -1492,6 +1509,26 @@ vector_rust_hnsw_should_update_add_element_insert_page(PG_FUNCTION_ARGS)
 	int32		pageChanged = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldUpdateAddElementInsertPage(hasNewInsertPage != 0, pageChanged != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_changed_ondisk_insert_page);
+Datum
+vector_hnsw_should_have_changed_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		newInsertPage = PG_GETARG_INT32(0);
+	int32		insertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveChangedOnDiskInsertPage((BlockNumber) newInsertPage, (BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_changed_ondisk_insert_page);
+Datum
+vector_rust_hnsw_should_have_changed_ondisk_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		newInsertPage = PG_GETARG_INT32(0);
+	int32		insertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveChangedOnDiskInsertPage((BlockNumber) newInsertPage, (BlockNumber) insertPage, true));
 }
 
 static bool
