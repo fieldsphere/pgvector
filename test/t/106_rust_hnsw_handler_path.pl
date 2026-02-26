@@ -360,6 +360,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_positive_rescan_key_count(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_positive_rescan_key_count'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_positive_rescan_key_count(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_positive_rescan_key_count'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_provided_rescan_key_array(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_provided_rescan_key_array'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3612,6 +3622,18 @@ my $copy_rescan_keys_parity = $node->safe_psql("postgres", q{
 	) AS t(has_keys, key_count);
 });
 is($copy_rescan_keys_parity, "t\nt\nt\nt");
+
+my $have_positive_rescan_key_count_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_positive_rescan_key_count(key_count) =
+		   rust_hnsw_should_have_positive_rescan_key_count(key_count)
+	FROM (VALUES
+		(0),
+		(1),
+		(-1),
+		(2)
+	) AS t(key_count);
+});
+is($have_positive_rescan_key_count_parity, "t\nt\nt\nt");
 
 my $use_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_provided_rescan_key_array(has_key_array) =
