@@ -149,6 +149,8 @@ static bool HnswShouldHaveVisitedBasePointerFlag(bool hasBasePointer, bool useRu
 static bool HnswShouldHaveVisitedBasePointer(const void *base, bool useRust);
 static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
 static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
+static bool HnswShouldHaveSearchIndexPointerFlag(bool hasIndexPointer, bool useRust);
+static bool HnswShouldHaveSearchIndexPointer(Relation index, bool useRust);
 static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
 static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
 static bool HnswShouldHaveQueryValuePointerFlag(bool hasQueryValue, bool useRust);
@@ -996,6 +998,21 @@ HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
 
 	return !hasBasePointer;
+}
+
+static bool
+HnswShouldHaveSearchIndexPointerFlag(bool hasIndexPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasIndexPointer);
+
+	return hasIndexPointer;
+}
+
+static bool
+HnswShouldHaveSearchIndexPointer(Relation index, bool useRust)
+{
+	return HnswShouldHaveSearchIndexPointerFlag(index != NULL, useRust);
 }
 
 static bool
@@ -2298,6 +2315,24 @@ vector_rust_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_index_pointer);
+Datum
+vector_hnsw_should_have_search_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_index_pointer);
+Datum
+vector_rust_hnsw_should_have_search_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_without_entrypoint);
 Datum
 vector_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
@@ -3534,7 +3569,7 @@ HnswInitSearchCandidate(char *base, HnswElement element, double distance)
 HnswSearchCandidate *
 HnswEntryCandidate(char *base, HnswElement entryPoint, HnswQuery * q, Relation index, HnswSupport * support, bool loadVec)
 {
-	bool		inMemory = index == NULL;
+	bool		inMemory = !HnswShouldHaveSearchIndexPointer(index, true);
 	double		distance;
 
 	if (HnswShouldUseMemoryEntryDistance(inMemory, true))
@@ -3768,7 +3803,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	int			lm = HnswGetLayerM(m, lc);
 	HnswUnvisited *unvisited = palloc(lm * sizeof(HnswUnvisited));
 	int			unvisitedLength;
-	bool		inMemory = index == NULL;
+	bool		inMemory = !HnswShouldHaveSearchIndexPointer(index, true);
 	bool		hasDiscardedHeapPointer = HnswShouldHaveDiscardedHeapPointer(discarded, true);
 	bool		hasTupleCounterPointer = HnswShouldHaveTupleCounterPointer(tuples, true);
 
@@ -4669,7 +4704,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 	int			entryLevel;
 	HnswQuery	q;
 	HnswElement skipElement = NULL;
-	bool		inMemory = index == NULL;
+	bool		inMemory = !HnswShouldHaveSearchIndexPointer(index, true);
 
 	if (HnswShouldUseSkipElementForExisting(existing, true))
 		skipElement = element;
