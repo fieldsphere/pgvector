@@ -462,6 +462,21 @@ vector_rust_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveScanPointerFlag(bool hasPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
+
+	return hasPointer;
+}
+
+static bool
+HnswShouldHaveScanPointer(const void *pointer, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(pointer != NULL, useRust);
+}
+
+static bool
 HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
 {
 	if (useRust)
@@ -473,77 +488,62 @@ HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
 static bool
 HnswShouldUseProvidedRescanKeyArrayFlag(bool hasKeyArray, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasKeyArray);
-
-	return hasKeyArray;
+	return HnswShouldHaveScanPointerFlag(hasKeyArray, useRust);
 }
 
 static bool
 HnswShouldUseProvidedRescanKeyArray(ScanKey keys, bool useRust)
 {
-	return HnswShouldUseProvidedRescanKeyArrayFlag(keys != NULL, useRust);
+	return HnswShouldHaveScanPointer((const void *) keys, useRust);
 }
 
 static bool
 HnswShouldUseProvidedOrderByDataFlag(bool hasOrderByData, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOrderByData);
-
-	return hasOrderByData;
+	return HnswShouldHaveScanPointerFlag(hasOrderByData, useRust);
 }
 
 static bool
 HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
 {
-	return HnswShouldUseProvidedOrderByDataFlag(orderByData != NULL, useRust);
+	return HnswShouldHaveScanPointer((const void *) orderByData, useRust);
 }
 
 static bool
 HnswShouldUseScanNormprocFlag(bool hasNormproc, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormproc);
-
-	return hasNormproc;
+	return HnswShouldHaveScanPointerFlag(hasNormproc, useRust);
 }
 
 static bool
 HnswShouldUseScanNormproc(void *normprocinfo, bool useRust)
 {
-	return HnswShouldUseScanNormprocFlag(normprocinfo != NULL, useRust);
+	return HnswShouldHaveScanPointer((const void *) normprocinfo, useRust);
 }
 
 static bool
 HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
-
-	return hasEntryPoint;
+	return HnswShouldHaveScanPointerFlag(hasEntryPoint, useRust);
 }
 
 static bool
 HnswShouldUseEntrypointForScan(HnswElement entryPoint, bool useRust)
 {
-	return HnswShouldUseEntrypointForScanFlag(entryPoint != NULL, useRust);
+	return HnswShouldHaveScanPointer((const void *) entryPoint, useRust);
 }
 
 static bool
 HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasInstrument);
-
-	return hasInstrument;
+	return HnswShouldHaveScanPointerFlag(hasInstrument, useRust);
 }
 
 #if PG_VERSION_NUM >= 180000
 static bool
 HnswShouldUseScanInstrument(void *instrument, bool useRust)
 {
-	return HnswShouldUseScanInstrumentFlag(instrument != NULL, useRust);
+	return HnswShouldHaveScanPointer((const void *) instrument, useRust);
 }
 #endif
 
@@ -559,7 +559,7 @@ HnswShouldDiscardedHeapMissingFlag(bool hasDiscardedHeap, bool useRust)
 static bool
 HnswShouldDiscardedHeapMissing(pairingheap * discarded, bool useRust)
 {
-	return HnswShouldDiscardedHeapMissingFlag(discarded != NULL, useRust);
+	return HnswShouldDiscardedHeapMissingFlag(HnswShouldHaveScanPointer((const void *) discarded, useRust), useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_rescan_keys);
@@ -598,6 +598,24 @@ vector_rust_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
 	int32		hasKeyArray = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_pointer);
+Datum
+vector_hnsw_should_have_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_pointer);
+Datum
+vector_rust_hnsw_should_have_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointerFlag(hasPointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_orderby_data);
@@ -961,7 +979,7 @@ hnswrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int no
 	so->previousDistance = -get_float8_infinity();
 	MemoryContextReset(so->tmpCtx);
 	hasKeys = HnswShouldUseProvidedRescanKeyArray(keys, true);
-	hasOrderBys = HnswShouldUseProvidedRescanKeyArray(orderbys, true);
+	hasOrderBys = HnswShouldUseProvidedOrderByData(orderbys, true);
 
 	if (HnswShouldCopyRescanKeys(hasKeys, scan->numberOfKeys, true))
 		memmove(scan->keyData, keys, scan->numberOfKeys * sizeof(ScanKeyData));
