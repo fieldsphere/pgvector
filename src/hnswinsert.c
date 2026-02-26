@@ -57,6 +57,8 @@ static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRus
 static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
+static bool HnswShouldHaveOnDiskItemPointerFlag(bool itemPointerValid, bool useRust);
+static bool HnswShouldHaveOnDiskItemPointer(ItemPointer itemPointer, bool useRust);
 static bool HnswShouldHaveOnDiskHeapTidFlag(bool heapTidValid, bool useRust);
 static bool HnswShouldHaveOnDiskHeapTid(ItemPointer heaptid, bool useRust);
 static bool HnswShouldHaveOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust);
@@ -1812,18 +1814,30 @@ vector_rust_hnsw_should_abort_ondisk_duplicate_slot_reject(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldHaveOnDiskHeapTidFlag(bool heapTidValid, bool useRust)
+HnswShouldHaveOnDiskItemPointerFlag(bool itemPointerValid, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heapTidValid);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemPointerValid);
 
-	return heapTidValid;
+	return itemPointerValid;
+}
+
+static bool
+HnswShouldHaveOnDiskItemPointer(ItemPointer itemPointer, bool useRust)
+{
+	return HnswShouldHaveOnDiskItemPointerFlag(ItemPointerIsValid(itemPointer), useRust);
+}
+
+static bool
+HnswShouldHaveOnDiskHeapTidFlag(bool heapTidValid, bool useRust)
+{
+	return HnswShouldHaveOnDiskItemPointerFlag(heapTidValid, useRust);
 }
 
 static bool
 HnswShouldHaveOnDiskHeapTid(ItemPointer heaptid, bool useRust)
 {
-	return HnswShouldHaveOnDiskHeapTidFlag(ItemPointerIsValid(heaptid), useRust);
+	return HnswShouldHaveOnDiskItemPointer(heaptid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_heaptid);
@@ -1844,19 +1858,34 @@ vector_rust_hnsw_should_have_ondisk_heaptid(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskHeapTidFlag(heapTidValid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_itempointer);
+Datum
+vector_hnsw_should_have_ondisk_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskItemPointerFlag(itemPointerValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_itempointer);
+Datum
+vector_rust_hnsw_should_have_ondisk_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskItemPointerFlag(itemPointerValid != 0, true));
+}
+
 static bool
 HnswShouldHaveOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(neighborTidValid);
-
-	return neighborTidValid;
+	return HnswShouldHaveOnDiskItemPointerFlag(neighborTidValid, useRust);
 }
 
 static bool
 HnswShouldHaveOnDiskNeighborTid(ItemPointer indextid, bool useRust)
 {
-	return HnswShouldHaveOnDiskNeighborTidFlag(ItemPointerIsValid(indextid), useRust);
+	return HnswShouldHaveOnDiskItemPointer(indextid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_neighbor_tid);
