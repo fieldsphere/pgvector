@@ -929,6 +929,39 @@ vector_rust_hnsw_should_set_vacuum_insert_page_when_missing(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveVacuumInsertPageFlag(bool hasInsertPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasInsertPage);
+
+	return hasInsertPage;
+}
+
+static bool
+HnswShouldHaveVacuumInsertPage(BlockNumber insertPage, bool useRust)
+{
+	return HnswShouldHaveVacuumInsertPageFlag(BlockNumberIsValid(insertPage), useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_insert_page);
+Datum
+vector_hnsw_should_have_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumInsertPageFlag(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_insert_page);
+Datum
+vector_rust_hnsw_should_have_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumInsertPageFlag(hasInsertPage != 0, true));
+}
+
+static bool
 HnswShouldMatchMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
 {
 	if (useRust)
@@ -1843,7 +1876,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			if (HnswShouldSkipDeletedMarkDeletedTuple(etup->deleted, true))
 			{
 				/* Set to first free page */
-				if (HnswShouldSetVacuumInsertPageWhenMissing(BlockNumberIsValid(insertPage), true))
+				if (HnswShouldSetVacuumInsertPageWhenMissing(HnswShouldHaveVacuumInsertPage(insertPage, true), true))
 					insertPage = blkno;
 
 				continue;
@@ -1901,7 +1934,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 				UnlockReleaseBuffer(nbuf);
 
 			/* Set to first free page */
-			if (HnswShouldSetVacuumInsertPageWhenMissing(BlockNumberIsValid(insertPage), true))
+			if (HnswShouldSetVacuumInsertPageWhenMissing(HnswShouldHaveVacuumInsertPage(insertPage, true), true))
 				insertPage = blkno;
 
 			/* Prepare new xlog */
