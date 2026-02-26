@@ -1510,13 +1510,31 @@ HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint,
 }
 
 static bool
+HnswShouldHaveMatchingVacuumEntrypointTidFlag(bool hasMatchingTid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingTid);
+
+	return hasMatchingTid;
+}
+
+static bool
+HnswShouldHaveMatchingVacuumEntrypointTid(int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(blkno, offno, entryBlkno, entryOffno);
+
+	return HnswShouldHaveMatchingVacuumEntrypointTidFlag(blkno == entryBlkno && offno == entryOffno, false);
+}
+
+static bool
 HnswShouldMatchVacuumEntrypointTuple(bool hasEntryPoint, int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint) &&
-			vector_rust_hnsw_should_match_neighbor_connection_kernel(blkno, offno, entryBlkno, entryOffno);
+			HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, true);
 
-	return hasEntryPoint && blkno == entryBlkno && offno == entryOffno;
+	return hasEntryPoint && HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, false);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_vacuum_highest_non_entrypoint);
@@ -1557,6 +1575,30 @@ vector_rust_hnsw_should_have_higher_vacuum_element_level(PG_FUNCTION_ARGS)
 	int32		highestLevel = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumElementLevel(elementLevel, highestLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_vacuum_entrypoint_tid);
+Datum
+vector_hnsw_should_have_matching_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+	int32		offno = PG_GETARG_INT32(1);
+	int32		entryBlkno = PG_GETARG_INT32(2);
+	int32		entryOffno = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_vacuum_entrypoint_tid);
+Datum
+vector_rust_hnsw_should_have_matching_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+	int32		offno = PG_GETARG_INT32(1);
+	int32		entryBlkno = PG_GETARG_INT32(2);
+	int32		entryOffno = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_vacuum_entrypoint_tuple);
