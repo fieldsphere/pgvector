@@ -116,6 +116,8 @@ static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageF
 static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust);
 static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust);
+static bool HnswShouldHaveEmptyInsertHeapTidsFlag(bool hasEmptyHeapTids, bool useRust);
+static bool HnswShouldHaveEmptyInsertHeapTids(int32 heaptidsLength, bool useRust);
 static bool HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust);
 static bool HnswShouldHaveNeighborCountBeforeLayerM(int32 neighborCount, int32 layerM, bool useRust);
 static bool HnswShouldProbeForFreeNeighborSlot(int32 neighborCount, int32 layerM, bool useRust);
@@ -3032,12 +3034,27 @@ vector_rust_hnsw_should_return_empty_without_neighbor_tids(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust)
+HnswShouldHaveEmptyInsertHeapTidsFlag(bool hasEmptyHeapTids, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEmptyHeapTids);
+
+	return hasEmptyHeapTids;
+}
+
+static bool
+HnswShouldHaveEmptyInsertHeapTids(int32 heaptidsLength, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
 
-	return heaptidsLength == 0;
+	return HnswShouldHaveEmptyInsertHeapTidsFlag(heaptidsLength == 0, false);
+}
+
+static bool
+HnswShouldPruneDeletedInsertElement(int32 heaptidsLength, bool useRust)
+{
+	return HnswShouldHaveEmptyInsertHeapTids(heaptidsLength, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prune_deleted_insert_element);
@@ -3056,6 +3073,24 @@ vector_rust_hnsw_should_prune_deleted_insert_element(PG_FUNCTION_ARGS)
 	int32		heaptidsLength = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldPruneDeletedInsertElement(heaptidsLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_insert_heaptids);
+Datum
+vector_hnsw_should_have_empty_insert_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyInsertHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_insert_heaptids);
+Datum
+vector_rust_hnsw_should_have_empty_insert_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyInsertHeapTids(heaptidsLength, true));
 }
 
 static bool
