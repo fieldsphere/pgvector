@@ -2050,6 +2050,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_match_vacuum_entrypoint_tuple(integer, integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_match_vacuum_entrypoint_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_match_vacuum_entrypoint_tuple(integer, integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_match_vacuum_entrypoint_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_vacuum_neighbor_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_vacuum_neighbor_overwrite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4809,6 +4819,18 @@ my $track_vacuum_highest_non_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(is_higher_level, is_entrypoint);
 });
 is($track_vacuum_highest_non_entrypoint_parity, "t\nt\nt\nt");
+
+my $match_vacuum_entrypoint_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_match_vacuum_entrypoint_tuple(has_entrypoint, blkno, offno, entry_blkno, entry_offno) =
+		   rust_hnsw_should_match_vacuum_entrypoint_tuple(has_entrypoint, blkno, offno, entry_blkno, entry_offno)
+	FROM (VALUES
+		(0, 5, 3, 5, 3),
+		(1, 5, 3, 5, 3),
+		(1, 5, 3, 5, 4),
+		(1, 9, 2, 8, 2)
+	) AS t(has_entrypoint, blkno, offno, entry_blkno, entry_offno);
+});
+is($match_vacuum_entrypoint_tuple_parity, "t\nt\nt\nt");
 
 my $reject_vacuum_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_vacuum_neighbor_overwrite(overwrite_succeeded) =
