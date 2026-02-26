@@ -1485,6 +1485,21 @@ vector_rust_hnsw_should_skip_deleted_repairgraph_element(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveHigherVacuumElementLevelFlag(bool isHigherLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isHigherLevel);
+
+	return isHigherLevel;
+}
+
+static bool
+HnswShouldHaveHigherVacuumElementLevel(int32 elementLevel, int32 highestLevel, bool useRust)
+{
+	return HnswShouldHaveHigherVacuumElementLevelFlag(elementLevel > highestLevel, useRust);
+}
+
+static bool
 HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint, bool useRust)
 {
 	if (useRust)
@@ -1522,6 +1537,26 @@ vector_rust_hnsw_should_track_vacuum_highest_non_entrypoint(PG_FUNCTION_ARGS)
 	int32		isEntryPoint = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldTrackVacuumHighestNonEntrypoint(isHigherLevel != 0, isEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_vacuum_element_level);
+Datum
+vector_hnsw_should_have_higher_vacuum_element_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		highestLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumElementLevel(elementLevel, highestLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_higher_vacuum_element_level);
+Datum
+vector_rust_hnsw_should_have_higher_vacuum_element_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		highestLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumElementLevel(elementLevel, highestLevel, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_vacuum_entrypoint_tuple);
@@ -1813,7 +1848,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 				tidhash_insert(vacuumstate->deleted, ip, &found);
 				Assert(!found);
 			}
-			else if (HnswShouldTrackVacuumHighestNonEntrypoint(etup->level > highestLevel, isEntryPoint, true))
+			else if (HnswShouldTrackVacuumHighestNonEntrypoint(HnswShouldHaveHigherVacuumElementLevel(etup->level, highestLevel, true), isEntryPoint, true))
 			{
 				/* Keep track of highest non-entry point */
 				highestPoint->blkno = blkno;
