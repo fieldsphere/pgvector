@@ -65,6 +65,8 @@ static bool HnswShouldMatchNeighborConnection(int32 indextidBlkno, int32 indexti
 static bool HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust);
 static bool HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust);
 static bool HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust);
+static bool HnswShouldHaveOnDiskBlockFlag(bool blockValid, bool useRust);
+static bool HnswShouldHaveOnDiskBlockNumber(BlockNumber blkno, bool useRust);
 static bool HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust);
 static bool HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust);
 static bool HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust);
@@ -1985,18 +1987,30 @@ vector_rust_hnsw_should_reuse_deleted_ondisk_tuple(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust)
+HnswShouldHaveOnDiskBlockFlag(bool blockValid, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasInsertPage);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(blockValid);
 
-	return hasInsertPage;
+	return blockValid;
+}
+
+static bool
+HnswShouldHaveOnDiskBlockNumber(BlockNumber blkno, bool useRust)
+{
+	return HnswShouldHaveOnDiskBlockFlag(BlockNumberIsValid(blkno), useRust);
+}
+
+static bool
+HnswShouldHaveOnDiskInsertPageFlag(bool hasInsertPage, bool useRust)
+{
+	return HnswShouldHaveOnDiskBlockFlag(hasInsertPage, useRust);
 }
 
 static bool
 HnswShouldHaveOnDiskInsertPage(BlockNumber insertPage, bool useRust)
 {
-	return HnswShouldHaveOnDiskInsertPageFlag(BlockNumberIsValid(insertPage), useRust);
+	return HnswShouldHaveOnDiskBlockNumber(insertPage, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_insert_page);
@@ -2015,6 +2029,24 @@ vector_rust_hnsw_should_have_ondisk_insert_page(PG_FUNCTION_ARGS)
 	int32		hasInsertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertPageFlag(hasInsertPage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_block_number);
+Datum
+vector_hnsw_should_have_ondisk_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskBlockNumber((BlockNumber) blkno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_block_number);
+Datum
+vector_rust_hnsw_should_have_ondisk_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskBlockNumber((BlockNumber) blkno, true));
 }
 
 static bool
@@ -2558,16 +2590,13 @@ vector_rust_hnsw_should_follow_ondisk_next_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveOnDiskNextPageFlag(bool nextPageValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(nextPageValid);
-
-	return nextPageValid;
+	return HnswShouldHaveOnDiskBlockFlag(nextPageValid, useRust);
 }
 
 static bool
 HnswShouldHaveOnDiskNextPage(BlockNumber nextPage, bool useRust)
 {
-	return HnswShouldHaveOnDiskNextPageFlag(BlockNumberIsValid(nextPage), useRust);
+	return HnswShouldHaveOnDiskBlockNumber(nextPage, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_next_page);
