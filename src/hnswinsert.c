@@ -49,6 +49,8 @@ static bool HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRus
 static bool HnswShouldHaveChangedOnDiskInsertPageFlag(bool pageChanged, bool useRust);
 static bool HnswShouldHaveChangedOnDiskInsertPage(BlockNumber newInsertPage, BlockNumber insertPage, bool useRust);
 static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bool useRust);
+static bool HnswShouldHaveDistinctOnDiskNeighborBufferFlag(bool hasDistinctBuffer, bool useRust);
+static bool HnswShouldHaveDistinctOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
@@ -3171,12 +3173,27 @@ vector_rust_hnsw_should_have_ondisk_insert_space(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
+HnswShouldHaveDistinctOnDiskNeighborBufferFlag(bool hasDistinctBuffer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDistinctBuffer);
+
+	return hasDistinctBuffer;
+}
+
+static bool
+HnswShouldHaveDistinctOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
 
-	return !sameBuffer;
+	return HnswShouldHaveDistinctOnDiskNeighborBufferFlag(!sameBuffer, false);
+}
+
+static bool
+HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
+{
+	return HnswShouldHaveDistinctOnDiskNeighborBuffer(sameBuffer, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_ondisk_neighbor_buffer);
@@ -3195,6 +3212,24 @@ vector_rust_hnsw_should_release_ondisk_neighbor_buffer(PG_FUNCTION_ARGS)
 	int32		sameBuffer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReleaseOnDiskNeighborBuffer(sameBuffer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_distinct_ondisk_neighbor_buffer);
+Datum
+vector_hnsw_should_have_distinct_ondisk_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctOnDiskNeighborBuffer(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_distinct_ondisk_neighbor_buffer);
+Datum
+vector_rust_hnsw_should_have_distinct_ondisk_neighbor_buffer(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctOnDiskNeighborBuffer(sameBuffer != 0, true));
 }
 
 static bool
