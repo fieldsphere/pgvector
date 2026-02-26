@@ -25,6 +25,8 @@ static bool HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust)
 static bool HnswShouldHaveOnDiskEntrypoint(HnswElement entryPoint, bool useRust);
 static int HnswGetOnDiskEntryLevelForUpdate(HnswElement entryPoint, bool useRust);
 static bool HnswShouldSkipInvalidInsertValue(bool indexValueFormed, bool useRust);
+static bool HnswShouldHaveOnDiskValueMismatchFlag(bool valuesMismatch, bool useRust);
+static bool HnswShouldHaveOnDiskValueMismatch(bool valuesEqual, bool useRust);
 static bool HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust);
 static bool HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, bool useRust);
 static bool HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust);
@@ -1107,12 +1109,27 @@ vector_rust_hnsw_should_skip_invalid_insert_value(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
+HnswShouldHaveOnDiskValueMismatchFlag(bool valuesMismatch, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(valuesMismatch);
+
+	return valuesMismatch;
+}
+
+static bool
+HnswShouldHaveOnDiskValueMismatch(bool valuesEqual, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
 
-	return !valuesEqual;
+	return HnswShouldHaveOnDiskValueMismatchFlag(!valuesEqual, false);
+}
+
+static bool
+HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
+{
+	return HnswShouldHaveOnDiskValueMismatch(valuesEqual, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch);
@@ -1131,6 +1148,24 @@ vector_rust_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch(PG_FUNCTI
 	int32		valuesEqual = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopOnDiskDuplicateSearchOnValueMismatch(valuesEqual != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_value_mismatch);
+Datum
+vector_hnsw_should_have_ondisk_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskValueMismatch(valuesEqual != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_value_mismatch);
+Datum
+vector_rust_hnsw_should_have_ondisk_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskValueMismatch(valuesEqual != 0, true));
 }
 
 static bool
