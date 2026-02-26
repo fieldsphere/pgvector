@@ -145,6 +145,7 @@ static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
 static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
+static bool HnswShouldUseSkipElementForExisting(bool existing, bool useRust);
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
@@ -885,6 +886,15 @@ HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int ele
 	}
 
 	return hasSkipElement && elementBlkno == skipBlkno && elementOffno == skipOffno;
+}
+
+static bool
+HnswShouldUseSkipElementForExisting(bool existing, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
+
+	return existing;
 }
 
 static bool
@@ -1788,6 +1798,24 @@ vector_rust_hnsw_should_skip_self_for_vacuum_update(PG_FUNCTION_ARGS)
 	int32		skipOffno = PG_GETARG_INT32(4);
 
 	PG_RETURN_BOOL(HnswShouldSkipSelfForVacuumUpdate(hasSkipElement != 0, elementBlkno, elementOffno, skipBlkno, skipOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_skip_element_for_existing);
+Datum
+vector_hnsw_should_use_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseSkipElementForExisting(existing != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_skip_element_for_existing);
+Datum
+vector_rust_hnsw_should_use_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseSkipElementForExisting(existing != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_type_info);
@@ -3593,8 +3621,11 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 	int			level = element->level;
 	int			entryLevel;
 	HnswQuery	q;
-	HnswElement skipElement = existing ? element : NULL;
+	HnswElement skipElement = NULL;
 	bool		inMemory = index == NULL;
+
+	if (HnswShouldUseSkipElementForExisting(existing, true))
+		skipElement = element;
 
 	q.value = HnswGetValue(base, element);
 
