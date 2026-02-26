@@ -3070,6 +3070,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_markdeleted_version_beyond_max(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_markdeleted_version_beyond_max'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_markdeleted_version_beyond_max(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_markdeleted_version_beyond_max'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_deleted_ondisk_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_deleted_ondisk_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7083,6 +7093,18 @@ my $reset_markdeleted_version_parity = $node->safe_psql("postgres", q{
 	) AS t(version, max_version);
 });
 is($reset_markdeleted_version_parity, "t\nt\nt\nt");
+
+my $have_markdeleted_version_beyond_max_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_markdeleted_version_beyond_max(version, max_version) =
+		   rust_hnsw_should_have_markdeleted_version_beyond_max(version, max_version)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(5, 3)
+	) AS t(version, max_version);
+});
+is($have_markdeleted_version_beyond_max_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
