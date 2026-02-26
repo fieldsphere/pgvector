@@ -220,6 +220,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reach_scan_tuple_limit(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reach_scan_tuple_limit'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reach_scan_tuple_limit(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reach_scan_tuple_limit'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_exceed_scan_memory_limit(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_exceed_scan_memory_limit'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3474,6 +3484,18 @@ my $limit_scan_by_resources_parity = $node->safe_psql("postgres", q{
 	) AS t(tuple_count, max_scan_tuples, memory_used, max_memory);
 });
 is($limit_scan_by_resources_parity, "t\nt\nt\nt");
+
+my $reach_scan_tuple_limit_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reach_scan_tuple_limit(tuple_count, max_scan_tuples) =
+		   rust_hnsw_should_reach_scan_tuple_limit(tuple_count, max_scan_tuples)
+	FROM (VALUES
+		(10::bigint, 20::bigint),
+		(20::bigint, 20::bigint),
+		(21::bigint, 20::bigint),
+		(0::bigint, 1::bigint)
+	) AS t(tuple_count, max_scan_tuples);
+});
+is($reach_scan_tuple_limit_parity, "t\nt\nt\nt");
 
 my $exceed_scan_memory_limit_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_exceed_scan_memory_limit(memory_used, max_memory) =
