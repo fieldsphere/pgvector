@@ -175,6 +175,8 @@ static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
 static bool HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust);
 static bool HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust);
 static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaMOutputPointer(int *m, bool useRust);
 static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
@@ -399,7 +401,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 	if (unlikely(HnswShouldRejectInvalidMetaMagic(metap->magicNumber == HNSW_MAGIC_NUMBER, true)))
 		elog(ERROR, "hnsw index is not valid");
 
-	if (HnswShouldLoadMetaM(m != NULL, true))
+	if (HnswShouldLoadMetaM(HnswShouldHaveMetaMOutputPointer(m, true), true))
 		*m = metap->m;
 
 	if (HnswShouldLoadMetaEntrypoint(entryPoint != NULL, true))
@@ -1171,6 +1173,21 @@ HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
 
 	return hasMOutputPointer;
+}
+
+static bool
+HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
+
+	return hasMOutputPointer;
+}
+
+static bool
+HnswShouldHaveMetaMOutputPointer(int *m, bool useRust)
+{
+	return HnswShouldHaveMetaMOutputPointerFlag(m != NULL, useRust);
 }
 
 static bool
@@ -2407,6 +2424,24 @@ vector_rust_hnsw_should_load_meta_m(PG_FUNCTION_ARGS)
 	int32		hasMOutputPointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLoadMetaM(hasMOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_m_output_pointer);
+Datum
+vector_hnsw_should_have_meta_m_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_m_output_pointer);
+Datum
+vector_rust_hnsw_should_have_meta_m_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_meta_entrypoint);
