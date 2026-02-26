@@ -1180,6 +1180,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_skip_element_for_existing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_skip_element_for_existing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_skip_element_for_existing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_skip_element_for_existing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_default_type_info(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_default_type_info'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3648,6 +3658,18 @@ my $skip_self_for_vacuum_update_parity = $node->safe_psql("postgres", q{
 	) AS t(has_skip_element, element_blkno, element_offno, skip_blkno, skip_offno);
 });
 is($skip_self_for_vacuum_update_parity, "t\nt\nt\nt");
+
+my $use_skip_element_for_existing_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_skip_element_for_existing(existing) =
+		   rust_hnsw_should_use_skip_element_for_existing(existing)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(existing);
+});
+is($use_skip_element_for_existing_parity, "t\nt\nt\nt");
 
 my $use_default_type_info_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_default_type_info(has_procinfo) =
