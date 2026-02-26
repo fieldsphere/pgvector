@@ -2130,6 +2130,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_highest_point_block(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_highest_point_block'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_highest_point_block(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_highest_point_block'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_repair_vacuum_highest_point(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_repair_vacuum_highest_point'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5155,6 +5165,18 @@ my $reset_vacuum_highest_point_parity = $node->safe_psql("postgres", q{
 	) AS t(highest_point_valid);
 });
 is($reset_vacuum_highest_point_parity, "t\nt\nt\nt");
+
+my $have_vacuum_highest_point_block_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_highest_point_block(highest_point_valid) =
+		   rust_hnsw_should_have_vacuum_highest_point_block(highest_point_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(highest_point_valid);
+});
+is($have_vacuum_highest_point_block_parity, "t\nt\nt\nt");
 
 my $repair_vacuum_highest_point_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_repair_vacuum_highest_point(needs_updated) =
