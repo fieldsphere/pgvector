@@ -155,12 +155,29 @@ vector_rust_hnsw_should_stop_returning_remaining_discarded(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveDecreasingScanDistanceFlag(bool isDecreasingDistance, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDecreasingDistance);
+
+	return isDecreasingDistance;
+}
+
+static bool
+HnswShouldHaveDecreasingScanDistance(double distance, double previousDistance, bool useRust)
+{
+	return HnswShouldHaveDecreasingScanDistanceFlag(distance < previousDistance, useRust);
+}
+
+static bool
 HnswShouldSkipStrictOutOfOrder(int iterativeScanMode, double distance, double previousDistance, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_skip_strict_out_of_order_kernel(iterativeScanMode, distance, previousDistance);
+		return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode) &&
+			HnswShouldHaveDecreasingScanDistance(distance, previousDistance, true);
 
-	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT && distance < previousDistance;
+	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT &&
+		HnswShouldHaveDecreasingScanDistance(distance, previousDistance, false);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_strict_out_of_order);
@@ -183,6 +200,26 @@ vector_rust_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
 	float8		previousDistance = PG_GETARG_FLOAT8(2);
 
 	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_decreasing_scan_distance);
+Datum
+vector_hnsw_should_have_decreasing_scan_distance(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		previousDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistance(distance, previousDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_decreasing_scan_distance);
+Datum
+vector_rust_hnsw_should_have_decreasing_scan_distance(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		previousDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistance(distance, previousDistance, true));
 }
 
 static bool
