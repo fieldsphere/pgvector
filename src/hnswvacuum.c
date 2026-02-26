@@ -1460,14 +1460,24 @@ vector_rust_hnsw_should_release_markdeleted_neighbor_buffer(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldResetMarkDeletedVersion(int32 version, int32 maxVersion, bool useRust)
+HnswShouldHaveMarkDeletedVersionBeyondMaxFlag(bool versionWithinRange, bool useRust)
 {
-	bool		versionWithinRange = version <= maxVersion;
-
 	if (useRust)
 		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(versionWithinRange);
 
-	return version > maxVersion;
+	return !versionWithinRange;
+}
+
+static bool
+HnswShouldHaveMarkDeletedVersionBeyondMax(int32 version, int32 maxVersion, bool useRust)
+{
+	return HnswShouldHaveMarkDeletedVersionBeyondMaxFlag(version <= maxVersion, useRust);
+}
+
+static bool
+HnswShouldResetMarkDeletedVersion(int32 version, int32 maxVersion, bool useRust)
+{
+	return HnswShouldHaveMarkDeletedVersionBeyondMax(version, maxVersion, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_markdeleted_version);
@@ -1488,6 +1498,26 @@ vector_rust_hnsw_should_reset_markdeleted_version(PG_FUNCTION_ARGS)
 	int32		maxVersion = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldResetMarkDeletedVersion(version, maxVersion, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_markdeleted_version_beyond_max);
+Datum
+vector_hnsw_should_have_markdeleted_version_beyond_max(PG_FUNCTION_ARGS)
+{
+	int32		version = PG_GETARG_INT32(0);
+	int32		maxVersion = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMarkDeletedVersionBeyondMax(version, maxVersion, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_markdeleted_version_beyond_max);
+Datum
+vector_rust_hnsw_should_have_markdeleted_version_beyond_max(PG_FUNCTION_ARGS)
+{
+	int32		version = PG_GETARG_INT32(0);
+	int32		maxVersion = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMarkDeletedVersionBeyondMax(version, maxVersion, true));
 }
 
 static bool
