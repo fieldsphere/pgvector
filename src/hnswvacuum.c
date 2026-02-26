@@ -771,6 +771,15 @@ vector_rust_hnsw_should_set_vacuum_insert_page_when_missing(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldMatchMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
+
+	return neighborPage == elementPage;
+}
+
+static bool
 HnswShouldReuseMarkDeletedBufferForNeighborPage(bool samePage, bool useRust)
 {
 	if (useRust)
@@ -795,6 +804,26 @@ vector_rust_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(PG_FUNCTION_A
 	int32		samePage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReuseMarkDeletedBufferForNeighborPage(samePage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_markdeleted_neighbor_page);
+Datum
+vector_hnsw_should_match_markdeleted_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchMarkDeletedNeighborPage(neighborPage, elementPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_match_markdeleted_neighbor_page);
+Datum
+vector_rust_hnsw_should_match_markdeleted_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldMatchMarkDeletedNeighborPage(neighborPage, elementPage, true));
 }
 
 static bool
@@ -1544,6 +1573,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			Page		npage;
 			BlockNumber neighborPage;
 			OffsetNumber neighborOffno;
+			bool		samePage;
 
 			/* Skip neighbor tuples */
 			if (HnswShouldSkipNonElementMarkDeletedTuple(HnswIsElementTuple(etup), true))
@@ -1566,8 +1596,9 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			/* Get neighbor page */
 			neighborPage = ItemPointerGetBlockNumber(&etup->neighbortid);
 			neighborOffno = ItemPointerGetOffsetNumber(&etup->neighbortid);
+			samePage = HnswShouldMatchMarkDeletedNeighborPage((int32) neighborPage, (int32) blkno, true);
 
-			if (HnswShouldReuseMarkDeletedBufferForNeighborPage(neighborPage == blkno, true))
+			if (HnswShouldReuseMarkDeletedBufferForNeighborPage(samePage, true))
 			{
 				nbuf = buf;
 				npage = page;
