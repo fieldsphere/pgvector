@@ -640,13 +640,23 @@ vector_rust_hnsw_should_check_vacuum_underfilled_layer0(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveVacuumSkipEntrypoint(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+static bool
 HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint) &&
+		return HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint, true) &&
 			vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, entryBlkno, entryOffno);
 
-	return hasEntryPoint && elementBlkno == entryBlkno && elementOffno == entryOffno;
+	return HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint, false) &&
+		elementBlkno == entryBlkno && elementOffno == entryOffno;
 }
 
 static bool
@@ -727,6 +737,24 @@ vector_rust_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
 	int32		entryOffno = PG_GETARG_INT32(4);
 
 	PG_RETURN_BOOL(HnswShouldSkipVacuumEntryPointElement(hasEntryPoint != 0, elementBlkno, elementOffno, entryBlkno, entryOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_skip_entrypoint);
+Datum
+vector_hnsw_should_have_vacuum_skip_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_skip_entrypoint);
+Datum
+vector_rust_hnsw_should_have_vacuum_skip_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_vacuum_entrypoint_tid);
