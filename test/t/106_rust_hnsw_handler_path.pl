@@ -1110,6 +1110,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_element_without_next_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_element_without_next_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_element_without_next_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_element_without_next_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_abort_ondisk_element_move_next(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_abort_ondisk_element_move_next'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4794,6 +4804,18 @@ my $exceed_ondisk_element_max_size_parity = $node->safe_psql("postgres", q{
 	) AS t(combined_size, max_size);
 });
 is($exceed_ondisk_element_max_size_parity, "t\nt\nt\nt");
+
+my $have_ondisk_element_without_next_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_element_without_next_page(has_next_page) =
+		   rust_hnsw_should_have_ondisk_element_without_next_page(has_next_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_next_page);
+});
+is($have_ondisk_element_without_next_page_parity, "t\nt\nt\nt");
 
 my $abort_ondisk_element_move_next_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_abort_ondisk_element_move_next(building) =
