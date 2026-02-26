@@ -177,6 +177,8 @@ static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
 static bool HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust);
 static bool HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust);
 static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaOutputPointerFlag(bool hasOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaOutputPointer(const void *outputPointer, bool useRust);
 static bool HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust);
 static bool HnswShouldHaveMetaMOutputPointer(int *m, bool useRust);
 static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
@@ -1200,18 +1202,30 @@ HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust)
 }
 
 static bool
-HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust)
+HnswShouldHaveMetaOutputPointerFlag(bool hasOutputPointer, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOutputPointer);
 
-	return hasMOutputPointer;
+	return hasOutputPointer;
+}
+
+static bool
+HnswShouldHaveMetaOutputPointer(const void *outputPointer, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointerFlag(outputPointer != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointerFlag(hasMOutputPointer, useRust);
 }
 
 static bool
 HnswShouldHaveMetaMOutputPointer(int *m, bool useRust)
 {
-	return HnswShouldHaveMetaMOutputPointerFlag(m != NULL, useRust);
+	return HnswShouldHaveMetaOutputPointer((const void *) m, useRust);
 }
 
 static bool
@@ -1226,16 +1240,13 @@ HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust)
 static bool
 HnswShouldHaveMetaEntrypointOutputPointerFlag(bool hasEntrypointOutputPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
-
-	return hasEntrypointOutputPointer;
+	return HnswShouldHaveMetaOutputPointerFlag(hasEntrypointOutputPointer, useRust);
 }
 
 static bool
 HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust)
 {
-	return HnswShouldHaveMetaEntrypointOutputPointerFlag(entryPoint != NULL, useRust);
+	return HnswShouldHaveMetaOutputPointer((const void *) entryPoint, useRust);
 }
 
 static bool
@@ -1280,16 +1291,13 @@ HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust)
 static bool
 HnswShouldHaveMetaUpdateEntrypointFlag(bool hasEntrypoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypoint);
-
-	return hasEntrypoint;
+	return HnswShouldHaveMetaOutputPointerFlag(hasEntrypoint, useRust);
 }
 
 static bool
 HnswShouldHaveMetaUpdateEntrypoint(HnswElement entryPoint, bool useRust)
 {
-	return HnswShouldHaveMetaUpdateEntrypointFlag(entryPoint != NULL, useRust);
+	return HnswShouldHaveMetaOutputPointer((const void *) entryPoint, useRust);
 }
 
 static bool
@@ -2559,6 +2567,24 @@ vector_rust_hnsw_should_have_meta_entrypoint_output_pointer(PG_FUNCTION_ARGS)
 	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_output_pointer);
+Datum
+vector_hnsw_should_have_meta_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_output_pointer);
+Datum
+vector_rust_hnsw_should_have_meta_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_meta_entry_block);
