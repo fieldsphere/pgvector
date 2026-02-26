@@ -280,6 +280,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_heap(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_heap'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_heap(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_heap'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_parallel_heap_scan(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_parallel_heap_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2776,6 +2786,18 @@ my $scan_heap_for_build_parity = $node->safe_psql("postgres", q{
 	) AS t(has_heap);
 });
 is($scan_heap_for_build_parity, "t\nt\nt\nt");
+
+my $have_build_heap_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_heap(has_heap) =
+		   rust_hnsw_should_have_build_heap(has_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_heap);
+});
+is($have_build_heap_parity, "t\nt\nt\nt");
 
 my $use_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_parallel_heap_scan(has_leader) =
