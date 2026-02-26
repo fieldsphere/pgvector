@@ -812,13 +812,19 @@ HnswShouldHaveHigherVacuumEntrypointLevel(int32 elementLevel, int32 entryPointLe
 }
 
 static bool
-HnswShouldPromoteVacuumEntryPoint(bool entryPointIsNull, int32 elementLevel, int32 entryPointLevel, bool useRust)
+HnswShouldHaveVacuumMissingEntrypoint(bool entryPointIsNull, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
-			HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, true);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull);
 
-	return entryPointIsNull || HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, false);
+	return entryPointIsNull;
+}
+
+static bool
+HnswShouldPromoteVacuumEntryPoint(bool entryPointIsNull, int32 elementLevel, int32 entryPointLevel, bool useRust)
+{
+	return HnswShouldHaveVacuumMissingEntrypoint(entryPointIsNull, useRust) ||
+		HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, useRust);
 }
 
 static bool
@@ -865,6 +871,24 @@ vector_rust_hnsw_should_promote_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	int32		entryPointLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldPromoteVacuumEntryPoint(entryPointIsNull != 0, elementLevel, entryPointLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_missing_entrypoint);
+Datum
+vector_hnsw_should_have_vacuum_missing_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumMissingEntrypoint(entryPointIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_missing_entrypoint);
+Datum
+vector_rust_hnsw_should_have_vacuum_missing_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumMissingEntrypoint(entryPointIsNull != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_vacuum_entrypoint_level);
