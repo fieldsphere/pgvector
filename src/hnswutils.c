@@ -114,6 +114,7 @@ static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLeve
 static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust);
 static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
 static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, bool useRust);
 static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
 static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
@@ -2990,11 +2991,14 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				BlockNumber blkno = ItemPointerGetBlockNumber(indextid);
 				OffsetNumber offno = ItemPointerGetOffsetNumber(indextid);
 				bool		trackDiscarded;
+				double	   *maxDistanceCap = NULL;
 
 				/* Avoid any allocations if not adding */
 				eElement = NULL;
 				trackDiscarded = HnswShouldTrackDiscardedCandidates(discarded != NULL, true);
-				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, alwaysAdd || trackDiscarded ? NULL : &f->distance, &eElement);
+				if (HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd, trackDiscarded, true))
+					maxDistanceCap = &f->distance;
+				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, maxDistanceCap, &eElement);
 
 				if (HnswShouldSkipMissingSearchElement(eElement != NULL, true))
 					continue;
@@ -3180,6 +3184,15 @@ HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
 		return vector_rust_hnsw_should_track_discarded_candidates_kernel(hasDiscardedHeap);
 
 	return hasDiscardedHeap;
+}
+
+static bool
+HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(alwaysAdd || trackDiscarded);
+
+	return !alwaysAdd && !trackDiscarded;
 }
 
 static bool
@@ -3400,6 +3413,26 @@ vector_rust_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
 	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_with_max_distance_cap);
+Datum
+vector_hnsw_should_load_element_with_max_distance_cap(PG_FUNCTION_ARGS)
+{
+	int32		alwaysAdd = PG_GETARG_INT32(0);
+	int32		trackDiscarded = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd != 0, trackDiscarded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_element_with_max_distance_cap);
+Datum
+vector_rust_hnsw_should_load_element_with_max_distance_cap(PG_FUNCTION_ARGS)
+{
+	int32		alwaysAdd = PG_GETARG_INT32(0);
+	int32		trackDiscarded = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd != 0, trackDiscarded != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_update_index);
