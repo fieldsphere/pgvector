@@ -538,6 +538,24 @@ HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLev
 	return entryPointIsNull || elementLevel > entryLevel;
 }
 
+static bool
+HnswShouldUseDefaultEntryLevel(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
+
+	return !hasEntryPoint;
+}
+
+static int
+HnswGetEntryLevelForUpdate(HnswElement entryPoint, bool useRust)
+{
+	if (HnswShouldUseDefaultEntryLevel(entryPoint != NULL, useRust))
+		return -1;
+
+	return entryPoint->level;
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_entry_point);
 Datum
 vector_hnsw_should_update_entry_point(PG_FUNCTION_ARGS)
@@ -558,6 +576,24 @@ vector_rust_hnsw_should_update_entry_point(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPoint(entryPointIsNull != 0, elementLevel, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_entry_level);
+Datum
+vector_hnsw_should_use_default_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultEntryLevel(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_entry_level);
+Datum
+vector_rust_hnsw_should_use_default_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultEntryLevel(hasEntryPoint != 0, true));
 }
 
 static bool
@@ -863,7 +899,7 @@ UpdateGraphInMemory(HnswSupport * support, HnswElement element, int m, HnswEleme
 	UpdateNeighborsInMemory(base, support, element, m);
 
 	/* Update entry point if needed (already have lock) */
-	if (HnswShouldUpdateEntryPoint(entryPoint == NULL, element->level, entryPoint != NULL ? entryPoint->level : -1, true))
+	if (HnswShouldUpdateEntryPoint(entryPoint == NULL, element->level, HnswGetEntryLevelForUpdate(entryPoint, true), true))
 		HnswPtrStore(base, graph->entryPoint, element);
 }
 
@@ -891,7 +927,7 @@ InsertTupleInMemory(HnswBuildState * buildstate, HnswElement element)
 	entryPoint = HnswPtrAccess(base, graph->entryPoint);
 
 	/* Prevent concurrent inserts when likely updating entry point */
-	if (HnswShouldUpdateEntryPoint(entryPoint == NULL, element->level, entryPoint != NULL ? entryPoint->level : -1, true))
+	if (HnswShouldUpdateEntryPoint(entryPoint == NULL, element->level, HnswGetEntryLevelForUpdate(entryPoint, true), true))
 	{
 		/* Release shared lock */
 		LWLockRelease(entryLock);
