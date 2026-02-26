@@ -1130,6 +1130,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_distinct_ondisk_neighbor_buffer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_distinct_ondisk_neighbor_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_distinct_ondisk_neighbor_buffer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_distinct_ondisk_neighbor_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_neighbor_page_as_insert_page(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_neighbor_page_as_insert_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4658,6 +4668,18 @@ my $release_ondisk_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($release_ondisk_neighbor_buffer_parity, "t\nt\nt\nt");
+
+my $have_distinct_ondisk_neighbor_buffer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_distinct_ondisk_neighbor_buffer(same_buffer) =
+		   rust_hnsw_should_have_distinct_ondisk_neighbor_buffer(same_buffer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(same_buffer);
+});
+is($have_distinct_ondisk_neighbor_buffer_parity, "t\nt\nt\nt");
 
 my $use_neighbor_page_as_insert_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_neighbor_page_as_insert_page(has_new_insert_page) =
