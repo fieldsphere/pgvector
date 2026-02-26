@@ -2090,6 +2090,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_match_markdeleted_neighbor_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_match_markdeleted_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_match_markdeleted_neighbor_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_match_markdeleted_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_release_markdeleted_neighbor_buffer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_release_markdeleted_neighbor_buffer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4817,6 +4827,18 @@ my $reuse_markdeleted_buffer_for_neighbor_page_parity = $node->safe_psql("postgr
 	) AS t(same_page);
 });
 is($reuse_markdeleted_buffer_for_neighbor_page_parity, "t\nt\nt\nt");
+
+my $match_markdeleted_neighbor_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_match_markdeleted_neighbor_page(neighbor_page, element_page) =
+		   rust_hnsw_should_match_markdeleted_neighbor_page(neighbor_page, element_page)
+	FROM (VALUES
+		(3, 3),
+		(2, 3),
+		(0, 0),
+		(11, 10)
+	) AS t(neighbor_page, element_page);
+});
+is($match_markdeleted_neighbor_page_parity, "t\nt\nt\nt");
 
 my $release_markdeleted_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_markdeleted_neighbor_buffer(same_buffer) =
