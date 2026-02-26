@@ -530,6 +530,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_parallel_dsm_segment(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_parallel_dsm_segment'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_parallel_dsm_segment(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_parallel_dsm_segment'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reserve_graph_memory(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reserve_graph_memory'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3116,6 +3126,18 @@ my $fallback_without_dsm_segment_parity = $node->safe_psql("postgres", q{
 	) AS t(has_dsm_segment);
 });
 is($fallback_without_dsm_segment_parity, "t\nt\nt\nt");
+
+my $have_parallel_dsm_segment_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_parallel_dsm_segment(has_dsm_segment) =
+		   rust_hnsw_should_have_parallel_dsm_segment(has_dsm_segment)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_dsm_segment);
+});
+is($have_parallel_dsm_segment_parity, "t\nt\nt\nt");
 
 my $reserve_graph_memory_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reserve_graph_memory(est_hnsw_area, est_other) =
