@@ -195,6 +195,8 @@ static bool HnswShouldHavePrunedOutputPointerFlag(bool hasPrunedOutput, bool use
 static bool HnswShouldHavePrunedOutputPointer(HnswCandidate **pruned, bool useRust);
 static bool HnswShouldHavePrunedCandidatePointer(HnswCandidate *pruned, bool useRust);
 static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
+static bool HnswShouldHaveNewCandidatePointerFlag(bool hasNewCandidatePointer, bool useRust);
+static bool HnswShouldHaveNewCandidatePointer(HnswCandidate *candidate, HnswCandidate *newCandidate, bool useRust);
 static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
 static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
 static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
@@ -1321,6 +1323,21 @@ static bool
 HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
 {
 	return HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput, useRust);
+}
+
+static bool
+HnswShouldHaveNewCandidatePointerFlag(bool hasNewCandidatePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNewCandidatePointer);
+
+	return hasNewCandidatePointer;
+}
+
+static bool
+HnswShouldHaveNewCandidatePointer(HnswCandidate *candidate, HnswCandidate *newCandidate, bool useRust)
+{
+	return HnswShouldHaveNewCandidatePointerFlag(candidate == newCandidate, useRust);
 }
 
 static bool
@@ -2829,6 +2846,24 @@ vector_rust_hnsw_should_process_new_candidate_branch(PG_FUNCTION_ARGS)
 	int32		isNewCandidate = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldProcessNewCandidateBranch(isNewCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_new_candidate_pointer);
+Datum
+vector_hnsw_should_have_new_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_new_candidate_pointer);
+Datum
+vector_rust_hnsw_should_have_new_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_replace_pruned_neighbor);
@@ -4542,7 +4577,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 				}
 			}
 		}
-		else if (HnswShouldProcessNewCandidateBranch(e == newCandidate, true))
+		else if (HnswShouldProcessNewCandidateBranch(HnswShouldHaveNewCandidatePointer(e, newCandidate, true), true))
 		{
 			e->closer = CheckElementCloser(base, e, r, support);
 			if (HnswShouldAppendCloserCandidate(e->closer, true))
