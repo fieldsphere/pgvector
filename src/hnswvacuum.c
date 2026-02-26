@@ -794,7 +794,7 @@ HnswShouldHaveVacuumHighestPointBlock(HnswElement highestPoint, bool useRust)
 	bool		highestPointValid = false;
 
 	if (HnswShouldHaveVacuumHighestPointPointer(highestPoint, useRust))
-		highestPointValid = BlockNumberIsValid(highestPoint->blkno);
+		highestPointValid = HnswShouldHaveVacuumScanBlock(highestPoint->blkno, useRust);
 
 	return HnswShouldHaveVacuumHighestPointBlockFlag(highestPointValid, useRust);
 }
@@ -815,6 +815,24 @@ vector_rust_hnsw_should_have_vacuum_highest_point_block(PG_FUNCTION_ARGS)
 	int32		highestPointValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointBlockFlag(highestPointValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_block_number);
+Datum
+vector_hnsw_should_have_vacuum_highest_point_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumScanBlock((BlockNumber) blkno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_highest_point_block_number);
+Datum
+vector_rust_hnsw_should_have_vacuum_highest_point_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumScanBlock((BlockNumber) blkno, true));
 }
 
 static bool
