@@ -3280,6 +3280,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_candidate_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_candidate_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_candidate_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_candidate_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_ondisk_element_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_ondisk_element_overwrite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7275,6 +7285,18 @@ my $update_connection_from_candidate_index_parity = $node->safe_psql("postgres",
 	) AS t(update_idx);
 });
 is($update_connection_from_candidate_index_parity, "t\nt\nt\nt");
+
+my $have_candidate_update_index_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_candidate_update_index(update_idx) =
+		   rust_hnsw_should_have_candidate_update_index(update_idx)
+	FROM (VALUES
+		(-2),
+		(-1),
+		(0),
+		(2)
+	) AS t(update_idx);
+});
+is($have_candidate_update_index_parity, "t\nt\nt\nt");
 
 my $reject_ondisk_element_overwrite_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_ondisk_element_overwrite(overwrite_succeeded) =
