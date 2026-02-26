@@ -1280,12 +1280,12 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
-	CREATE FUNCTION c_hnsw_should_have_consistent_neighbor_tuple(integer, integer, integer, integer) RETURNS boolean
+	CREATE FUNCTION c_hnsw_should_have_consistent_neighbor_tuple(integer, integer, integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_consistent_neighbor_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
-	CREATE FUNCTION rust_hnsw_should_have_consistent_neighbor_tuple(integer, integer, integer, integer) RETURNS boolean
+	CREATE FUNCTION rust_hnsw_should_have_consistent_neighbor_tuple(integer, integer, integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_consistent_neighbor_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
@@ -4620,14 +4620,14 @@ my $reject_stale_neighbor_tuple_parity = $node->safe_psql("postgres", q{
 is($reject_stale_neighbor_tuple_parity, "t\nt\nt\nt");
 
 my $have_consistent_neighbor_tuple_parity = $node->safe_psql("postgres", q{
-	SELECT c_hnsw_should_have_consistent_neighbor_tuple(tuple_version, tuple_count, element_level, m) =
-		   rust_hnsw_should_have_consistent_neighbor_tuple(tuple_version, tuple_count, element_level, m)
+	SELECT c_hnsw_should_have_consistent_neighbor_tuple(tuple_version, element_version, tuple_count, element_level, m) =
+		   rust_hnsw_should_have_consistent_neighbor_tuple(tuple_version, element_version, tuple_count, element_level, m)
 	FROM (VALUES
-		(2, 16, 6, 2),
-		(3, 10, 4, 2),
-		(7, 18, 8, 2),
-		(1, 8, 3, 1)
-	) AS t(tuple_version, tuple_count, element_level, m);
+		(2, 2, 16, 6, 2),
+		(3, 4, 10, 4, 2),
+		(7, 7, 18, 8, 2),
+		(1, 1, 8, 3, 1)
+	) AS t(tuple_version, element_version, tuple_count, element_level, m);
 });
 is($have_consistent_neighbor_tuple_parity, "t\nt\nt\nt");
 

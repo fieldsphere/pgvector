@@ -133,6 +133,8 @@ static bool HnswShouldHaveDiskNeighborIndexTidFlag(bool isValidIndexTid, bool us
 static bool HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRust);
 static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust);
 static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
+static bool HnswShouldHaveConsistentNeighborTupleFlag(bool tupleConsistent, bool useRust);
+static bool HnswShouldHaveConsistentNeighborTuple(uint8 tupleVersion, uint8 elementVersion, int tupleCount, int elementLevel, int m, bool useRust);
 static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
 static bool HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldHaveDiscardedHeapPointer(pairingheap **discarded, bool useRust);
@@ -879,6 +881,23 @@ HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
 
 	return !neighborTidsLoaded;
+}
+
+static bool
+HnswShouldHaveConsistentNeighborTupleFlag(bool tupleConsistent, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleConsistent);
+
+	return tupleConsistent;
+}
+
+static bool
+HnswShouldHaveConsistentNeighborTuple(uint8 tupleVersion, uint8 elementVersion, int tupleCount, int elementLevel, int m, bool useRust)
+{
+	bool		tupleConsistent = tupleVersion == elementVersion && tupleCount == (elementLevel + 2) * m;
+
+	return HnswShouldHaveConsistentNeighborTupleFlag(tupleConsistent, useRust);
 }
 
 static bool
@@ -2104,6 +2123,32 @@ vector_hnsw_should_reject_stale_neighbor_tuple(PG_FUNCTION_ARGS)
 	int32		tupleConsistent = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectStaleNeighborTuple(tupleConsistent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_consistent_neighbor_tuple);
+Datum
+vector_hnsw_should_have_consistent_neighbor_tuple(PG_FUNCTION_ARGS)
+{
+	int32		tupleVersion = PG_GETARG_INT32(0);
+	int32		elementVersion = PG_GETARG_INT32(1);
+	int32		tupleCount = PG_GETARG_INT32(2);
+	int32		elementLevel = PG_GETARG_INT32(3);
+	int32		m = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTuple((uint8) tupleVersion, (uint8) elementVersion, tupleCount, elementLevel, m, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_consistent_neighbor_tuple);
+Datum
+vector_rust_hnsw_should_have_consistent_neighbor_tuple(PG_FUNCTION_ARGS)
+{
+	int32		tupleVersion = PG_GETARG_INT32(0);
+	int32		elementVersion = PG_GETARG_INT32(1);
+	int32		tupleCount = PG_GETARG_INT32(2);
+	int32		elementLevel = PG_GETARG_INT32(3);
+	int32		m = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTuple((uint8) tupleVersion, (uint8) elementVersion, tupleCount, elementLevel, m, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_stale_neighbor_tuple);
@@ -3814,7 +3859,7 @@ HnswLoadNeighborTids(HnswElement element, ItemPointerData *indextids, Relation i
 	 * Ensure the neighbor tuple has not been deleted or replaced between
 	 * index scan iterations
 	 */
-	if (HnswShouldRejectStaleNeighborTuple(ntup->version == element->version && ntup->count == (element->level + 2) * m, true))
+	if (HnswShouldRejectStaleNeighborTuple(HnswShouldHaveConsistentNeighborTuple(ntup->version, element->version, ntup->count, element->level, m, true), true))
 	{
 		UnlockReleaseBuffer(buf);
 		return false;
