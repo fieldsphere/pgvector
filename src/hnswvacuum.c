@@ -164,6 +164,33 @@ vector_rust_hnsw_should_process_vacuum_heaptids(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveVacuumTupleHeapTidFlag(bool firstHeaptidValid, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(firstHeaptidValid);
+
+	return firstHeaptidValid;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_tuple_heaptid);
+Datum
+vector_hnsw_should_have_vacuum_tuple_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumTupleHeapTidFlag(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_tuple_heaptid);
+Datum
+vector_rust_hnsw_should_have_vacuum_tuple_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumTupleHeapTidFlag(firstHeaptidValid != 0, true));
+}
+
+static bool
 HnswShouldMarkVacuumTupleDeleted(bool firstHeaptidValid, bool useRust)
 {
 	if (useRust)
@@ -1442,7 +1469,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 			if (HnswShouldSkipNonElementVacuumTuple(HnswIsElementTuple(etup), true))
 				continue;
 
-			if (HnswShouldProcessVacuumHeapTids(ItemPointerIsValid(&etup->heaptids[0]), true))
+			if (HnswShouldProcessVacuumHeapTids(HnswShouldHaveVacuumTupleHeapTidFlag(ItemPointerIsValid(&etup->heaptids[0]), true), true))
 			{
 				for (int i = 0; i < HNSW_HEAPTIDS; i++)
 				{
@@ -1473,7 +1500,7 @@ RemoveHeapTids(HnswVacuumState * vacuumstate)
 				}
 			}
 
-			if (HnswShouldMarkVacuumTupleDeleted(ItemPointerIsValid(&etup->heaptids[0]), true))
+			if (HnswShouldMarkVacuumTupleDeleted(HnswShouldHaveVacuumTupleHeapTidFlag(ItemPointerIsValid(&etup->heaptids[0]), true), true))
 			{
 				ItemPointerData ip;
 				bool		found;
@@ -1748,7 +1775,7 @@ RepairGraph(HnswVacuumState * vacuumstate)
 				continue;
 
 			/* Skip updating neighbors if being deleted */
-			if (HnswShouldSkipDeletedRepairGraphElement(ItemPointerIsValid(&etup->heaptids[0]), true))
+			if (HnswShouldSkipDeletedRepairGraphElement(HnswShouldHaveVacuumTupleHeapTidFlag(ItemPointerIsValid(&etup->heaptids[0]), true), true))
 				continue;
 
 			/* Create an element */
@@ -1883,7 +1910,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			}
 
 			/* Skip live tuples */
-			if (HnswShouldSkipLiveMarkDeletedTuple(ItemPointerIsValid(&etup->heaptids[0]), true))
+			if (HnswShouldSkipLiveMarkDeletedTuple(HnswShouldHaveVacuumTupleHeapTidFlag(ItemPointerIsValid(&etup->heaptids[0]), true), true))
 				continue;
 
 			/* Get neighbor page */
