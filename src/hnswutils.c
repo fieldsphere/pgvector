@@ -168,6 +168,8 @@ static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRu
 static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
 static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
 static bool HnswShouldUseIndexOptions(bool hasOptions, bool useRust);
+static bool HnswShouldHaveIndexOptionsFlag(bool hasOptions, bool useRust);
+static bool HnswShouldHaveIndexOptions(HnswOptions *opts, bool useRust);
 static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
 static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
 static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
@@ -195,7 +197,7 @@ HnswGetM(Relation index)
 {
 	HnswOptions *opts = (HnswOptions *) index->rd_options;
 
-	if (HnswShouldUseIndexOptions(opts != NULL, true))
+	if (HnswShouldUseIndexOptions(HnswShouldHaveIndexOptions(opts, true), true))
 		return opts->m;
 
 	return HNSW_DEFAULT_M;
@@ -209,7 +211,7 @@ HnswGetEfConstruction(Relation index)
 {
 	HnswOptions *opts = (HnswOptions *) index->rd_options;
 
-	if (HnswShouldUseIndexOptions(opts != NULL, true))
+	if (HnswShouldUseIndexOptions(HnswShouldHaveIndexOptions(opts, true), true))
 		return opts->efConstruction;
 
 	return HNSW_DEFAULT_EF_CONSTRUCTION;
@@ -1106,6 +1108,21 @@ HnswShouldUseIndexOptions(bool hasOptions, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
 
 	return hasOptions;
+}
+
+static bool
+HnswShouldHaveIndexOptionsFlag(bool hasOptions, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
+
+	return hasOptions;
+}
+
+static bool
+HnswShouldHaveIndexOptions(HnswOptions *opts, bool useRust)
+{
+	return HnswShouldHaveIndexOptionsFlag(opts != NULL, useRust);
 }
 
 static bool
@@ -2249,6 +2266,24 @@ vector_rust_hnsw_should_use_index_options(PG_FUNCTION_ARGS)
 	int32		hasOptions = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseIndexOptions(hasOptions != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_index_options);
+Datum
+vector_hnsw_should_have_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_index_options);
+Datum
+vector_rust_hnsw_should_have_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_missing_optional_proc);
