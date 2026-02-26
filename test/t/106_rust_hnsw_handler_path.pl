@@ -2760,6 +2760,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_higher_vacuum_element_level(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_higher_vacuum_element_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_higher_vacuum_element_level(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_higher_vacuum_element_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_match_vacuum_entrypoint_tuple(integer, integer, integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_match_vacuum_entrypoint_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6441,6 +6451,18 @@ my $track_vacuum_highest_non_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(is_higher_level, is_entrypoint);
 });
 is($track_vacuum_highest_non_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_higher_vacuum_element_level_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_higher_vacuum_element_level(element_level, highest_level) =
+		   rust_hnsw_should_have_higher_vacuum_element_level(element_level, highest_level)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(1, 1),
+		(2, 4)
+	) AS t(element_level, highest_level);
+});
+is($have_higher_vacuum_element_level_parity, "t\nt\nt\nt");
 
 my $match_vacuum_entrypoint_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_match_vacuum_entrypoint_tuple(has_entrypoint, blkno, offno, entry_blkno, entry_offno) =
