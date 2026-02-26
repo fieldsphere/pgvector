@@ -3430,6 +3430,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_neighbor_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_neighbor_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_neighbor_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_neighbor_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_update_connection_from_candidate_index(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_update_connection_from_candidate_index'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7625,6 +7635,18 @@ my $have_matching_neighbor_block_parity = $node->safe_psql("postgres", q{
 	) AS t(indextid_blkno, element_blkno);
 });
 is($have_matching_neighbor_block_parity, "t\nt\nt\nt");
+
+my $have_matching_neighbor_offset_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_neighbor_offset(indextid_offno, element_offno) =
+		   rust_hnsw_should_have_matching_neighbor_offset(indextid_offno, element_offno)
+	FROM (VALUES
+		(1, 1),
+		(1, 2),
+		(8, 8),
+		(9, 1)
+	) AS t(indextid_offno, element_offno);
+});
+is($have_matching_neighbor_offset_parity, "t\nt\nt\nt");
 
 my $update_connection_from_candidate_index_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_update_connection_from_candidate_index(update_idx) =
