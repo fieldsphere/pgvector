@@ -223,18 +223,30 @@ vector_rust_hnsw_should_process_vacuum_heaptids(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldHaveVacuumTupleHeapTidFlag(bool firstHeaptidValid, bool useRust)
+HnswShouldHaveVacuumItemPointerFlag(bool itemPointerValid, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(firstHeaptidValid);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemPointerValid);
 
-	return firstHeaptidValid;
+	return itemPointerValid;
+}
+
+static bool
+HnswShouldHaveVacuumItemPointer(ItemPointer itemPointer, bool useRust)
+{
+	return HnswShouldHaveVacuumItemPointerFlag(ItemPointerIsValid(itemPointer), useRust);
+}
+
+static bool
+HnswShouldHaveVacuumTupleHeapTidFlag(bool firstHeaptidValid, bool useRust)
+{
+	return HnswShouldHaveVacuumItemPointerFlag(firstHeaptidValid, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumTupleHeapTid(ItemPointer heaptid, bool useRust)
 {
-	return HnswShouldHaveVacuumTupleHeapTidFlag(ItemPointerIsValid(heaptid), useRust);
+	return HnswShouldHaveVacuumItemPointer(heaptid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_tuple_heaptid);
@@ -253,6 +265,24 @@ vector_rust_hnsw_should_have_vacuum_tuple_heaptid(PG_FUNCTION_ARGS)
 	int32		firstHeaptidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumTupleHeapTidFlag(firstHeaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_itempointer);
+Datum
+vector_hnsw_should_have_vacuum_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumItemPointerFlag(itemPointerValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_itempointer);
+Datum
+vector_rust_hnsw_should_have_vacuum_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumItemPointerFlag(itemPointerValid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_tuple_heaptid_pointer);
@@ -330,16 +360,13 @@ vector_rust_hnsw_should_stop_vacuum_heaptid_scan(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumHeapTidScanFlag(bool heapTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heapTidValid);
-
-	return heapTidValid;
+	return HnswShouldHaveVacuumItemPointerFlag(heapTidValid, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumHeapTidScanTid(ItemPointer heaptid, bool useRust)
 {
-	return HnswShouldHaveVacuumHeapTidScanFlag(ItemPointerIsValid(heaptid), useRust);
+	return HnswShouldHaveVacuumItemPointer(heaptid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_heaptid_scan_tid);
@@ -471,16 +498,13 @@ vector_rust_hnsw_should_skip_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumNeighborTidFlag(bool neighborTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(neighborTidValid);
-
-	return neighborTidValid;
+	return HnswShouldHaveVacuumItemPointerFlag(neighborTidValid, useRust);
 }
 
 static bool
 HnswShouldHaveVacuumNeighborTid(ItemPointer indextid, bool useRust)
 {
-	return HnswShouldHaveVacuumNeighborTidFlag(ItemPointerIsValid(indextid), useRust);
+	return HnswShouldHaveVacuumItemPointer(indextid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_neighbor_tid);
