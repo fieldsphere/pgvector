@@ -178,6 +178,8 @@ static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
 static bool HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust);
 static bool HnswShouldHaveMetaMOutputPointer(int *m, bool useRust);
 static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaEntrypointOutputPointerFlag(bool hasEntrypointOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust);
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
 static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
@@ -404,7 +406,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 	if (HnswShouldLoadMetaM(HnswShouldHaveMetaMOutputPointer(m, true), true))
 		*m = metap->m;
 
-	if (HnswShouldLoadMetaEntrypoint(entryPoint != NULL, true))
+	if (HnswShouldLoadMetaEntrypoint(HnswShouldHaveMetaEntrypointOutputPointer(entryPoint, true), true))
 	{
 		if (HnswShouldUseMetaEntryBlock(BlockNumberIsValid(metap->entryBlkno), true))
 		{
@@ -1197,6 +1199,21 @@ HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
 
 	return hasEntrypointOutputPointer;
+}
+
+static bool
+HnswShouldHaveMetaEntrypointOutputPointerFlag(bool hasEntrypointOutputPointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
+
+	return hasEntrypointOutputPointer;
+}
+
+static bool
+HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust)
+{
+	return HnswShouldHaveMetaEntrypointOutputPointerFlag(entryPoint != NULL, useRust);
 }
 
 static bool
@@ -2460,6 +2477,24 @@ vector_rust_hnsw_should_load_meta_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLoadMetaEntrypoint(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_entrypoint_output_pointer);
+Datum
+vector_hnsw_should_have_meta_entrypoint_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_entrypoint_output_pointer);
+Datum
+vector_rust_hnsw_should_have_meta_entrypoint_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_meta_entry_block);
