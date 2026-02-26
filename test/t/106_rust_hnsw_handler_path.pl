@@ -40,6 +40,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_cap_ratio_at_one(double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_cap_ratio_at_one'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_cap_ratio_at_one(double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_cap_ratio_at_one'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_adjust_startup_cost(double precision, double precision, double precision) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_adjust_startup_cost'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2328,6 +2338,18 @@ my $clamp_ratio_parity = $node->safe_psql("postgres", q{
 	) AS t(ratio);
 });
 is($clamp_ratio_parity, "t\nt\nt\nt");
+
+my $cap_ratio_at_one_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_cap_ratio_at_one(ratio) =
+		   rust_hnsw_should_cap_ratio_at_one(ratio)
+	FROM (VALUES
+		(0.0::double precision),
+		(0.2::double precision),
+		(1.0::double precision),
+		(1.5::double precision)
+	) AS t(ratio);
+});
+is($cap_ratio_at_one_parity, "t\nt\nt\nt");
 
 my $adjust_startup_cost_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_adjust_startup_cost(startup_pages, rel_pages, ratio) =
