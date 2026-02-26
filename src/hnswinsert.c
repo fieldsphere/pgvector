@@ -44,6 +44,7 @@ static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
 static bool HnswShouldExceedOnDiskElementMaxSizeFlag(bool exceedsMaxSize, bool useRust);
 static bool HnswShouldExceedOnDiskElementMaxSize(int64 combinedSize, int64 maxSize, bool useRust);
+static bool HnswShouldHaveOnDiskElementWithoutNextPage(bool hasNextPage, bool useRust);
 static bool HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust);
 static bool HnswShouldAbortOnDiskElementMoveNext(bool building, bool useRust);
 static bool HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust);
@@ -1511,6 +1512,15 @@ HnswShouldExceedOnDiskElementMaxSize(int64 combinedSize, int64 maxSize, bool use
 }
 
 static bool
+HnswShouldHaveOnDiskElementWithoutNextPage(bool hasNextPage, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasNextPage);
+
+	return !hasNextPage;
+}
+
+static bool
 HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust)
 {
 	if (useRust)
@@ -1521,7 +1531,8 @@ HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeS
 																		 hasNextPage);
 
 	return HnswShouldExceedOnDiskElementMaxSize(combinedSize, maxSize, false) &&
-		freeSpace >= elementTupleSize && !hasNextPage;
+		HnswShouldHavePageSpaceForTuple(freeSpace, elementTupleSize, false) &&
+		HnswShouldHaveOnDiskElementWithoutNextPage(hasNextPage, false);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_ondisk_element_page);
@@ -1578,6 +1589,24 @@ vector_rust_hnsw_should_exceed_ondisk_element_max_size(PG_FUNCTION_ARGS)
 	int64		maxSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldExceedOnDiskElementMaxSize(combinedSize, maxSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_element_without_next_page);
+Datum
+vector_hnsw_should_have_ondisk_element_without_next_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNextPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskElementWithoutNextPage(hasNextPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_element_without_next_page);
+Datum
+vector_rust_hnsw_should_have_ondisk_element_without_next_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNextPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskElementWithoutNextPage(hasNextPage != 0, true));
 }
 
 static bool
