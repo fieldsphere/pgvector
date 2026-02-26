@@ -190,6 +190,8 @@ static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRus
 static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
 static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
 static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust);
+static bool HnswShouldHaveSearchElementPointerFlag(bool hasSearchElement, bool useRust);
+static bool HnswShouldHaveSearchElementPointer(HnswElement searchElement, bool useRust);
 static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust);
 static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
 static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
@@ -1298,6 +1300,21 @@ HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(countedCandidate);
 
 	return countedCandidate;
+}
+
+static bool
+HnswShouldHaveSearchElementPointerFlag(bool hasSearchElement, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSearchElement);
+
+	return hasSearchElement;
+}
+
+static bool
+HnswShouldHaveSearchElementPointer(HnswElement searchElement, bool useRust)
+{
+	return HnswShouldHaveSearchElementPointerFlag(searchElement != NULL, useRust);
 }
 
 static bool
@@ -2775,6 +2792,24 @@ vector_rust_hnsw_should_skip_missing_search_element(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipMissingSearchElement(hasSearchElement != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_element_pointer);
+Datum
+vector_hnsw_should_have_search_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_element_pointer);
+Datum
+vector_rust_hnsw_should_have_search_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_tuple_slot_by_index);
 Datum
 vector_hnsw_should_copy_tuple_slot_by_index(PG_FUNCTION_ARGS)
@@ -3758,7 +3793,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 					maxDistanceCap = &f->distance;
 				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, maxDistanceCap, &eElement);
 
-				if (HnswShouldSkipMissingSearchElement(eElement != NULL, true))
+				if (HnswShouldSkipMissingSearchElement(HnswShouldHaveSearchElementPointer(eElement, true), true))
 					continue;
 			}
 
