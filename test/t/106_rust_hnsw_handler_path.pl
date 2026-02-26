@@ -900,6 +900,26 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_default_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_default_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_default_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_default_max_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_default_max_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_default_max_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_max_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_initialize_loaded_element(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_initialize_loaded_element'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3332,6 +3352,30 @@ my $update_element_max_distance_parity = $node->safe_psql("postgres", q{
 	) AS t(has_distance, has_max_distance, distance_value, max_distance_value);
 });
 is($update_element_max_distance_parity, "t\nt\nt\nt");
+
+my $use_default_distance_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_default_distance_value(has_distance_pointer) =
+		   rust_hnsw_should_use_default_distance_value(has_distance_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_distance_pointer);
+});
+is($use_default_distance_value_parity, "t\nt\nt\nt");
+
+my $use_default_max_distance_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_default_max_distance_value(has_max_distance_pointer) =
+		   rust_hnsw_should_use_default_max_distance_value(has_max_distance_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_max_distance_pointer);
+});
+is($use_default_max_distance_value_parity, "t\nt\nt\nt");
 
 my $initialize_loaded_element_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_initialize_loaded_element(has_element) =
