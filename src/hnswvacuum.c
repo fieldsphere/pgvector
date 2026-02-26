@@ -1129,6 +1129,21 @@ HnswShouldInitVacuumStatsWhenMissing(bool hasStats, bool useRust)
 	return !hasStats;
 }
 
+static bool
+HnswShouldHaveVacuumStatsFlag(bool hasStats, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasStats);
+
+	return hasStats;
+}
+
+static bool
+HnswShouldHaveVacuumStats(IndexBulkDeleteResult *stats, bool useRust)
+{
+	return HnswShouldHaveVacuumStatsFlag(stats != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_init_vacuum_stats_when_missing);
 Datum
 vector_hnsw_should_init_vacuum_stats_when_missing(PG_FUNCTION_ARGS)
@@ -1145,6 +1160,24 @@ vector_rust_hnsw_should_init_vacuum_stats_when_missing(PG_FUNCTION_ARGS)
 	int32		hasStats = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitVacuumStatsWhenMissing(hasStats != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_stats);
+Datum
+vector_hnsw_should_have_vacuum_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumStatsFlag(hasStats != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_stats);
+Datum
+vector_rust_hnsw_should_have_vacuum_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumStatsFlag(hasStats != 0, true));
 }
 
 static bool
@@ -1802,7 +1835,7 @@ InitVacuumState(HnswVacuumState * vacuumstate, IndexVacuumInfo *info, IndexBulkD
 {
 	Relation	index = info->index;
 
-	if (HnswShouldInitVacuumStatsWhenMissing(stats != NULL, true))
+	if (HnswShouldInitVacuumStatsWhenMissing(HnswShouldHaveVacuumStats(stats, true), true))
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
 
 	vacuumstate->index = index;
@@ -1875,7 +1908,7 @@ hnswvacuumcleanup(IndexVacuumInfo *info, IndexBulkDeleteResult *stats)
 
 	/* stats is NULL if ambulkdelete not called */
 	/* OK to return NULL if index not changed */
-	if (HnswShouldReturnNullVacuumCleanupStats(stats != NULL, true))
+	if (HnswShouldReturnNullVacuumCleanupStats(HnswShouldHaveVacuumStats(stats, true), true))
 		return NULL;
 
 	stats->num_pages = RelationGetNumberOfBlocks(rel);
