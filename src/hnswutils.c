@@ -181,6 +181,8 @@ static bool HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust);
 static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
 static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
 static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
+static bool HnswShouldHaveSortBasePointerFlag(bool hasBasePointer, bool useRust);
+static bool HnswShouldHaveSortBasePointer(const void *base, bool useRust);
 static bool HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust);
 static bool HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust);
 static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
@@ -1206,6 +1208,21 @@ HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(sortCandidates);
 
 	return sortCandidates;
+}
+
+static bool
+HnswShouldHaveSortBasePointerFlag(bool hasBasePointer, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
+
+	return hasBasePointer;
+}
+
+static bool
+HnswShouldHaveSortBasePointer(const void *base, bool useRust)
+{
+	return HnswShouldHaveSortBasePointerFlag(base != NULL, useRust);
 }
 
 static bool
@@ -2615,6 +2632,24 @@ vector_rust_hnsw_should_sort_pointer_candidates(PG_FUNCTION_ARGS)
 	int32		hasBasePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSortPointerCandidates(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_sort_base_pointer);
+Datum
+vector_hnsw_should_have_sort_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_sort_base_pointer);
+Datum
+vector_rust_hnsw_should_have_sort_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_calculate_neighbor_closer);
@@ -4425,7 +4460,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	/* Ensure order of candidates is deterministic for closer caching */
 	if (HnswShouldSortNeighborCandidates(sortCandidates, true))
 	{
-		if (HnswShouldSortPointerCandidates(base != NULL, true))
+		if (HnswShouldSortPointerCandidates(HnswShouldHaveSortBasePointer(base, true), true))
 			list_sort(w, CompareCandidateDistances);
 		else
 			list_sort(w, CompareCandidateDistancesOffset);
@@ -4444,7 +4479,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		else if (HnswShouldReuseAddedCandidates(list_length(added), true))
 		{
 			/* Keep Valgrind happy for in-memory, parallel builds */
-			if (HnswShouldDefineCloserStateForBase(base != NULL, true))
+			if (HnswShouldDefineCloserStateForBase(HnswShouldHaveSortBasePointer(base, true), true))
 				VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
 			/*
@@ -4480,7 +4515,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		}
 
 		/* Keep Valgrind happy for in-memory, parallel builds */
-		if (HnswShouldDefineCloserStateForBase(base != NULL, true))
+		if (HnswShouldDefineCloserStateForBase(HnswShouldHaveSortBasePointer(base, true), true))
 			VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
 		if (HnswShouldAppendCloserCandidate(e->closer, true))
