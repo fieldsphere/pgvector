@@ -3220,6 +3220,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_neighbor_count_before_layer_m(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_neighbor_count_before_layer_m'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_neighbor_count_before_layer_m(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_neighbor_count_before_layer_m'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_existing_neighbor_update(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_existing_neighbor_update'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7253,6 +7263,18 @@ my $probe_for_free_neighbor_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbor_count, layer_m);
 });
 is($probe_for_free_neighbor_slot_parity, "t\nt\nt\nt");
+
+my $have_neighbor_count_before_layer_m_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_neighbor_count_before_layer_m(neighbor_count, layer_m) =
+		   rust_hnsw_should_have_neighbor_count_before_layer_m(neighbor_count, layer_m)
+	FROM (VALUES
+		(0, 8),
+		(8, 8),
+		(7, 8),
+		(12, 8)
+	) AS t(neighbor_count, layer_m);
+});
+is($have_neighbor_count_before_layer_m_parity, "t\nt\nt\nt");
 
 my $skip_existing_neighbor_update_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_existing_neighbor_update(check_existing, connection_exists) =
