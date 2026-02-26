@@ -112,6 +112,7 @@ static bool HnswShouldSkipExistingNeighborUpdate(bool checkExisting, bool connec
 static bool HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldHaveNonNegativeUpdateIndexFlag(bool isNonNegative, bool useRust);
 static bool HnswShouldHaveNonNegativeUpdateIndex(int32 updateIndex, bool useRust);
+static bool HnswShouldHaveUpdateIndexBeforeTupleCount(int32 updateIndex, int32 tupleCount, bool useRust);
 static bool HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust);
 static bool HnswShouldUpdateConnectionFromCandidateIndex(int32 updateIndex, bool useRust);
 static bool HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust);
@@ -2932,10 +2933,19 @@ HnswShouldHaveNonNegativeUpdateIndex(int32 updateIndex, bool useRust)
 }
 
 static bool
+HnswShouldHaveUpdateIndexBeforeTupleCount(int32 updateIndex, int32 tupleCount, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) updateIndex, (int64) tupleCount);
+
+	return updateIndex < tupleCount;
+}
+
+static bool
 HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useRust)
 {
 	return HnswShouldHaveNonNegativeUpdateIndex(updateIndex, useRust) &&
-		updateIndex < tupleCount;
+		HnswShouldHaveUpdateIndexBeforeTupleCount(updateIndex, tupleCount, useRust);
 }
 
 static bool
@@ -2965,6 +2975,26 @@ vector_rust_hnsw_should_apply_neighbor_update_slot(PG_FUNCTION_ARGS)
 	int32		tupleCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldApplyNeighborUpdateSlot(updateIndex, tupleCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_index_before_tuple_count);
+Datum
+vector_hnsw_should_have_update_index_before_tuple_count(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+	int32		tupleCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexBeforeTupleCount(updateIndex, tupleCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_index_before_tuple_count);
+Datum
+vector_rust_hnsw_should_have_update_index_before_tuple_count(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+	int32		tupleCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexBeforeTupleCount(updateIndex, tupleCount, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonnegative_update_index);
