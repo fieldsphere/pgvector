@@ -259,12 +259,18 @@ HnswShouldStopWhenIterativeScanOff(int iterativeScanMode, bool useRust)
 }
 
 static bool
-HnswShouldTrackScanDiscarded(int iterativeScanMode, bool useRust)
+HnswShouldHaveActiveIterativeScanMode(int iterativeScanMode, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
 
 	return iterativeScanMode != HNSW_ITERATIVE_SCAN_OFF;
+}
+
+static bool
+HnswShouldTrackScanDiscarded(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_when_iterative_scan_off);
@@ -301,6 +307,24 @@ vector_rust_hnsw_should_track_scan_discarded(PG_FUNCTION_ARGS)
 	int32		iterativeScanMode = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldTrackScanDiscarded(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_active_iterative_scan_mode);
+Datum
+vector_hnsw_should_have_active_iterative_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_active_iterative_scan_mode);
+Datum
+vector_rust_hnsw_should_have_active_iterative_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, true));
 }
 
 static bool
@@ -411,10 +435,7 @@ vector_rust_hnsw_should_exceed_scan_memory_limit(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReleaseIterativeScanMemory(int iterativeScanMode, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
-
-	return iterativeScanMode != HNSW_ITERATIVE_SCAN_OFF;
+	return HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_iterative_scan_memory);
