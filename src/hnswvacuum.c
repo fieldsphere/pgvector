@@ -1381,6 +1381,18 @@ HnswShouldHaveVacuumInsertPage(BlockNumber insertPage, bool useRust)
 	return HnswShouldHaveVacuumBlockNumber(insertPage, useRust);
 }
 
+static bool
+HnswShouldHaveMissingVacuumInsertPageFlag(bool hasInsertPage, bool useRust)
+{
+	return HnswShouldSetVacuumInsertPageWhenMissing(hasInsertPage, useRust);
+}
+
+static bool
+HnswShouldHaveMissingVacuumInsertPage(BlockNumber insertPage, bool useRust)
+{
+	return HnswShouldHaveMissingVacuumInsertPageFlag(HnswShouldHaveVacuumInsertPage(insertPage, useRust), useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_insert_page);
 Datum
 vector_hnsw_should_have_vacuum_insert_page(PG_FUNCTION_ARGS)
@@ -1397,6 +1409,24 @@ vector_rust_hnsw_should_have_vacuum_insert_page(PG_FUNCTION_ARGS)
 	int32		hasInsertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumInsertPageFlag(hasInsertPage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_vacuum_insert_page);
+Datum
+vector_hnsw_should_have_missing_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumInsertPageFlag(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_vacuum_insert_page);
+Datum
+vector_rust_hnsw_should_have_missing_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumInsertPageFlag(hasInsertPage != 0, true));
 }
 
 static bool
@@ -2550,7 +2580,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 			if (HnswShouldSkipDeletedMarkDeletedTuple(etup->deleted, true))
 			{
 				/* Set to first free page */
-				if (HnswShouldSetVacuumInsertPageWhenMissing(HnswShouldHaveVacuumInsertPage(insertPage, true), true))
+				if (HnswShouldHaveMissingVacuumInsertPage(insertPage, true))
 					insertPage = blkno;
 
 				continue;
@@ -2608,7 +2638,7 @@ MarkDeleted(HnswVacuumState * vacuumstate)
 				UnlockReleaseBuffer(nbuf);
 
 			/* Set to first free page */
-			if (HnswShouldSetVacuumInsertPageWhenMissing(HnswShouldHaveVacuumInsertPage(insertPage, true), true))
+			if (HnswShouldHaveMissingVacuumInsertPage(insertPage, true))
 				insertPage = blkno;
 
 			/* Prepare new xlog */
