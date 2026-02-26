@@ -1050,6 +1050,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_query_value_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_query_value_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_query_value_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_query_value_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_calculate_element_distance(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_calculate_element_distance'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4152,6 +4162,18 @@ my $zero_distance_for_null_query_value_parity = $node->safe_psql("postgres", q{
 	) AS t(has_query_value);
 });
 is($zero_distance_for_null_query_value_parity, "t\nt\nt\nt");
+
+my $have_query_value_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_query_value_pointer(has_query_value) =
+		   rust_hnsw_should_have_query_value_pointer(has_query_value)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_query_value);
+});
+is($have_query_value_pointer_parity, "t\nt\nt\nt");
 
 my $calculate_element_distance_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_calculate_element_distance(has_distance_pointer) =
