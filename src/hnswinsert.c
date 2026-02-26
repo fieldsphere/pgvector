@@ -102,6 +102,7 @@ static bool HnswShouldHaveMatchingOnDiskBuffer(int32 leftBuffer, int32 rightBuff
 static bool HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust);
 static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
+static bool HnswShouldHavePageSpaceForTuple(int64 pageFree, int64 tupleSize, bool useRust);
 static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust);
 static bool HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust);
 static bool HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust);
@@ -2692,13 +2693,19 @@ vector_rust_hnsw_should_use_distinct_neighbor_page_space(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust)
+HnswShouldHavePageSpaceForTuple(int64 pageFree, int64 tupleSize, bool useRust)
 {
 	if (useRust)
-		return !vector_rust_hnsw_should_append_neighbor_page_kernel(pageFree, elementTupleSize) &&
-			!vector_rust_hnsw_should_append_neighbor_page_kernel(neighborPageFree, neighborTupleSize);
+		return !vector_rust_hnsw_should_append_neighbor_page_kernel(pageFree, tupleSize);
 
-	return pageFree >= elementTupleSize && neighborPageFree >= neighborTupleSize;
+	return pageFree >= tupleSize;
+}
+
+static bool
+HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust)
+{
+	return HnswShouldHavePageSpaceForTuple(pageFree, elementTupleSize, useRust) &&
+		HnswShouldHavePageSpaceForTuple(neighborPageFree, neighborTupleSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_deleted_tuple_space);
@@ -2725,14 +2732,34 @@ vector_rust_hnsw_should_reuse_deleted_tuple_space(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldReuseDeletedTupleSpace(pageFree, neighborPageFree, elementTupleSize, neighborTupleSize, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_page_space_for_tuple);
+Datum
+vector_hnsw_should_have_page_space_for_tuple(PG_FUNCTION_ARGS)
+{
+	int64		pageFree = PG_GETARG_INT64(0);
+	int64		tupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHavePageSpaceForTuple(pageFree, tupleSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_page_space_for_tuple);
+Datum
+vector_rust_hnsw_should_have_page_space_for_tuple(PG_FUNCTION_ARGS)
+{
+	int64		pageFree = PG_GETARG_INT64(0);
+	int64		tupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHavePageSpaceForTuple(pageFree, tupleSize, true));
+}
+
 static bool
 HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage) &&
-			!vector_rust_hnsw_should_append_neighbor_page_kernel(pageFree, elementTupleSize);
+			HnswShouldHavePageSpaceForTuple(pageFree, elementTupleSize, true);
 
-	return samePage && pageFree >= elementTupleSize;
+	return samePage && HnswShouldHavePageSpaceForTuple(pageFree, elementTupleSize, false);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_borrow_same_page_neighbor_space);
