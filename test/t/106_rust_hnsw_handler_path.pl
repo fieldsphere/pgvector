@@ -1180,6 +1180,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_disk_neighbor_indextid_itempointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_disk_neighbor_indextid_itempointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_disk_neighbor_indextid_itempointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_disk_neighbor_indextid_itempointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_abort_unvisited_disk_load(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_abort_unvisited_disk_load'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4268,6 +4278,18 @@ my $stop_loading_disk_neighbor_parity = $node->safe_psql("postgres", q{
 	) AS t(is_valid_indextid);
 });
 is($stop_loading_disk_neighbor_parity, "t\nt\nt\nt");
+
+my $have_disk_neighbor_indextid_itempointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_disk_neighbor_indextid_itempointer(is_valid_indextid) =
+		   rust_hnsw_should_have_disk_neighbor_indextid_itempointer(is_valid_indextid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_valid_indextid);
+});
+is($have_disk_neighbor_indextid_itempointer_parity, "t\nt\nt\nt");
 
 my $abort_unvisited_disk_load_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_abort_unvisited_disk_load(neighbor_tids_loaded) =
