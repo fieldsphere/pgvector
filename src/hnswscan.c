@@ -500,6 +500,21 @@ HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
 	return HnswShouldUseProvidedOrderByDataFlag(orderByData != NULL, useRust);
 }
 
+static bool
+HnswShouldDiscardedHeapMissingFlag(bool hasDiscardedHeap, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDiscardedHeap);
+
+	return !hasDiscardedHeap;
+}
+
+static bool
+HnswShouldDiscardedHeapMissing(pairingheap * discarded, bool useRust)
+{
+	return HnswShouldDiscardedHeapMissingFlag(discarded != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_rescan_keys);
 Datum
 vector_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
@@ -554,6 +569,24 @@ vector_rust_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
 	int32		hasOrderByData = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_discarded_heap_missing);
+Datum
+vector_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_discarded_heap_missing);
+Datum
+vector_rust_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, true));
 }
 
 static bool
@@ -907,7 +940,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 				break;
 
 			/* Empty index */
-			if (HnswShouldStopWithoutDiscarded(so->discarded == NULL, true))
+			if (HnswShouldStopWithoutDiscarded(HnswShouldDiscardedHeapMissing(so->discarded, true), true))
 				break;
 
 			/* Reached max number of tuples or memory limit */
