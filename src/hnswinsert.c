@@ -17,6 +17,8 @@
 
 static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust);
 static bool HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust);
+static bool HnswShouldHaveOnDiskPointerFlag(bool hasPointer, bool useRust);
+static bool HnswShouldHaveOnDiskPointer(const void *pointer, bool useRust);
 static bool HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust);
 static bool HnswShouldHaveOnDiskEntrypoint(HnswElement entryPoint, bool useRust);
 static int HnswGetOnDiskEntryLevelForUpdate(HnswElement entryPoint, bool useRust);
@@ -883,18 +885,30 @@ HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
 }
 
 static bool
-HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust)
+HnswShouldHaveOnDiskPointerFlag(bool hasPointer, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 
-	return hasEntryPoint;
+	return hasPointer;
+}
+
+static bool
+HnswShouldHaveOnDiskPointer(const void *pointer, bool useRust)
+{
+	return HnswShouldHaveOnDiskPointerFlag(pointer != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveOnDiskEntrypointFlag(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveOnDiskPointerFlag(hasEntryPoint, useRust);
 }
 
 static bool
 HnswShouldHaveOnDiskEntrypoint(HnswElement entryPoint, bool useRust)
 {
-	return HnswShouldHaveOnDiskEntrypointFlag(entryPoint != NULL, useRust);
+	return HnswShouldHaveOnDiskPointer((const void *) entryPoint, useRust);
 }
 
 static int
@@ -944,6 +958,24 @@ vector_rust_hnsw_should_have_ondisk_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_pointer);
+Datum
+vector_hnsw_should_have_ondisk_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_pointer);
+Datum
+vector_rust_hnsw_should_have_ondisk_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointerFlag(hasPointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_ondisk_entry_level);
