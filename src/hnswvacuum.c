@@ -1400,12 +1400,27 @@ vector_rust_hnsw_should_have_vacuum_insert_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldMatchMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
+HnswShouldHaveMatchingMarkDeletedNeighborPageFlag(bool pagesMatch, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(pagesMatch);
+
+	return pagesMatch;
+}
+
+static bool
+HnswShouldHaveMatchingMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
 
-	return neighborPage == elementPage;
+	return HnswShouldHaveMatchingMarkDeletedNeighborPageFlag(neighborPage == elementPage, false);
+}
+
+static bool
+HnswShouldMatchMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
+{
+	return HnswShouldHaveMatchingMarkDeletedNeighborPage(neighborPage, elementPage, useRust);
 }
 
 static bool
@@ -1462,6 +1477,26 @@ vector_rust_hnsw_should_match_markdeleted_neighbor_page(PG_FUNCTION_ARGS)
 	int32		elementPage = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldMatchMarkDeletedNeighborPage(neighborPage, elementPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_markdeleted_neighbor_page);
+Datum
+vector_hnsw_should_have_matching_markdeleted_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedNeighborPage(neighborPage, elementPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_markdeleted_neighbor_page);
+Datum
+vector_rust_hnsw_should_have_matching_markdeleted_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int32		neighborPage = PG_GETARG_INT32(0);
+	int32		elementPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedNeighborPage(neighborPage, elementPage, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_markdeleted_buffers);
