@@ -2140,6 +2140,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_match_neighbor_pages(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_match_neighbor_pages'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_match_neighbor_pages(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_match_neighbor_pages'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_release_reused_neighbor_buffer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_release_reused_neighbor_buffer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4867,6 +4877,18 @@ my $reuse_element_buffer_for_neighbor_page_parity = $node->safe_psql("postgres",
 	) AS t(same_page);
 });
 is($reuse_element_buffer_for_neighbor_page_parity, "t\nt\nt\nt");
+
+my $match_neighbor_pages_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_match_neighbor_pages(neighbor_page, element_page) =
+		   rust_hnsw_should_match_neighbor_pages(neighbor_page, element_page)
+	FROM (VALUES
+		(1, 1),
+		(10, 11),
+		(0, 0),
+		(100, 99)
+	) AS t(neighbor_page, element_page);
+});
+is($match_neighbor_pages_parity, "t\nt\nt\nt");
 
 my $release_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_reused_neighbor_buffer(same_buffer) =
