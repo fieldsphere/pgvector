@@ -721,6 +721,21 @@ HnswShouldEndParallelBuild(bool hasLeader, bool useRust)
 	return hasLeader;
 }
 
+static bool
+HnswShouldHaveBuildLeaderFlag(bool hasLeader, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasLeader);
+
+	return hasLeader;
+}
+
+static bool
+HnswShouldHaveBuildLeader(HnswLeader * hnswleader, bool useRust)
+{
+	return HnswShouldHaveBuildLeaderFlag(hnswleader != NULL, useRust);
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_end_parallel_build);
 Datum
 vector_hnsw_should_end_parallel_build(PG_FUNCTION_ARGS)
@@ -737,6 +752,24 @@ vector_rust_hnsw_should_end_parallel_build(PG_FUNCTION_ARGS)
 	int32		hasLeader = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldEndParallelBuild(hasLeader != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_leader);
+Datum
+vector_hnsw_should_have_build_leader(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildLeaderFlag(hasLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_leader);
+Datum
+vector_rust_hnsw_should_have_build_leader(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildLeaderFlag(hasLeader != 0, true));
 }
 
 static bool
@@ -2346,7 +2379,7 @@ BuildGraph(HnswBuildState * buildstate)
 	/* Add tuples to graph */
 	if (HnswShouldScanHeapForBuild(buildstate->heap != NULL, true))
 	{
-		if (HnswShouldUseParallelHeapScan(buildstate->hnswleader != NULL, true))
+		if (HnswShouldUseParallelHeapScan(HnswShouldHaveBuildLeader(buildstate->hnswleader, true), true))
 			buildstate->reltuples = ParallelHeapScan(buildstate);
 		else
 			buildstate->reltuples = table_index_build_scan(buildstate->heap, buildstate->index, buildstate->indexInfo,
@@ -2360,7 +2393,7 @@ BuildGraph(HnswBuildState * buildstate)
 		FlushPages(buildstate);
 
 	/* End parallel build */
-	if (HnswShouldEndParallelBuild(buildstate->hnswleader != NULL, true))
+	if (HnswShouldEndParallelBuild(HnswShouldHaveBuildLeader(buildstate->hnswleader, true), true))
 		HnswEndParallel(buildstate->hnswleader);
 }
 
