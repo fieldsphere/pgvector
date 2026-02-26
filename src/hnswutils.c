@@ -132,6 +132,8 @@ static bool HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRus
 static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust);
 static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
 static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
+static bool HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldHaveDiscardedHeapPointer(pairingheap **discarded, bool useRust);
 static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
 static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
 static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
@@ -870,12 +872,24 @@ HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust)
 }
 
 static bool
-HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
+HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDiscardedHeap);
 
 	return hasDiscardedHeap;
+}
+
+static bool
+HnswShouldHaveDiscardedHeapPointer(pairingheap **discarded, bool useRust)
+{
+	return HnswShouldHaveDiscardedHeapPointerFlag(discarded != NULL, useRust);
+}
+
+static bool
+HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
+{
+	return HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap, useRust);
 }
 
 static bool
@@ -1978,6 +1992,24 @@ vector_rust_hnsw_should_initialize_discarded_heap(PG_FUNCTION_ARGS)
 	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitializeDiscardedHeap(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_discarded_heap_pointer);
+Datum
+vector_hnsw_should_have_discarded_heap_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_discarded_heap_pointer);
+Datum
+vector_rust_hnsw_should_have_discarded_heap_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_tuple_counter);
@@ -3559,6 +3591,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	HnswUnvisited *unvisited = palloc(lm * sizeof(HnswUnvisited));
 	int			unvisitedLength;
 	bool		inMemory = index == NULL;
+	bool		hasDiscardedHeapPointer = HnswShouldHaveDiscardedHeapPointer(discarded, true);
 
 	if (HnswShouldInitializeVisitedHash(v != NULL, true))
 	{
@@ -3570,7 +3603,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	{
 		InitVisited(base, v, inMemory, ef, m);
 
-		if (HnswShouldInitializeDiscardedHeap(discarded != NULL, true))
+		if (HnswShouldInitializeDiscardedHeap(hasDiscardedHeapPointer, true))
 			*discarded = pairingheap_allocate(CompareNearestDiscardedCandidates, NULL);
 	}
 
@@ -3652,7 +3685,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 
 				/* Avoid any allocations if not adding */
 				eElement = NULL;
-				trackDiscarded = HnswShouldTrackDiscardedCandidates(discarded != NULL, true);
+				trackDiscarded = HnswShouldTrackDiscardedCandidates(hasDiscardedHeapPointer, true);
 				if (HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd, trackDiscarded, true))
 					maxDistanceCap = &f->distance;
 				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, maxDistanceCap, &eElement);
@@ -3663,7 +3696,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 
 			if (!HnswShouldAddSearchCandidate(eDistance, f->distance, alwaysAdd, true))
 			{
-				if (HnswShouldTrackDiscardedCandidates(discarded != NULL, true))
+				if (HnswShouldTrackDiscardedCandidates(hasDiscardedHeapPointer, true))
 				{
 					/* Create a new candidate */
 					e = HnswInitSearchCandidate(base, eElement, eDistance);
@@ -3696,7 +3729,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				{
 					HnswSearchCandidate *d = HnswGetSearchCandidate(w_node, pairingheap_remove_first(W));
 
-					if (HnswShouldTrackDiscardedCandidates(discarded != NULL, true))
+					if (HnswShouldTrackDiscardedCandidates(hasDiscardedHeapPointer, true))
 						pairingheap_add(*discarded, &d->w_node);
 				}
 			}
