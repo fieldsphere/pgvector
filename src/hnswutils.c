@@ -185,6 +185,9 @@ static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
 static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust);
 static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
 static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust);
+static bool HnswShouldHavePrunedOutputPointerFlag(bool hasPrunedOutput, bool useRust);
+static bool HnswShouldHavePrunedOutputPointer(HnswCandidate **pruned, bool useRust);
+static bool HnswShouldHavePrunedCandidatePointer(HnswCandidate *pruned, bool useRust);
 static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
 static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
 static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
@@ -1258,12 +1261,30 @@ HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust)
 }
 
 static bool
-HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
+HnswShouldHavePrunedOutputPointerFlag(bool hasPrunedOutput, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPrunedOutput);
 
 	return hasPrunedOutput;
+}
+
+static bool
+HnswShouldHavePrunedOutputPointer(HnswCandidate **pruned, bool useRust)
+{
+	return HnswShouldHavePrunedOutputPointerFlag(pruned != NULL, useRust);
+}
+
+static bool
+HnswShouldHavePrunedCandidatePointer(HnswCandidate *pruned, bool useRust)
+{
+	return HnswShouldHavePrunedOutputPointerFlag(pruned != NULL, useRust);
+}
+
+static bool
+HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
+{
+	return HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput, useRust);
 }
 
 static bool
@@ -2700,6 +2721,24 @@ vector_rust_hnsw_should_return_pruned_output(PG_FUNCTION_ARGS)
 	int32		hasPrunedOutput = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnPrunedOutput(hasPrunedOutput != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pruned_output_pointer);
+Datum
+vector_hnsw_should_have_pruned_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pruned_output_pointer);
+Datum
+vector_rust_hnsw_should_have_pruned_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_new_candidate_branch);
@@ -4423,7 +4462,7 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		r = lappend(r, wd[wdoff++]);
 
 	/* Return pruned for update connections */
-	if (HnswShouldReturnPrunedOutput(pruned != NULL, true))
+	if (HnswShouldReturnPrunedOutput(HnswShouldHavePrunedOutputPointer(pruned, true), true))
 	{
 		if (HnswShouldSetPrunedFromArray(wdoff, wdlen, true))
 			*pruned = wd[wdoff];
@@ -4480,7 +4519,7 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		SelectNeighbors(base, c, lm, support, &neighbors->closerSet, &newHc, &pruned, true);
 
 		/* Should not happen */
-		if (HnswShouldAbortWithoutPrunedCandidate(pruned != NULL, true))
+		if (HnswShouldAbortWithoutPrunedCandidate(HnswShouldHavePrunedCandidatePointer(pruned, true), true))
 			return;
 
 		/* Find and replace the pruned element */
