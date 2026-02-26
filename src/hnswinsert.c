@@ -41,6 +41,7 @@ static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool u
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
+static bool HnswShouldHaveInsufficientOnDiskNeighborSpace(int64 freeSpace, int64 tupleSize, bool useRust);
 static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
 static bool HnswShouldExceedOnDiskElementMaxSizeFlag(bool exceedsMaxSize, bool useRust);
 static bool HnswShouldExceedOnDiskElementMaxSize(int64 combinedSize, int64 maxSize, bool useRust);
@@ -1468,12 +1469,18 @@ vector_rust_hnsw_should_abort_ondisk_neighbor_update(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust)
+HnswShouldHaveInsufficientOnDiskNeighborSpace(int64 freeSpace, int64 tupleSize, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, tupleSize);
 
 	return freeSpace < tupleSize;
+}
+
+static bool
+HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust)
+{
+	return HnswShouldHaveInsufficientOnDiskNeighborSpace(freeSpace, tupleSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_ondisk_neighbor_page);
@@ -1494,6 +1501,26 @@ vector_rust_hnsw_should_append_ondisk_neighbor_page(PG_FUNCTION_ARGS)
 	int64		tupleSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldAppendOnDiskNeighborPage(freeSpace, tupleSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_insufficient_ondisk_neighbor_space);
+Datum
+vector_hnsw_should_have_insufficient_ondisk_neighbor_space(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		tupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveInsufficientOnDiskNeighborSpace(freeSpace, tupleSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_insufficient_ondisk_neighbor_space);
+Datum
+vector_rust_hnsw_should_have_insufficient_ondisk_neighbor_space(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		tupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveInsufficientOnDiskNeighborSpace(freeSpace, tupleSize, true));
 }
 
 static bool
