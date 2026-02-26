@@ -501,6 +501,21 @@ HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
 }
 
 static bool
+HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+
+	return hasEntryPoint;
+}
+
+static bool
+HnswShouldUseEntrypointForScan(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldUseEntrypointForScanFlag(entryPoint != NULL, useRust);
+}
+
+static bool
 HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
 {
 	if (useRust)
@@ -586,6 +601,24 @@ vector_rust_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
 	int32		hasOrderByData = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_entrypoint_for_scan);
+Datum
+vector_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_entrypoint_for_scan);
+Datum
+vector_rust_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_discarded_heap_missing);
@@ -755,7 +788,7 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	q->value = value;
 	so->m = m;
 
-	if (HnswShouldReturnEmptyWithoutEntryPoint(entryPoint == NULL, true))
+	if (HnswShouldReturnEmptyWithoutEntryPoint(!HnswShouldUseEntrypointForScan(entryPoint, true), true))
 		return NIL;
 
 	ep = list_make1(HnswEntryCandidate(base, entryPoint, q, index, support, false));
