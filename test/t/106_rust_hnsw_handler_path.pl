@@ -200,6 +200,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_iterative_scan_off_mode(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_iterative_scan_off_mode'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_iterative_scan_off_mode(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_iterative_scan_off_mode'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_track_scan_discarded(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_track_scan_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3610,6 +3620,18 @@ my $stop_when_iterative_scan_off_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode);
 });
 is($stop_when_iterative_scan_off_parity, "t\nt\nt\nt");
+
+my $have_iterative_scan_off_mode_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_iterative_scan_off_mode(iterative_scan_mode) =
+		   rust_hnsw_should_have_iterative_scan_off_mode(iterative_scan_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(0)
+	) AS t(iterative_scan_mode);
+});
+is($have_iterative_scan_off_mode_parity, "t\nt\nt\nt");
 
 my $track_scan_discarded_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_track_scan_discarded(iterative_scan_mode) =
