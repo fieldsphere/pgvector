@@ -180,6 +180,8 @@ static bool HnswShouldHaveMetaMOutputPointer(int *m, bool useRust);
 static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
 static bool HnswShouldHaveMetaEntrypointOutputPointerFlag(bool hasEntrypointOutputPointer, bool useRust);
 static bool HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust);
+static bool HnswShouldHaveMetaBlockFlag(bool hasValidBlock, bool useRust);
+static bool HnswShouldHaveMetaBlockNumber(BlockNumber blkno, bool useRust);
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
 static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
 static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
@@ -410,7 +412,7 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 
 	if (HnswShouldLoadMetaEntrypoint(HnswShouldHaveMetaEntrypointOutputPointer(entryPoint, true), true))
 	{
-		if (HnswShouldUseMetaEntryBlock(BlockNumberIsValid(metap->entryBlkno), true))
+		if (HnswShouldUseMetaEntryBlock(HnswShouldHaveMetaBlockNumber(metap->entryBlkno, true), true))
 		{
 			*entryPoint = HnswInitElementFromBlock(metap->entryBlkno, metap->entryOffno);
 			(*entryPoint)->level = metap->entryLevel;
@@ -460,7 +462,7 @@ HnswUpdateMetaPageInfo(Page page, int updateEntry, HnswElement entryPoint, Block
 		}
 	}
 
-	if (HnswShouldWriteMetaInsertPage(BlockNumberIsValid(insertPage), true))
+	if (HnswShouldWriteMetaInsertPage(HnswShouldHaveMetaBlockNumber(insertPage, true), true))
 		metap->insertPage = insertPage;
 }
 
@@ -1220,12 +1222,24 @@ HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust)
 }
 
 static bool
-HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+HnswShouldHaveMetaBlockFlag(bool hasValidBlock, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidEntryBlock);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
 
-	return hasValidEntryBlock;
+	return hasValidBlock;
+}
+
+static bool
+HnswShouldHaveMetaBlockNumber(BlockNumber blkno, bool useRust)
+{
+	return HnswShouldHaveMetaBlockFlag(BlockNumberIsValid(blkno), useRust);
+}
+
+static bool
+HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+{
+	return HnswShouldHaveMetaBlockFlag(hasValidEntryBlock, useRust);
 }
 
 static bool
@@ -1287,10 +1301,7 @@ HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEnt
 static bool
 HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidInsertPage);
-
-	return hasValidInsertPage;
+	return HnswShouldHaveMetaBlockFlag(hasValidInsertPage, useRust);
 }
 
 static bool
@@ -2531,6 +2542,24 @@ vector_rust_hnsw_should_use_meta_entry_block(PG_FUNCTION_ARGS)
 	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseMetaEntryBlock(hasValidEntryBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_block_number);
+Datum
+vector_hnsw_should_have_meta_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockNumber((BlockNumber) blkno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_block_number);
+Datum
+vector_rust_hnsw_should_have_meta_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockNumber((BlockNumber) blkno, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_meta_entry_info);
