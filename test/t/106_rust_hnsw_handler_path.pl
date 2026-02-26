@@ -800,6 +800,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_default_ondisk_entry_level(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_default_ondisk_entry_level'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3352,6 +3362,18 @@ my $have_debug_query_string_parity = $node->safe_psql("postgres", q{
 	) AS t(has_debug_query_string);
 });
 is($have_debug_query_string_parity, "t\nt\nt\nt");
+
+my $have_build_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_pointer(has_pointer) =
+		   rust_hnsw_should_have_build_pointer(has_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pointer);
+});
+is($have_build_pointer_parity, "t\nt\nt\nt");
 
 my $use_non_concurrent_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_non_concurrent_snapshot(is_concurrent) =
