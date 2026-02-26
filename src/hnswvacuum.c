@@ -775,12 +775,22 @@ vector_rust_hnsw_should_skip_vacuum_element_without_updates(PG_FUNCTION_ARGS)
 }
 
 static bool
+HnswShouldHaveHigherVacuumEntrypointLevel(int32 elementLevel, int32 entryPointLevel, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryPointLevel);
+
+	return elementLevel > entryPointLevel;
+}
+
+static bool
 HnswShouldPromoteVacuumEntryPoint(bool entryPointIsNull, int32 elementLevel, int32 entryPointLevel, bool useRust)
 {
 	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(entryPointIsNull, elementLevel, entryPointLevel);
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
+			HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, true);
 
-	return entryPointIsNull || elementLevel > entryPointLevel;
+	return entryPointIsNull || HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, false);
 }
 
 static bool
@@ -827,6 +837,26 @@ vector_rust_hnsw_should_promote_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	int32		entryPointLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldPromoteVacuumEntryPoint(entryPointIsNull != 0, elementLevel, entryPointLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_vacuum_entrypoint_level);
+Datum
+vector_hnsw_should_have_higher_vacuum_entrypoint_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		entryPointLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_higher_vacuum_entrypoint_level);
+Datum
+vector_rust_hnsw_should_have_higher_vacuum_entrypoint_level(PG_FUNCTION_ARGS)
+{
+	int32		elementLevel = PG_GETARG_INT32(0);
+	int32		entryPointLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumEntrypointLevel(elementLevel, entryPointLevel, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_vacuum_entry_level);
