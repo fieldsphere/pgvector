@@ -172,6 +172,8 @@ static bool HnswShouldHaveIndexOptionsFlag(bool hasOptions, bool useRust);
 static bool HnswShouldHaveIndexOptions(HnswOptions *opts, bool useRust);
 static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
 static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
+static bool HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust);
+static bool HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust);
 static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
 static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
 static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
@@ -315,7 +317,7 @@ HnswInitNeighbors(char *base, HnswElement element, int m, HnswAllocator * alloca
 void *
 HnswAlloc(HnswAllocator * allocator, Size size)
 {
-	if (HnswShouldUseCustomAllocator(allocator != NULL, true))
+	if (HnswShouldUseCustomAllocator(HnswShouldHaveCustomAllocator(allocator, true), true))
 		return (*(allocator)->alloc) (size, (allocator)->state);
 
 	return palloc(size);
@@ -1141,6 +1143,21 @@ HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
 
 	return hasAllocator;
+}
+
+static bool
+HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
+
+	return hasAllocator;
+}
+
+static bool
+HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust)
+{
+	return HnswShouldHaveCustomAllocatorFlag(allocator != NULL, useRust);
 }
 
 static bool
@@ -2320,6 +2337,24 @@ vector_rust_hnsw_should_use_custom_allocator(PG_FUNCTION_ARGS)
 	int32		hasAllocator = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseCustomAllocator(hasAllocator != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_custom_allocator);
+Datum
+vector_hnsw_should_have_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_custom_allocator);
+Datum
+vector_rust_hnsw_should_have_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_meta_m);
