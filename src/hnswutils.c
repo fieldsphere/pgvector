@@ -5483,6 +5483,330 @@ vector_rust_hnsw_should_have_search_element_pointer_flag(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_custom_allocator_flag);
+Datum
+vector_hnsw_should_have_custom_allocator_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_custom_allocator_flag);
+Datum
+vector_rust_hnsw_should_have_custom_allocator_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_disk_neighbor_index_tid);
+Datum
+vector_hnsw_should_have_disk_neighbor_index_tid(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_disk_neighbor_index_tid);
+Datum
+vector_rust_hnsw_should_have_disk_neighbor_index_tid(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_disk_neighbor_index_tid_flag);
+Datum
+vector_hnsw_should_have_disk_neighbor_index_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_disk_neighbor_index_tid_flag);
+Datum
+vector_rust_hnsw_should_have_disk_neighbor_index_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_expected_meta_magic_flag);
+Datum
+vector_hnsw_should_have_expected_meta_magic_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagicFlag(hasExpectedMagic != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_expected_meta_magic_flag);
+Datum
+vector_rust_hnsw_should_have_expected_meta_magic_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagicFlag(hasExpectedMagic != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_index_options_flag);
+Datum
+vector_hnsw_should_have_index_options_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_index_options_flag);
+Datum
+vector_rust_hnsw_should_have_index_options_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_block_flag);
+Datum
+vector_hnsw_should_have_meta_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockFlag(hasValidBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_block_flag);
+Datum
+vector_rust_hnsw_should_have_meta_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockFlag(hasValidBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_entrypoint_output_pointer_flag);
+Datum
+vector_hnsw_should_have_meta_entrypoint_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_entrypoint_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_meta_entrypoint_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_m_output_pointer_flag);
+Datum
+vector_hnsw_should_have_meta_m_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_m_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_meta_m_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_output_pointer_flag);
+Datum
+vector_hnsw_should_have_meta_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_meta_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_update_entrypoint_flag);
+Datum
+vector_hnsw_should_have_meta_update_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_update_entrypoint_flag);
+Datum
+vector_rust_hnsw_should_have_meta_update_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_new_candidate_pointer_flag);
+Datum
+vector_hnsw_should_have_new_candidate_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_new_candidate_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_new_candidate_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_norm_proc_info_flag);
+Datum
+vector_hnsw_should_have_norm_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormProcInfoFlag(hasNormProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_norm_proc_info_flag);
+Datum
+vector_rust_hnsw_should_have_norm_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormProcInfoFlag(hasNormProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pruned_candidate_pointer);
+Datum
+vector_hnsw_should_have_pruned_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pruned_candidate_pointer);
+Datum
+vector_rust_hnsw_should_have_pruned_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pruned_output_pointer_flag);
+Datum
+vector_hnsw_should_have_pruned_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pruned_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_pruned_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_check_function_flag);
+Datum
+vector_hnsw_should_have_type_check_function_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeCheckFunctionFlag(hasCheckValueFunction != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_check_function_flag);
+Datum
+vector_rust_hnsw_should_have_type_check_function_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeCheckFunctionFlag(hasCheckValueFunction != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_info_proc_info);
+Datum
+vector_hnsw_should_have_type_info_proc_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_info_proc_info);
+Datum
+vector_rust_hnsw_should_have_type_info_proc_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_info_proc_info_flag);
+Datum
+vector_hnsw_should_have_type_info_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_info_proc_info_flag);
+Datum
+vector_rust_hnsw_should_have_type_info_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_index_pointer_flag);
+Datum
+vector_hnsw_should_have_update_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_index_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_update_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
