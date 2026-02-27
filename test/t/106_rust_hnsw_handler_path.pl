@@ -2570,6 +2570,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_ondisk_neighbor_slot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_ondisk_neighbor_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_ondisk_neighbor_slot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_ondisk_neighbor_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_on_invalid_ondisk_neighbor_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6793,6 +6803,18 @@ my $use_free_ondisk_neighbor_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(slot_tid_valid);
 });
 is($use_free_ondisk_neighbor_slot_parity, "t\nt\nt\nt");
+
+my $have_invalid_ondisk_neighbor_slot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_ondisk_neighbor_slot(slot_tid_valid) =
+		   rust_hnsw_should_have_invalid_ondisk_neighbor_slot(slot_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(slot_tid_valid);
+});
+is($have_invalid_ondisk_neighbor_slot_parity, "t\nt\nt\nt");
 
 my $stop_on_invalid_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(neighbor_tid_valid) =
