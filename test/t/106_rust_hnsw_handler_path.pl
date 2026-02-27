@@ -3130,6 +3130,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_live_markdeleted_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_live_markdeleted_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_live_markdeleted_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_live_markdeleted_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_set_vacuum_insert_page_when_missing(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_set_vacuum_insert_page_when_missing'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7515,6 +7525,18 @@ my $skip_live_markdeleted_tuple_parity = $node->safe_psql("postgres", q{
 	) AS t(is_live_tuple);
 });
 is($skip_live_markdeleted_tuple_parity, "t\nt\nt\nt");
+
+my $have_live_markdeleted_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_live_markdeleted_tuple(is_live_tuple) =
+		   rust_hnsw_should_have_live_markdeleted_tuple(is_live_tuple)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_live_tuple);
+});
+is($have_live_markdeleted_tuple_parity, "t\nt\nt\nt");
 
 my $set_vacuum_insert_page_when_missing_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_set_vacuum_insert_page_when_missing(has_insert_page) =
