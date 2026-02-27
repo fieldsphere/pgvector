@@ -895,9 +895,15 @@ HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
 }
 
 static bool
-HnswShouldUseProvidedRescanKeyArrayFlag(bool hasKeyArray, bool useRust)
+HnswShouldHaveProvidedRescanKeyArray(bool hasKeyArray, bool useRust)
 {
 	return HnswShouldHaveScanPointerFlag(hasKeyArray, useRust);
+}
+
+static bool
+HnswShouldUseProvidedRescanKeyArrayFlag(bool hasKeyArray, bool useRust)
+{
+	return HnswShouldHaveProvidedRescanKeyArray(hasKeyArray, useRust);
 }
 
 static bool
@@ -1073,6 +1079,24 @@ vector_rust_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
 	int32		hasKeyArray = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_rescan_key_array);
+Datum
+vector_hnsw_should_have_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyArray(hasKeyArray != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_rescan_key_array);
+Datum
+vector_rust_hnsw_should_have_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyArray(hasKeyArray != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_pointer);
