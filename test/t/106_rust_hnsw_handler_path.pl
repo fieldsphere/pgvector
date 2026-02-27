@@ -3110,6 +3110,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_non_element_markdeleted_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_non_element_markdeleted_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_non_element_markdeleted_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_non_element_markdeleted_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_live_markdeleted_tuple(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_live_markdeleted_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7481,6 +7491,18 @@ my $skip_non_element_markdeleted_tuple_parity = $node->safe_psql("postgres", q{
 	) AS t(is_element_tuple);
 });
 is($skip_non_element_markdeleted_tuple_parity, "t\nt\nt\nt");
+
+my $have_non_element_markdeleted_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_non_element_markdeleted_tuple(is_element_tuple) =
+		   rust_hnsw_should_have_non_element_markdeleted_tuple(is_element_tuple)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_element_tuple);
+});
+is($have_non_element_markdeleted_tuple_parity, "t\nt\nt\nt");
 
 my $skip_live_markdeleted_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_live_markdeleted_tuple(is_live_tuple) =
