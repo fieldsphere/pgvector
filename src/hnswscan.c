@@ -600,9 +600,15 @@ vector_rust_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseStrictScanMode(int iterativeScanMode, bool useRust)
+HnswShouldHaveStrictScanMode(int iterativeScanMode, bool useRust)
 {
 	return HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, useRust);
+}
+
+static bool
+HnswShouldUseStrictScanMode(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveStrictScanMode(iterativeScanMode, useRust);
 }
 
 static bool
@@ -645,6 +651,24 @@ vector_rust_hnsw_should_use_strict_scan_mode(PG_FUNCTION_ARGS)
 	int32		iterativeScanMode = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseStrictScanMode(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_strict_scan_mode);
+Datum
+vector_hnsw_should_have_strict_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_strict_scan_mode);
+Datum
+vector_rust_hnsw_should_have_strict_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictScanMode(iterativeScanMode, true));
 }
 
 static bool
