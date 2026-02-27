@@ -13,6 +13,7 @@ my $hnsw_vacuum_path = "$repo_root/src/hnswvacuum.c";
 my $hnsw_utils_path = "$repo_root/src/hnswutils.c";
 my $ivf_vacuum_path = "$repo_root/src/ivfvacuum.c";
 my $ivf_insert_path = "$repo_root/src/ivfinsert.c";
+my $ivf_scan_path = "$repo_root/src/ivfscan.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -46,6 +47,10 @@ close($ivf_vacuum_fh);
 open(my $ivf_insert_fh, '<', $ivf_insert_path) or die "could not open $ivf_insert_path: $!";
 my $ivf_insert_c = <$ivf_insert_fh>;
 close($ivf_insert_fh);
+
+open(my $ivf_scan_fh, '<', $ivf_scan_path) or die "could not open $ivf_scan_path: $!";
+my $ivf_scan_c = <$ivf_scan_fh>;
+close($ivf_scan_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -906,5 +911,35 @@ unlike($ivf_insert_c, qr/IvfflatShouldAppendPage\(int freeSpace, Size itemSize, 
 	"legacy C ivfinsert-append-page fallback removed");
 unlike($ivf_insert_c, qr/IvfflatShouldUpdateInsertPage\(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust\)\s*\{[^}]*return insertPage != originalInsertPage;/s,
 	"legacy C ivfinsert-update-insert-page fallback removed");
+
+ok($ivf_scan_c =~ /vector_rust_ivfflat_choose_scan_list_candidate_kernel\(/,
+	"ivfscan.c uses rust choose-scan-list-candidate kernel");
+ok($ivf_scan_c =~ /vector_rust_ivfflat_should_reuse_scan_slot_kernel\(/,
+	"ivfscan.c uses rust reuse-scan-slot kernel");
+ok($ivf_scan_c =~ /vector_rust_ivfflat_should_scan_next_list_kernel\(/,
+	"ivfscan.c uses rust scan-next-list kernel");
+ok($ivf_scan_c =~ /vector_rust_ivfflat_should_load_more_scan_items_kernel\(/,
+	"ivfscan.c uses rust load-more-scan-items kernel");
+ok($ivf_scan_c =~ /vector_rust_ivfflat_should_follow_insert_page_link_kernel\(/,
+	"ivfscan.c uses rust follow-insert-page-link kernel");
+ok($ivf_scan_c =~ /vector_rust_ivfflat_scan_probe_limits_kernel\(/,
+	"ivfscan.c uses rust scan-probe-limits kernel");
+ok($ivf_scan_c =~ /vector_rust_ivfflat_compute_scan_limits_kernel\(/,
+	"ivfscan.c uses rust compute-scan-limits kernel");
+
+unlike($ivf_scan_c, qr/IvfflatChooseScanListCandidate\(float8 distance, int listCount, int maxProbes, float8 maxDistance, bool useRust\)\s*\{[^}]*return listCount < maxProbes \|\| distance < maxDistance;/s,
+	"legacy C ivfscan-choose-scan-list-candidate fallback removed");
+unlike($ivf_scan_c, qr/IvfflatShouldReuseScanSlot\(int listCount, int maxProbes, bool useRust\)\s*\{[^}]*return listCount >= maxProbes;/s,
+	"legacy C ivfscan-reuse-scan-slot fallback removed");
+unlike($ivf_scan_c, qr/IvfflatShouldScanNextList\(int listIndex, int maxProbes, int batchProbes, int probes, bool useRust\)\s*\{[^}]*return listIndex < maxProbes && \(batchProbes \+ 1\) <= probes;/s,
+	"legacy C ivfscan-scan-next-list fallback removed");
+unlike($ivf_scan_c, qr/IvfflatShouldLoadMoreScanItems\(int listIndex, int maxProbes, bool useRust\)\s*\{[^}]*return listIndex < maxProbes;/s,
+	"legacy C ivfscan-load-more-scan-items fallback removed");
+unlike($ivf_scan_c, qr/IvfflatShouldVisitScanPage\(BlockNumber page, bool useRust\)\s*\{[^}]*return BlockNumberIsValid\(page\);/s,
+	"legacy C ivfscan-visit-scan-page fallback removed");
+unlike($ivf_scan_c, qr/IvfflatScanProbeLimits\(int probes, int maxProbes, int lists, bool useRust, int \*adjustedProbes, int \*adjustedMaxProbes\)\s*\{[^}]*\*adjustedProbes = probes;[^}]*\*adjustedMaxProbes = maxProbes;/s,
+	"legacy C ivfscan-probe-limits fallback removed");
+unlike($ivf_scan_c, qr/IvfflatComputeScanLimits\(int probes, int maxProbes, int lists, int iterativeScanMode, bool useRust, int \*adjustedProbes, int \*adjustedMaxProbes\)\s*\{[^}]*if \(iterativeScanMode != IVFFLAT_ITERATIVE_SCAN_OFF\)[^}]*IvfflatScanProbeLimits\(probes, maxProbes, lists, false, adjustedProbes, adjustedMaxProbes\);/s,
+	"legacy C ivfscan-compute-scan-limits fallback removed");
 
 done_testing();
