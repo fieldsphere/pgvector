@@ -22,6 +22,7 @@
 static bool HnswShouldHaveProvidedRescanKeyPointer(ScanKey keys, bool useRust);
 static bool HnswShouldHaveProvidedOrderByPointer(ScanKey orderByData, bool useRust);
 static bool HnswShouldHaveScanNormprocPointer(void *normprocinfo, bool useRust);
+static bool HnswShouldHaveScanInstrumentPointer(void *instrument, bool useRust);
 static bool HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool useRust);
 
 static bool
@@ -1047,9 +1048,15 @@ HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
 static bool
 HnswShouldUseScanInstrument(void *instrument, bool useRust)
 {
-	return HnswShouldHaveScanPointer((const void *) instrument, useRust);
+	return HnswShouldHaveScanInstrumentPointer(instrument, useRust);
 }
 #endif
+
+static bool
+HnswShouldHaveScanInstrumentPointer(void *instrument, bool useRust)
+{
+	return HnswShouldHaveScanPointer((const void *) instrument, useRust);
+}
 
 static bool
 HnswShouldHaveMissingDiscardedHeap(bool hasDiscardedHeap, bool useRust)
@@ -1690,6 +1697,28 @@ vector_rust_hnsw_should_have_scan_instrument(PG_FUNCTION_ARGS)
 	int32		hasInstrument = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveScanInstrument(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_instrument_pointer);
+Datum
+vector_hnsw_should_have_scan_instrument_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+	const char *mockInstrument = "instrument";
+	void	   *instrument = hasInstrument != 0 ? (void *) mockInstrument : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrumentPointer(instrument, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_instrument_pointer);
+Datum
+vector_rust_hnsw_should_have_scan_instrument_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+	const char *mockInstrument = "instrument";
+	void	   *instrument = hasInstrument != 0 ? (void *) mockInstrument : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrumentPointer(instrument, true));
 }
 
 /*
