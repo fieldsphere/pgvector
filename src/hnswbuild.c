@@ -605,12 +605,18 @@ HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLev
 }
 
 static bool
-HnswShouldUseDefaultEntryLevel(bool hasEntryPoint, bool useRust)
+HnswShouldHaveDefaultEntryLevel(bool hasEntryPoint, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 
 	return !hasEntryPoint;
+}
+
+static bool
+HnswShouldUseDefaultEntryLevel(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveDefaultEntryLevel(hasEntryPoint, useRust);
 }
 
 static bool
@@ -707,6 +713,24 @@ vector_rust_hnsw_should_use_default_entry_level(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultEntryLevel(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_entry_level);
+Datum
+vector_hnsw_should_have_default_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultEntryLevel(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_entry_level);
+Datum
+vector_rust_hnsw_should_have_default_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultEntryLevel(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_entrypoint);
@@ -941,12 +965,18 @@ vector_rust_hnsw_should_have_build_heap(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseParallelHeapScan(bool hasLeader, bool useRust)
+HnswShouldHaveParallelHeapScan(bool hasLeader, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_use_parallel_heap_scan_kernel(hasLeader);
 
 	return hasLeader;
+}
+
+static bool
+HnswShouldUseParallelHeapScan(bool hasLeader, bool useRust)
+{
+	return HnswShouldHaveParallelHeapScan(hasLeader, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_parallel_heap_scan);
@@ -965,6 +995,24 @@ vector_rust_hnsw_should_use_parallel_heap_scan(PG_FUNCTION_ARGS)
 	int32		hasLeader = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseParallelHeapScan(hasLeader != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_parallel_heap_scan);
+Datum
+vector_hnsw_should_have_parallel_heap_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveParallelHeapScan(hasLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_parallel_heap_scan);
+Datum
+vector_rust_hnsw_should_have_parallel_heap_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveParallelHeapScan(hasLeader != 0, true));
 }
 
 static bool
@@ -1754,12 +1802,18 @@ vector_rust_hnsw_should_skip_parallel_workers(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseRelationParallelWorkers(int parallelWorkers, bool useRust)
+HnswShouldHaveRelationParallelWorkers(int parallelWorkers, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_use_relation_parallel_workers_kernel(parallelWorkers);
 
 	return parallelWorkers != -1;
+}
+
+static bool
+HnswShouldUseRelationParallelWorkers(int parallelWorkers, bool useRust)
+{
+	return HnswShouldHaveRelationParallelWorkers(parallelWorkers, useRust);
 }
 
 static bool
@@ -2437,12 +2491,18 @@ vector_rust_hnsw_should_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust)
+HnswShouldHaveNonConcurrentLockModes(bool isConcurrent, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel(isConcurrent);
 
 	return !isConcurrent;
+}
+
+static bool
+HnswShouldUseNonConcurrentLockModes(bool isConcurrent, bool useRust)
+{
+	return HnswShouldHaveNonConcurrentLockModes(isConcurrent, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_non_concurrent_lock_modes);
@@ -2463,13 +2523,37 @@ vector_rust_hnsw_should_use_non_concurrent_lock_modes(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseNonConcurrentLockModes(isConcurrent != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_concurrent_lock_modes);
+Datum
+vector_hnsw_should_have_non_concurrent_lock_modes(PG_FUNCTION_ARGS)
+{
+	int32		isConcurrent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonConcurrentLockModes(isConcurrent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_concurrent_lock_modes);
+Datum
+vector_rust_hnsw_should_have_non_concurrent_lock_modes(PG_FUNCTION_ARGS)
+{
+	int32		isConcurrent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonConcurrentLockModes(isConcurrent != 0, true));
+}
+
 static bool
-HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust)
+HnswShouldHaveNonConcurrentSnapshot(bool isConcurrent, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel(isConcurrent);
 
 	return !isConcurrent;
+}
+
+static bool
+HnswShouldUseNonConcurrentSnapshot(bool isConcurrent, bool useRust)
+{
+	return HnswShouldHaveNonConcurrentSnapshot(isConcurrent, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_non_concurrent_snapshot);
@@ -2490,6 +2574,24 @@ vector_rust_hnsw_should_use_non_concurrent_snapshot(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseNonConcurrentSnapshot(isConcurrent != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_concurrent_snapshot);
+Datum
+vector_hnsw_should_have_non_concurrent_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		isConcurrent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonConcurrentSnapshot(isConcurrent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_concurrent_snapshot);
+Datum
+vector_rust_hnsw_should_have_non_concurrent_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		isConcurrent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonConcurrentSnapshot(isConcurrent != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_relation_parallel_workers);
 Datum
 vector_hnsw_should_use_relation_parallel_workers(PG_FUNCTION_ARGS)
@@ -2506,6 +2608,24 @@ vector_rust_hnsw_should_use_relation_parallel_workers(PG_FUNCTION_ARGS)
 	int32		parallelWorkers = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseRelationParallelWorkers(parallelWorkers, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_relation_parallel_workers);
+Datum
+vector_hnsw_should_have_relation_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRelationParallelWorkers(parallelWorkers, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_relation_parallel_workers);
+Datum
+vector_rust_hnsw_should_have_relation_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRelationParallelWorkers(parallelWorkers, true));
 }
 
 static int
