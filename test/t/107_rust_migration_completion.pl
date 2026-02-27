@@ -653,6 +653,10 @@ ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_element_max_distance_kernel\
 	"hnswutils.c uses rust update-element-max-distance kernel");
 ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_entry_point_kernel\(/,
 	"hnswutils.c uses rust update-entry-point kernel");
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_match_neighbor_connection_kernel\(/,
+	"hnswutils.c uses rust match-neighbor-connection kernel");
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_reject_excess_dimensions_kernel\(/,
+	"hnswutils.c uses rust reject-excess-dimensions kernel");
 
 unlike($hnsw_utils_c, qr/HnswShouldHaveQueryValuePointerFlag\(bool hasQueryValue, bool useRust\)\s*\{[^}]*return hasQueryValue;/s,
 	"legacy C query-value-pointer-flag fallback removed");
@@ -742,5 +746,35 @@ unlike($hnsw_utils_c, qr/HnswShouldHaveSkipElementPointerFlag\(bool hasSkipEleme
 	"legacy C skip-element-pointer-flag fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldHaveDefaultSkipElementTid\(bool hasSkipElement, bool useRust\)\s*\{[^}]*return !hasSkipElement;/s,
 	"legacy C default-skip-element-tid fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldSkipSelfForVacuumUpdate\(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust\)\s*\{.*return hasSkipElement && elementBlkno == skipBlkno && elementOffno == skipOffno;\s*\}/s,
+	"legacy C skip-self-for-vacuum-update fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTypeInfoProcInfoFlag\(bool hasProcInfo, bool useRust\)\s*\{[^}]*return hasProcInfo;/s,
+	"legacy C typeinfo-procinfo-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveDefaultTypeInfo\(bool hasProcInfo, bool useRust\)\s*\{[^}]*return !hasProcInfo;/s,
+	"legacy C default-typeinfo fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldRejectSparsevecExcessNnz\(int nnz, int maxNnz, bool useRust\)\s*\{[^}]*return nnz > maxNnz;/s,
+	"legacy C reject-sparsevec-excess-nnz fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldSortNeighborCandidates\(bool sortCandidates, bool useRust\)\s*\{[^}]*return sortCandidates;/s,
+	"legacy C sort-neighbor-candidates fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSortBasePointerFlag\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return hasBasePointer;/s,
+	"legacy C sort-base-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldSortPointerCandidates\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return !hasBasePointer;/s,
+	"legacy C sort-pointer-candidates fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldCalculateNeighborCloser\(bool mustCalculate, bool useRust\)\s*\{[^}]*return mustCalculate;/s,
+	"legacy C calculate-neighbor-closer fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldReuseAddedCandidates\(int addedCount, bool useRust\)\s*\{[^}]*return addedCount > 0;/s,
+	"legacy C reuse-added-candidates fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldDefineCloserStateForBase\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return hasBasePointer;/s,
+	"legacy C define-closer-state-for-base fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldAppendCloserCandidate\(bool isCloser, bool useRust\)\s*\{[^}]*return isCloser;/s,
+	"legacy C append-closer-candidate fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldRecheckCandidateAfterRemoval\(bool removedAny, bool useRust\)\s*\{[^}]*return removedAny;/s,
+	"legacy C recheck-candidate-after-removal fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHavePrunedOutputPointerFlag\(bool hasPrunedOutput, bool useRust\)\s*\{[^}]*return hasPrunedOutput;/s,
+	"legacy C pruned-output-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveNewCandidatePointerFlag\(bool hasNewCandidatePointer, bool useRust\)\s*\{[^}]*return hasNewCandidatePointer;/s,
+	"legacy C new-candidate-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldProcessNewCandidateBranch\(bool isNewCandidate, bool useRust\)\s*\{[^}]*return isNewCandidate;/s,
+	"legacy C process-new-candidate-branch fallback removed");
 
 done_testing();
