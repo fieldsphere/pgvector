@@ -2500,6 +2500,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_break_on_invalid_ondisk_heaptid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_break_on_invalid_ondisk_heaptid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6669,6 +6679,18 @@ my $abort_ondisk_duplicate_slot_reject_parity = $node->safe_psql("postgres", q{
 	) AS t(building);
 });
 is($abort_ondisk_duplicate_slot_reject_parity, "t\nt\nt\nt");
+
+my $have_nonbuilding_ondisk_duplicate_slot_reject_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(building) =
+		   rust_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(building)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(building);
+});
+is($have_nonbuilding_ondisk_duplicate_slot_reject_parity, "t\nt\nt\nt");
 
 my $break_on_invalid_ondisk_heaptid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_break_on_invalid_ondisk_heaptid(heap_tid_valid) =
