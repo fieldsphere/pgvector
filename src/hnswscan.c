@@ -1193,12 +1193,18 @@ vector_rust_hnsw_should_have_null_scan_value(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldNormalizeScanValue(bool hasNormproc, bool useRust)
+HnswShouldHaveNormalizedScanValue(bool hasNormproc, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_normalize_scan_value_kernel(hasNormproc);
 
 	return hasNormproc;
+}
+
+static bool
+HnswShouldNormalizeScanValue(bool hasNormproc, bool useRust)
+{
+	return HnswShouldHaveNormalizedScanValue(hasNormproc, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_normalize_scan_value);
@@ -1217,6 +1223,24 @@ vector_rust_hnsw_should_normalize_scan_value(PG_FUNCTION_ARGS)
 	int32		hasNormproc = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldNormalizeScanValue(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_normalized_scan_value);
+Datum
+vector_hnsw_should_have_normalized_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormalizedScanValue(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_normalized_scan_value);
+Datum
+vector_rust_hnsw_should_have_normalized_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormalizedScanValue(hasNormproc != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_normproc);
