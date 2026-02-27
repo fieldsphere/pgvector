@@ -133,6 +133,24 @@ vector_rust_hnsw_should_have_nonempty_resume_discarded(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscarded(discardedIsEmpty != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonempty_resume_discarded_flag);
+Datum
+vector_hnsw_should_have_nonempty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscardedFlag(hasNonEmptyDiscarded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonempty_resume_discarded_flag);
+Datum
+vector_rust_hnsw_should_have_nonempty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscardedFlag(hasNonEmptyDiscarded != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_resume_from_discarded);
 Datum
 vector_hnsw_should_stop_resume_from_discarded(PG_FUNCTION_ARGS)
@@ -167,6 +185,24 @@ vector_rust_hnsw_should_have_empty_resume_discarded(PG_FUNCTION_ARGS)
 	int32		discardedIsEmpty = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_resume_discarded_flag);
+Datum
+vector_hnsw_should_have_empty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscardedFlag(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_resume_discarded_flag);
+Datum
+vector_rust_hnsw_should_have_empty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscardedFlag(discardedIsEmpty != 0, true));
 }
 
 static bool
@@ -236,6 +272,24 @@ vector_rust_hnsw_should_have_nonempty_remaining_discarded(PG_FUNCTION_ARGS)
 	int32		discardedIsEmpty = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonempty_remaining_discarded_flag);
+Datum
+vector_hnsw_should_have_nonempty_remaining_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscardedFlag(hasNonEmptyDiscarded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonempty_remaining_discarded_flag);
+Datum
+vector_rust_hnsw_should_have_nonempty_remaining_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscardedFlag(hasNonEmptyDiscarded != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_returning_remaining_discarded);
@@ -1137,6 +1191,24 @@ vector_rust_hnsw_should_have_rescan_keys(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_rescan_keys_flag);
+Datum
+vector_hnsw_should_have_rescan_keys_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_rescan_keys_flag);
+Datum
+vector_rust_hnsw_should_have_rescan_keys_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_positive_rescan_key_count);
 Datum
 vector_hnsw_should_have_positive_rescan_key_count(PG_FUNCTION_ARGS)
@@ -1153,6 +1225,24 @@ vector_rust_hnsw_should_have_positive_rescan_key_count(PG_FUNCTION_ARGS)
 	int32		keyCount = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCount(keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_positive_rescan_key_count_flag);
+Datum
+vector_hnsw_should_have_positive_rescan_key_count_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPositiveKeyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCountFlag(hasPositiveKeyCount != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_positive_rescan_key_count_flag);
+Datum
+vector_rust_hnsw_should_have_positive_rescan_key_count_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPositiveKeyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCountFlag(hasPositiveKeyCount != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_rescan_key_array);
