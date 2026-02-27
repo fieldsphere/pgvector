@@ -86,49 +86,22 @@ ivfflatbuildphasename(int64 phasenum)
 static void
 IvfflatAdjustCost(float8 indexTotalCost, float8 numIndexPages, float8 randomPageCost, float8 seqPageCost, float8 ratio, float8 relPages, float8 sequentialRatio, bool useRust, float8 *adjustedTotalCost, float8 *adjustedStartupCost)
 {
-	if (useRust)
-		vector_rust_ivfflat_adjust_cost_kernel(indexTotalCost, numIndexPages, randomPageCost, seqPageCost, ratio, relPages, sequentialRatio, adjustedTotalCost, adjustedStartupCost);
-	else
-	{
-		float8		startupPages;
-
-		*adjustedTotalCost = indexTotalCost - sequentialRatio * numIndexPages * (randomPageCost - seqPageCost);
-		*adjustedStartupCost = *adjustedTotalCost * ratio;
-
-		startupPages = numIndexPages * ratio;
-		if (startupPages > relPages && ratio < 0.5)
-		{
-			/* Change rest of page cost from random to sequential */
-			*adjustedStartupCost -= (1 - sequentialRatio) * startupPages * (randomPageCost - seqPageCost);
-
-			/* Remove cost of extra pages */
-			*adjustedStartupCost -= (startupPages - relPages) * seqPageCost;
-		}
-	}
+	(void) useRust;
+	vector_rust_ivfflat_adjust_cost_kernel(indexTotalCost, numIndexPages, randomPageCost, seqPageCost, ratio, relPages, sequentialRatio, adjustedTotalCost, adjustedStartupCost);
 }
 
 static float8
 IvfflatProbeRatio(int probes, int lists, bool useRust)
 {
-	float8		ratio;
-
-	if (useRust)
-		return vector_rust_ivfflat_probe_ratio_kernel(probes, lists);
-
-	ratio = ((double) probes) / lists;
-	if (ratio > 1.0)
-		ratio = 1.0;
-
-	return ratio;
+	(void) useRust;
+	return vector_rust_ivfflat_probe_ratio_kernel(probes, lists);
 }
 
 static bool
 IvfflatShouldDisableWithoutOrder(int orderByCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_disable_without_order_kernel(orderByCount);
-
-	return orderByCount == 0;
+	(void) useRust;
+	return vector_rust_ivfflat_should_disable_without_order_kernel(orderByCount);
 }
 
 static ArrayType *
