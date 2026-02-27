@@ -304,12 +304,18 @@ vector_rust_hnsw_should_have_non_element_vacuum_tuple(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldProcessVacuumHeapTids(bool firstHeaptidValid, bool useRust)
+HnswShouldHaveProcessableVacuumHeapTids(bool firstHeaptidValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(firstHeaptidValid);
 
 	return firstHeaptidValid;
+}
+
+static bool
+HnswShouldProcessVacuumHeapTids(bool firstHeaptidValid, bool useRust)
+{
+	return HnswShouldHaveProcessableVacuumHeapTids(firstHeaptidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_vacuum_heaptids);
@@ -328,6 +334,24 @@ vector_rust_hnsw_should_process_vacuum_heaptids(PG_FUNCTION_ARGS)
 	int32		firstHeaptidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldProcessVacuumHeapTids(firstHeaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_processable_vacuum_heaptids);
+Datum
+vector_hnsw_should_have_processable_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProcessableVacuumHeapTids(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_processable_vacuum_heaptids);
+Datum
+vector_rust_hnsw_should_have_processable_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProcessableVacuumHeapTids(firstHeaptidValid != 0, true));
 }
 
 static bool
