@@ -1523,6 +1523,24 @@ vector_rust_hnsw_should_have_boundary_duplicate_insert_slot(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveBoundaryDuplicateInsertSlot(freeSlotIndex, maxHeaptids, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_boundary_duplicate_insert_slot_flag);
+Datum
+vector_hnsw_should_have_boundary_duplicate_insert_slot_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBoundarySlot = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBoundaryDuplicateInsertSlotFlag(hasBoundarySlot != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_boundary_duplicate_insert_slot_flag);
+Datum
+vector_rust_hnsw_should_have_boundary_duplicate_insert_slot_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBoundarySlot = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBoundaryDuplicateInsertSlotFlag(hasBoundarySlot != 0, true));
+}
+
 static bool
 HnswShouldHaveInvalidOnDiskHeapTidFlag(bool heapTidValid, bool useRust)
 {
@@ -3765,6 +3783,24 @@ vector_rust_hnsw_should_have_empty_insert_heaptids(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveEmptyInsertHeapTids(heaptidsLength, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_insert_heaptids_flag);
+Datum
+vector_hnsw_should_have_empty_insert_heaptids_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEmptyHeapTids = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyInsertHeapTidsFlag(hasEmptyHeapTids != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_insert_heaptids_flag);
+Datum
+vector_rust_hnsw_should_have_empty_insert_heaptids_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEmptyHeapTids = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyInsertHeapTidsFlag(hasEmptyHeapTids != 0, true));
+}
+
 static bool
 HnswShouldHaveNeighborCountBeforeLayerM(int32 neighborCount, int32 layerM, bool useRust)
 {
@@ -3895,6 +3931,24 @@ vector_rust_hnsw_should_have_existing_neighbor_check(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborCheck(checkExisting != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_existing_neighbor_check_flag);
+Datum
+vector_hnsw_should_have_existing_neighbor_check_flag(PG_FUNCTION_ARGS)
+{
+	int32		checkExisting = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborCheckFlag(checkExisting != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_existing_neighbor_check_flag);
+Datum
+vector_rust_hnsw_should_have_existing_neighbor_check_flag(PG_FUNCTION_ARGS)
+{
+	int32		checkExisting = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborCheckFlag(checkExisting != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_existing_neighbor_connection);
 Datum
 vector_hnsw_should_have_existing_neighbor_connection(PG_FUNCTION_ARGS)
@@ -3911,6 +3965,24 @@ vector_rust_hnsw_should_have_existing_neighbor_connection(PG_FUNCTION_ARGS)
 	int32		connectionExists = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborConnection(connectionExists != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_existing_neighbor_connection_flag);
+Datum
+vector_hnsw_should_have_existing_neighbor_connection_flag(PG_FUNCTION_ARGS)
+{
+	int32		connectionExists = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborConnectionFlag(connectionExists != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_existing_neighbor_connection_flag);
+Datum
+vector_rust_hnsw_should_have_existing_neighbor_connection_flag(PG_FUNCTION_ARGS)
+{
+	int32		connectionExists = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExistingNeighborConnectionFlag(connectionExists != 0, true));
 }
 
 static bool
@@ -4087,6 +4159,24 @@ vector_rust_hnsw_should_have_candidate_update_index(PG_FUNCTION_ARGS)
 	int32		updateIndex = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveCandidateUpdateIndex(updateIndex, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_candidate_update_index_flag);
+Datum
+vector_hnsw_should_have_candidate_update_index_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasCandidateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCandidateUpdateIndexFlag(hasCandidateIndex != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_candidate_update_index_flag);
+Datum
+vector_rust_hnsw_should_have_candidate_update_index_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasCandidateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCandidateUpdateIndexFlag(hasCandidateIndex != 0, true));
 }
 
 static bool
