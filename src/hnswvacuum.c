@@ -253,12 +253,18 @@ vector_rust_hnsw_should_have_invalid_vacuum_last_item(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipNonElementVacuumTuple(bool isElementTuple, bool useRust)
+HnswShouldHaveNonElementVacuumTuple(bool isElementTuple, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
 
 	return !isElementTuple;
+}
+
+static bool
+HnswShouldSkipNonElementVacuumTuple(bool isElementTuple, bool useRust)
+{
+	return HnswShouldHaveNonElementVacuumTuple(isElementTuple, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_vacuum_tuple);
@@ -277,6 +283,24 @@ vector_rust_hnsw_should_skip_non_element_vacuum_tuple(PG_FUNCTION_ARGS)
 	int32		isElementTuple = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipNonElementVacuumTuple(isElementTuple != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_element_vacuum_tuple);
+Datum
+vector_hnsw_should_have_non_element_vacuum_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonElementVacuumTuple(isElementTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_element_vacuum_tuple);
+Datum
+vector_rust_hnsw_should_have_non_element_vacuum_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonElementVacuumTuple(isElementTuple != 0, true));
 }
 
 static bool
