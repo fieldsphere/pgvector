@@ -570,6 +570,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_null_scan_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_null_scan_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_null_scan_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_null_scan_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_normalize_scan_value(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_normalize_scan_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4604,6 +4614,18 @@ my $use_null_scan_value_parity = $node->safe_psql("postgres", q{
 	) AS t(orderby_is_null);
 });
 is($use_null_scan_value_parity, "t\nt\nt\nt");
+
+my $have_null_scan_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_null_scan_value(orderby_is_null) =
+		   rust_hnsw_should_have_null_scan_value(orderby_is_null)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(orderby_is_null);
+});
+is($have_null_scan_value_parity, "t\nt\nt\nt");
 
 my $normalize_scan_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_normalize_scan_value(has_normproc) =
