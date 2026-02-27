@@ -321,4 +321,34 @@ unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskElementWithoutNextPage\(bool hasNe
 unlike($hnsw_insert_c, qr/HnswShouldAppendOnDiskElementPage\(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust\)\s*\{[^}]*return HnswShouldExceedOnDiskElementMaxSize\(combinedSize, maxSize, false\) &&\s*HnswShouldHavePageSpaceForTuple\(freeSpace, elementTupleSize, false\) &&\s*HnswShouldHaveOnDiskElementWithoutNextPage\(hasNextPage, false\);/s,
 	"legacy C append-ondisk-element-page fallback removed");
 
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel\(/,
+	"hnswinsert.c uses rust mark-ondisk-neighbor-buffer-dirty kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(/,
+	"hnswinsert.c uses rust update-ondisk-insert-page kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel\(/,
+	"hnswinsert.c uses rust commit-ondisk-duplicate-dirty kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswinsert.c uses rust update-progress-after-insert kernel");
+
+unlike($hnsw_insert_c, qr/HnswShouldHaveNonBuildingOnDiskElementMoveNext\(bool building, bool useRust\)\s*\{[^}]*return !building;/s,
+	"legacy C nonbuilding-ondisk-element-move-next fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldCommitOnDiskAddElementWithBufferDirty\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C commit-ondisk-add-element-dirty fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldMarkOnDiskNeighborBufferDirty\(bool sameBuffer, bool useRust\)\s*\{[^}]*return !sameBuffer;/s,
+	"legacy C mark-ondisk-neighbor-buffer-dirty fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveChangedOnDiskInsertPageFlag\(bool pageChanged, bool useRust\)\s*\{[^}]*return pageChanged;/s,
+	"legacy C changed-ondisk-insert-page-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldUpdateAddElementInsertPage\(bool hasNewInsertPage, bool pageChanged, bool useRust\)\s*\{[^}]*return shouldUpdate;/s,
+	"legacy C update-add-element-insert-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveNeighborPageAsInsertPage\(bool hasNewInsertPage, bool useRust\)\s*\{[^}]*return !hasNewInsertPage;/s,
+	"legacy C neighbor-page-as-insert-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveNextNeighborOffset\(bool sameBuffer, bool useRust\)\s*\{[^}]*return sameBuffer;/s,
+	"legacy C next-neighbor-offset fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveFreeOnDiskOffsetFlag\(bool freeOffsetValid, bool useRust\)\s*\{[^}]*return freeOffsetValid;/s,
+	"legacy C free-ondisk-offset-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveFreeOnDiskOffsets\(bool freeOffsetValid, bool useRust\)\s*\{[^}]*return freeOffsetValid;/s,
+	"legacy C free-ondisk-offsets fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldProcessFreeOffsetResult\(bool freeOffsetResult, bool useRust\)\s*\{[^}]*return freeOffsetResult;/s,
+	"legacy C process-free-offset-result fallback removed");
+
 done_testing();
