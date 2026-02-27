@@ -1849,9 +1849,15 @@ vector_rust_hnsw_should_have_non_element_repairgraph_tuple(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipDeletedRepairGraphElement(bool firstHeaptidValid, bool useRust)
+HnswShouldHaveDeletedRepairGraphElement(bool firstHeaptidValid, bool useRust)
 {
 	return HnswShouldMarkVacuumTupleDeleted(firstHeaptidValid, useRust);
+}
+
+static bool
+HnswShouldSkipDeletedRepairGraphElement(bool firstHeaptidValid, bool useRust)
+{
+	return HnswShouldHaveDeletedRepairGraphElement(firstHeaptidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_deleted_repairgraph_element);
@@ -1870,6 +1876,24 @@ vector_rust_hnsw_should_skip_deleted_repairgraph_element(PG_FUNCTION_ARGS)
 	int32		firstHeaptidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipDeletedRepairGraphElement(firstHeaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_deleted_repairgraph_element);
+Datum
+vector_hnsw_should_have_deleted_repairgraph_element(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedRepairGraphElement(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_deleted_repairgraph_element);
+Datum
+vector_rust_hnsw_should_have_deleted_repairgraph_element(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedRepairGraphElement(firstHeaptidValid != 0, true));
 }
 
 static bool
