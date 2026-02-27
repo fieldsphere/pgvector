@@ -7,6 +7,7 @@ use Test::More;
 my $repo_root = abs_path(dirname(__FILE__) . "/../..");
 my $hnsw_path = "$repo_root/src/hnsw.c";
 my $hnsw_scan_path = "$repo_root/src/hnswscan.c";
+my $hnsw_build_path = "$repo_root/src/hnswbuild.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -16,6 +17,10 @@ close($fh);
 open(my $scan_fh, '<', $hnsw_scan_path) or die "could not open $hnsw_scan_path: $!";
 my $hnsw_scan_c = <$scan_fh>;
 close($scan_fh);
+
+open(my $build_fh, '<', $hnsw_build_path) or die "could not open $hnsw_build_path: $!";
+my $hnsw_build_c = <$build_fh>;
+close($build_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -66,5 +71,33 @@ unlike($hnsw_scan_c, qr/return !snapshotIsMVCC;/,
 	"legacy C non-mvcc fallback removed");
 unlike($hnsw_scan_c, qr/return hasPointer;/,
 	"legacy C scan-pointer fallback removed");
+
+ok($hnsw_build_c =~ /vector_rust_hnsw_can_add_duplicate_heap_tid_kernel\(/,
+	"hnswbuild.c uses rust duplicate-heaptid kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel\(/,
+	"hnswbuild.c uses rust duplicate-search-stop kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_flush_graph_kernel\(/,
+	"hnswbuild.c uses rust flush-graph kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_skip_invalid_index_value_kernel\(/,
+	"hnswbuild.c uses rust invalid-index-value kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_update_entry_point_kernel\(/,
+	"hnswbuild.c uses rust update-entrypoint kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswbuild.c uses rust progress-update kernel");
+
+unlike($hnsw_build_c, qr/return heaptidsLength < maxHeaptids;/,
+	"legacy C duplicate-heaptid fallback removed");
+unlike($hnsw_build_c, qr/return !valuesEqual;/,
+	"legacy C duplicate-search-stop fallback removed");
+unlike($hnsw_build_c, qr/return memoryUsed >= memoryTotal;/,
+	"legacy C flush-graph fallback removed");
+unlike($hnsw_build_c, qr/return !indexValueFormed;/,
+	"legacy C invalid-index-value fallback removed");
+unlike($hnsw_build_c, qr/return elementLevel > entryLevel;/,
+	"legacy C higher-entrypoint-level fallback removed");
+unlike($hnsw_build_c, qr/return !hasEntryPoint;/,
+	"legacy C default-entrylevel fallback removed");
+unlike($hnsw_build_c, qr/return hasPointer;/,
+	"legacy C build-pointer fallback removed");
 
 done_testing();
