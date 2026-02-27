@@ -673,10 +673,8 @@ HnswGetDistance(Datum a, Datum b, HnswSupport * support)
 static bool
 HnswShouldHaveQueryValuePointerFlag(bool hasQueryValue, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasQueryValue);
-
-	return hasQueryValue;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasQueryValue);
 }
 
 static bool
@@ -688,19 +686,15 @@ HnswShouldHaveQueryValuePointer(const void *queryValuePointer, bool useRust)
 static bool
 HnswShouldZeroDistanceForNullQueryValue(bool hasQueryValue, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasQueryValue);
-
-	return !hasQueryValue;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasQueryValue);
 }
 
 static bool
 HnswShouldHaveElementDistancePointerFlag(bool hasDistancePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasDistancePointer);
-
-	return hasDistancePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasDistancePointer);
 }
 
 static bool
@@ -712,10 +706,8 @@ HnswShouldHaveElementDistancePointer(const double *distance, bool useRust)
 static bool
 HnswShouldHaveElementMaxDistancePointerFlag(bool hasMaxDistancePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasMaxDistancePointer);
-
-	return hasMaxDistancePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasMaxDistancePointer);
 }
 
 static bool
@@ -733,19 +725,15 @@ HnswShouldCalculateElementDistance(bool hasDistancePointer, bool useRust)
 static bool
 HnswShouldUpdateElementMaxDistance(bool hasDistancePointer, bool hasMaxDistancePointer, double distanceValue, double maxDistanceValue, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_element_max_distance_kernel(hasDistancePointer, hasMaxDistancePointer, distanceValue, maxDistanceValue);
-
-	return !hasDistancePointer || !hasMaxDistancePointer || distanceValue < maxDistanceValue;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_element_max_distance_kernel(hasDistancePointer, hasMaxDistancePointer, distanceValue, maxDistanceValue);
 }
 
 static bool
 HnswShouldHaveDefaultDistanceValue(bool hasDistancePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDistancePointer);
-
-	return !hasDistancePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDistancePointer);
 }
 
 static bool
@@ -757,10 +745,8 @@ HnswShouldUseDefaultDistanceValue(bool hasDistancePointer, bool useRust)
 static bool
 HnswShouldHaveDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasMaxDistancePointer);
-
-	return !hasMaxDistancePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasMaxDistancePointer);
 }
 
 static bool
@@ -772,10 +758,8 @@ HnswShouldUseDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
 static bool
 HnswShouldHaveLoadedElementPointerFlag(bool hasElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasElement);
-
-	return hasElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasElement);
 }
 
 static bool
@@ -787,37 +771,29 @@ HnswShouldHaveLoadedElementPointer(HnswElement *element, bool useRust)
 static bool
 HnswShouldInitializeLoadedElement(bool hasElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasElement);
-
-	return !hasElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasElement);
 }
 
 static bool
 HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadVector);
-
-	return shouldLoadVector;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadVector);
 }
 
 static bool
 HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadHeaptids);
-
-	return shouldLoadHeaptids;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadHeaptids);
 }
 
 static bool
 HnswShouldHaveElementHeapTidItemPointerFlag(bool heaptidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidValid);
-
-	return heaptidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidValid);
 }
 
 static bool
@@ -829,19 +805,15 @@ HnswShouldHaveElementHeapTidItemPointer(ItemPointer heaptid, bool useRust)
 static bool
 HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heaptidValid);
-
-	return !heaptidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heaptidValid);
 }
 
 static bool
 HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
-
-	return !hasSkipElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
 }
 
 static bool
