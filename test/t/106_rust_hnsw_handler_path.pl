@@ -4050,6 +4050,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_itempointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_itempointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_itempointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_itempointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_free_ondisk_neighbor_slot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_free_ondisk_neighbor_slot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5637,6 +5647,26 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_apply_neighbor_update_slot(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_apply_neighbor_update_slot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_non_negative_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_non_negative_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_non_negative_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_non_negative_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_non_negative_update_index_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_non_negative_update_index_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_non_negative_update_index_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_non_negative_update_index_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -10732,6 +10762,18 @@ my $have_ondisk_itempointer_parity = $node->safe_psql("postgres", q{
 });
 is($have_ondisk_itempointer_parity, "t\nt\nt\nt");
 
+my $have_ondisk_itempointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_itempointer_flag(item_pointer_valid) =
+		   rust_hnsw_should_have_ondisk_itempointer_flag(item_pointer_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(item_pointer_valid);
+});
+is($have_ondisk_itempointer_flag_parity, "t\nt\nt\nt");
+
 my $use_free_ondisk_neighbor_slot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_free_ondisk_neighbor_slot(slot_tid_valid) =
 		   rust_hnsw_should_use_free_ondisk_neighbor_slot(slot_tid_valid)
@@ -12651,6 +12693,30 @@ my $have_nonnegative_update_index_parity = $node->safe_psql("postgres", q{
 	) AS t(update_idx);
 });
 is($have_nonnegative_update_index_parity, "t\nt\nt\nt");
+
+my $have_non_negative_update_index_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_non_negative_update_index(update_idx) =
+		   rust_hnsw_should_have_non_negative_update_index(update_idx)
+	FROM (VALUES
+		(-1),
+		(0),
+		(2),
+		(-2)
+	) AS t(update_idx);
+});
+is($have_non_negative_update_index_parity, "t\nt\nt\nt");
+
+my $have_non_negative_update_index_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_non_negative_update_index_flag(is_non_negative) =
+		   rust_hnsw_should_have_non_negative_update_index_flag(is_non_negative)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_non_negative);
+});
+is($have_non_negative_update_index_flag_parity, "t\nt\nt\nt");
 
 my $have_update_index_before_tuple_count_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_update_index_before_tuple_count(update_idx, tuple_count) =
