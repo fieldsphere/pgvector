@@ -2310,6 +2310,106 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reject_closer_neighbor(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reject_closer_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reject_closer_neighbor(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_closer_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_closer_neighbor(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_closer_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_closer_neighbor(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_closer_neighbor'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_select_neighbors_early_return(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_select_neighbors_early_return'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_select_neighbors_early_return(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_select_neighbors_early_return'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_select_neighbors_early_return(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_select_neighbors_early_return'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_select_neighbors_early_return(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_select_neighbors_early_return'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_add_search_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_add_search_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_add_search_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_add_search_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_add_search_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_add_search_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_add_search_candidate(double precision, double precision, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_add_search_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_stop_search_layer(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_stop_search_layer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_stop_search_layer(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_stop_search_layer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_stop_search_layer(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_stop_search_layer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_stop_search_layer(double precision, double precision) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_stop_search_layer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_append_neighbor_without_prune(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_append_neighbor_without_prune'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_append_neighbor_without_prune(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_append_neighbor_without_prune'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_append_neighbor_without_prune(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_append_neighbor_without_prune'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_append_neighbor_without_prune(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_append_neighbor_without_prune'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_append_closer_candidate(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_append_closer_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7214,6 +7314,126 @@ my $define_closer_state_for_base_parity = $node->safe_psql("postgres", q{
 	) AS t(has_base_pointer);
 });
 is($define_closer_state_for_base_parity, "t\nt\nt\nt");
+
+my $reject_closer_neighbor_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reject_closer_neighbor(distance_value, candidate_distance) =
+		   rust_hnsw_should_reject_closer_neighbor(distance_value, candidate_distance)
+	FROM (VALUES
+		(0.10::float8, 0.20::float8),
+		(0.20::float8, 0.20::float8),
+		(0.30::float8, 0.20::float8),
+		(0.05::float8, 0.10::float8)
+	) AS t(distance_value, candidate_distance);
+});
+is($reject_closer_neighbor_parity, "t\nt\nt\nt");
+
+my $have_reject_closer_neighbor_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_closer_neighbor(distance_value, candidate_distance) =
+		   rust_hnsw_should_have_reject_closer_neighbor(distance_value, candidate_distance)
+	FROM (VALUES
+		(0.10::float8, 0.20::float8),
+		(0.20::float8, 0.20::float8),
+		(0.30::float8, 0.20::float8),
+		(0.05::float8, 0.10::float8)
+	) AS t(distance_value, candidate_distance);
+});
+is($have_reject_closer_neighbor_parity, "t\nt\nt\nt");
+
+my $select_neighbors_early_return_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_select_neighbors_early_return(candidate_count, max_neighbors) =
+		   rust_hnsw_should_select_neighbors_early_return(candidate_count, max_neighbors)
+	FROM (VALUES
+		(0, 0),
+		(4, 5),
+		(5, 5),
+		(6, 5)
+	) AS t(candidate_count, max_neighbors);
+});
+is($select_neighbors_early_return_parity, "t\nt\nt\nt");
+
+my $have_select_neighbors_early_return_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_select_neighbors_early_return(candidate_count, max_neighbors) =
+		   rust_hnsw_should_have_select_neighbors_early_return(candidate_count, max_neighbors)
+	FROM (VALUES
+		(0, 0),
+		(4, 5),
+		(5, 5),
+		(6, 5)
+	) AS t(candidate_count, max_neighbors);
+});
+is($have_select_neighbors_early_return_parity, "t\nt\nt\nt");
+
+my $add_search_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_add_search_candidate(candidate_distance, frontier_distance, always_add) =
+		   rust_hnsw_should_add_search_candidate(candidate_distance, frontier_distance, always_add)
+	FROM (VALUES
+		(0.10::float8, 0.20::float8, 0),
+		(0.30::float8, 0.20::float8, 0),
+		(0.30::float8, 0.20::float8, 1),
+		(0.20::float8, 0.20::float8, 0)
+	) AS t(candidate_distance, frontier_distance, always_add);
+});
+is($add_search_candidate_parity, "t\nt\nt\nt");
+
+my $have_add_search_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_add_search_candidate(candidate_distance, frontier_distance, always_add) =
+		   rust_hnsw_should_have_add_search_candidate(candidate_distance, frontier_distance, always_add)
+	FROM (VALUES
+		(0.10::float8, 0.20::float8, 0),
+		(0.30::float8, 0.20::float8, 0),
+		(0.30::float8, 0.20::float8, 1),
+		(0.20::float8, 0.20::float8, 0)
+	) AS t(candidate_distance, frontier_distance, always_add);
+});
+is($have_add_search_candidate_parity, "t\nt\nt\nt");
+
+my $stop_search_layer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_stop_search_layer(candidate_distance, frontier_distance) =
+		   rust_hnsw_should_stop_search_layer(candidate_distance, frontier_distance)
+	FROM (VALUES
+		(0.10::float8, 0.20::float8),
+		(0.20::float8, 0.20::float8),
+		(0.30::float8, 0.20::float8),
+		(0.50::float8, 0.10::float8)
+	) AS t(candidate_distance, frontier_distance);
+});
+is($stop_search_layer_parity, "t\nt\nt\nt");
+
+my $have_stop_search_layer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_stop_search_layer(candidate_distance, frontier_distance) =
+		   rust_hnsw_should_have_stop_search_layer(candidate_distance, frontier_distance)
+	FROM (VALUES
+		(0.10::float8, 0.20::float8),
+		(0.20::float8, 0.20::float8),
+		(0.30::float8, 0.20::float8),
+		(0.50::float8, 0.10::float8)
+	) AS t(candidate_distance, frontier_distance);
+});
+is($have_stop_search_layer_parity, "t\nt\nt\nt");
+
+my $append_neighbor_without_prune_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_append_neighbor_without_prune(neighbors_length, max_neighbors) =
+		   rust_hnsw_should_append_neighbor_without_prune(neighbors_length, max_neighbors)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(3, 5)
+	) AS t(neighbors_length, max_neighbors);
+});
+is($append_neighbor_without_prune_parity, "t\nt\nt\nt");
+
+my $have_append_neighbor_without_prune_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_append_neighbor_without_prune(neighbors_length, max_neighbors) =
+		   rust_hnsw_should_have_append_neighbor_without_prune(neighbors_length, max_neighbors)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(3, 5)
+	) AS t(neighbors_length, max_neighbors);
+});
+is($have_append_neighbor_without_prune_parity, "t\nt\nt\nt");
 
 my $append_closer_candidate_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_append_closer_candidate(is_closer) =
