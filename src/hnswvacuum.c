@@ -706,12 +706,18 @@ vector_rust_hnsw_should_have_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFlagDeletedVacuumNeighbor(bool isDeletedNeighbor, bool useRust)
+HnswShouldHaveDeletedVacuumNeighbor(bool isDeletedNeighbor, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedNeighbor);
 
 	return isDeletedNeighbor;
+}
+
+static bool
+HnswShouldFlagDeletedVacuumNeighbor(bool isDeletedNeighbor, bool useRust)
+{
+	return HnswShouldHaveDeletedVacuumNeighbor(isDeletedNeighbor, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flag_deleted_vacuum_neighbor);
@@ -730,6 +736,24 @@ vector_rust_hnsw_should_flag_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
 	int32		isDeletedNeighbor = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFlagDeletedVacuumNeighbor(isDeletedNeighbor != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_deleted_vacuum_neighbor);
+Datum
+vector_hnsw_should_have_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedVacuumNeighbor(isDeletedNeighbor != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_deleted_vacuum_neighbor);
+Datum
+vector_rust_hnsw_should_have_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedVacuumNeighbor(isDeletedNeighbor != 0, true));
 }
 
 static bool
