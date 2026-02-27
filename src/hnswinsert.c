@@ -2224,12 +2224,18 @@ vector_rust_hnsw_should_have_build_path_for_appended_ondisk_buffer(PG_FUNCTION_A
 }
 
 static bool
-HnswShouldUseBuildPathForReusedOnDiskBuffer(bool building, bool useRust)
+HnswShouldHaveBuildPathForReusedOnDiskBuffer(bool building, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 
 	return building;
+}
+
+static bool
+HnswShouldUseBuildPathForReusedOnDiskBuffer(bool building, bool useRust)
+{
+	return HnswShouldHaveBuildPathForReusedOnDiskBuffer(building, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_build_path_for_reused_ondisk_buffer);
@@ -2248,6 +2254,24 @@ vector_rust_hnsw_should_use_build_path_for_reused_ondisk_buffer(PG_FUNCTION_ARGS
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildPathForReusedOnDiskBuffer(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_path_for_reused_ondisk_buffer);
+Datum
+vector_hnsw_should_have_build_path_for_reused_ondisk_buffer(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPathForReusedOnDiskBuffer(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_path_for_reused_ondisk_buffer);
+Datum
+vector_rust_hnsw_should_have_build_path_for_reused_ondisk_buffer(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPathForReusedOnDiskBuffer(building != 0, true));
 }
 
 static bool
