@@ -533,5 +533,23 @@ unlike($hnsw_vacuum_c, qr/HnswShouldResetVacuumHighestPoint\(bool highestPointVa
 	"legacy C reset-vacuum-highest-point fallback removed");
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumHighestPointBlockFlag\(bool highestPointValid, bool useRust\)\s*\{[^}]*return highestPointValid;/s,
 	"legacy C vacuum-highest-point-block-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldRepairVacuumHighestPoint\(bool needsUpdated, bool useRust\)\s*\{[^}]*return needsUpdated;/s,
+	"legacy C repair-vacuum-highest-point fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldRepairVacuumEntryPoint\(bool needsUpdated, bool useRust\)\s*\{[^}]*return needsUpdated;/s,
+	"legacy C repair-vacuum-entrypoint fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldResetVacuumEntryPointNeighbors\(bool hasHighestPoint, bool useRust\)\s*\{[^}]*return hasHighestPoint;/s,
+	"legacy C reset-vacuum-entrypoint-neighbors fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldReplaceDeletedVacuumEntryPoint\(bool isDeletedEntrypoint, bool useRust\)\s*\{[^}]*return isDeletedEntrypoint;/s,
+	"legacy C replace-deleted-vacuum-entrypoint fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldRepairNonnullVacuumHighestPoint\(bool hasHighestPoint, bool useRust\)\s*\{[^}]*return hasHighestPoint;/s,
+	"legacy C repair-nonnull-vacuum-highest-point fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldProcessNonnullVacuumEntrypoint\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return hasEntryPoint;/s,
+	"legacy C process-nonnull-vacuum-entrypoint fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveNonElementMarkDeletedTuple\(bool isElementTuple, bool useRust\)\s*\{[^}]*return !isElementTuple;/s,
+	"legacy C non-element-markdeleted-tuple fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveLiveMarkDeletedTuple\(bool isLiveTuple, bool useRust\)\s*\{[^}]*return isLiveTuple;/s,
+	"legacy C live-markdeleted-tuple fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldSetVacuumInsertPageWhenMissing\(bool hasInsertPage, bool useRust\)\s*\{[^}]*return !hasInsertPage;/s,
+	"legacy C set-vacuum-insert-page-when-missing fallback removed");
 
 done_testing();
