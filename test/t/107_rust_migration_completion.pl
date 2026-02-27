@@ -12,6 +12,7 @@ my $hnsw_insert_path = "$repo_root/src/hnswinsert.c";
 my $hnsw_vacuum_path = "$repo_root/src/hnswvacuum.c";
 my $hnsw_utils_path = "$repo_root/src/hnswutils.c";
 my $ivf_vacuum_path = "$repo_root/src/ivfvacuum.c";
+my $ivf_insert_path = "$repo_root/src/ivfinsert.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -41,6 +42,10 @@ close($utils_fh);
 open(my $ivf_vacuum_fh, '<', $ivf_vacuum_path) or die "could not open $ivf_vacuum_path: $!";
 my $ivf_vacuum_c = <$ivf_vacuum_fh>;
 close($ivf_vacuum_fh);
+
+open(my $ivf_insert_fh, '<', $ivf_insert_path) or die "could not open $ivf_insert_path: $!";
+my $ivf_insert_c = <$ivf_insert_fh>;
+close($ivf_insert_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -883,5 +888,23 @@ unlike($ivf_vacuum_c, qr/IvfflatVacuumPageIsValid\(BlockNumber page, bool useRus
 	"legacy C ivfvacuum-page-valid fallback removed");
 unlike($ivf_vacuum_c, qr/IvfflatShouldSetInsertPage\(int ndeletable, BlockNumber insertPage, bool useRust\)\s*\{[^}]*return !IvfflatVacuumPageIsValid\(insertPage, false\) && ndeletable > 0;/s,
 	"legacy C ivfvacuum-set-insert-page fallback removed");
+
+ok($ivf_insert_c =~ /vector_rust_ivfflat_choose_insert_candidate_kernel\(/,
+	"ivfinsert.c uses rust choose-insert-candidate kernel");
+ok($ivf_insert_c =~ /vector_rust_ivfflat_should_append_page_kernel\(/,
+	"ivfinsert.c uses rust append-page kernel");
+ok($ivf_insert_c =~ /vector_rust_ivfflat_should_update_insert_page_kernel\(/,
+	"ivfinsert.c uses rust update-insert-page kernel");
+ok($ivf_insert_c =~ /vector_rust_ivfflat_should_follow_insert_page_link_kernel\(/,
+	"ivfinsert.c uses rust follow-insert-page-link kernel");
+
+unlike($ivf_insert_c, qr/IvfflatInsertPageIsValid\(BlockNumber page, bool useRust\)\s*\{[^}]*return BlockNumberIsValid\(page\);/s,
+	"legacy C ivfinsert-page-valid fallback removed");
+unlike($ivf_insert_c, qr/IvfflatChooseInsertCandidate\(float8 distance, float8 minDistance, BlockNumber insertPage, bool useRust\)\s*\{[^}]*return distance < minDistance \|\| !IvfflatInsertPageIsValid\(insertPage, false\);/s,
+	"legacy C ivfinsert-choose-candidate fallback removed");
+unlike($ivf_insert_c, qr/IvfflatShouldAppendPage\(int freeSpace, Size itemSize, bool useRust\)\s*\{[^}]*return freeSpace < itemSize;/s,
+	"legacy C ivfinsert-append-page fallback removed");
+unlike($ivf_insert_c, qr/IvfflatShouldUpdateInsertPage\(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust\)\s*\{[^}]*return insertPage != originalInsertPage;/s,
+	"legacy C ivfinsert-update-insert-page fallback removed");
 
 done_testing();
