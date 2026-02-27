@@ -130,12 +130,18 @@ vector_rust_hnsw_should_have_deleted_tid_pointer(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldContinueVacuumBlockScan(bool hasValidBlock, bool useRust)
+HnswShouldHaveContinuableVacuumBlockScan(bool hasValidBlock, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
 
 	return hasValidBlock;
+}
+
+static bool
+HnswShouldContinueVacuumBlockScan(bool hasValidBlock, bool useRust)
+{
+	return HnswShouldHaveContinuableVacuumBlockScan(hasValidBlock, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_continue_vacuum_block_scan);
@@ -154,6 +160,24 @@ vector_rust_hnsw_should_continue_vacuum_block_scan(PG_FUNCTION_ARGS)
 	int32		hasValidBlock = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldContinueVacuumBlockScan(hasValidBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_continuable_vacuum_block_scan);
+Datum
+vector_hnsw_should_have_continuable_vacuum_block_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveContinuableVacuumBlockScan(hasValidBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_continuable_vacuum_block_scan);
+Datum
+vector_rust_hnsw_should_have_continuable_vacuum_block_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveContinuableVacuumBlockScan(hasValidBlock != 0, true));
 }
 
 static bool
