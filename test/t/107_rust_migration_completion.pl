@@ -9,6 +9,7 @@ my $hnsw_path = "$repo_root/src/hnsw.c";
 my $hnsw_scan_path = "$repo_root/src/hnswscan.c";
 my $hnsw_build_path = "$repo_root/src/hnswbuild.c";
 my $hnsw_insert_path = "$repo_root/src/hnswinsert.c";
+my $hnsw_vacuum_path = "$repo_root/src/hnswvacuum.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -26,6 +27,10 @@ close($build_fh);
 open(my $insert_fh, '<', $hnsw_insert_path) or die "could not open $hnsw_insert_path: $!";
 my $hnsw_insert_c = <$insert_fh>;
 close($insert_fh);
+
+open(my $vacuum_fh, '<', $hnsw_vacuum_path) or die "could not open $hnsw_vacuum_path: $!";
+my $hnsw_vacuum_c = <$vacuum_fh>;
+close($vacuum_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -464,5 +469,43 @@ unlike($hnsw_insert_c, qr/HnswShouldSkipUnselectedOnDiskNeighbor\(int32 updateIn
 	"legacy C skip-unselected-ondisk-neighbor fallback removed");
 unlike($hnsw_insert_c, qr/HnswShouldSkipNullInsertTuple\(bool isNull, bool useRust\)\s*\{[^}]*return isNull;/s,
 	"legacy C skip-null-insert-tuple fallback removed");
+
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_repair_underfilled_layer0_kernel\(/,
+	"hnswvacuum.c uses rust repair-underfilled-layer0 kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_skip_invalid_index_value_kernel\(/,
+	"hnswvacuum.c uses rust skip-invalid-index-value kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(/,
+	"hnswvacuum.c uses rust update-ondisk-insert-page kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswvacuum.c uses rust update-progress-after-insert kernel");
+
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedTidPointerFlag\(bool hasDeletedTid, bool useRust\)\s*\{[^}]*return hasDeletedTid;/s,
+	"legacy C deleted-tid-pointer-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveContinuableVacuumBlockScan\(bool hasValidBlock, bool useRust\)\s*\{[^}]*return hasValidBlock;/s,
+	"legacy C continuable-vacuum-block-scan fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumBlockFlag\(bool blockValid, bool useRust\)\s*\{[^}]*return blockValid;/s,
+	"legacy C vacuum-block-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveInvalidVacuumLastItemFlag\(bool lastItemValid, bool useRust\)\s*\{[^}]*return !lastItemValid;/s,
+	"legacy C invalid-vacuum-last-item fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveNonElementVacuumTuple\(bool isElementTuple, bool useRust\)\s*\{[^}]*return !isElementTuple;/s,
+	"legacy C non-element-vacuum-tuple fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveProcessableVacuumHeapTids\(bool firstHeaptidValid, bool useRust\)\s*\{[^}]*return firstHeaptidValid;/s,
+	"legacy C processable-vacuum-heaptids fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumItemPointerFlag\(bool itemPointerValid, bool useRust\)\s*\{[^}]*return itemPointerValid;/s,
+	"legacy C vacuum-itempointer-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedVacuumTuple\(bool firstHeaptidValid, bool useRust\)\s*\{[^}]*return !firstHeaptidValid;/s,
+	"legacy C deleted-vacuum-tuple fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveInvalidVacuumHeapTid\(bool heapTidValid, bool useRust\)\s*\{[^}]*return !heapTidValid;/s,
+	"legacy C invalid-vacuum-heaptid fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumHeapTidRemoval\(bool callbackRemove, bool useRust\)\s*\{[^}]*return callbackRemove;/s,
+	"legacy C vacuum-heaptid-removal fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveCompactedVacuumHeapTids\(bool itemUpdated, bool useRust\)\s*\{[^}]*return itemUpdated;/s,
+	"legacy C compacted-vacuum-heaptids fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveFinishedVacuumPageUpdate\(bool pageUpdated, bool useRust\)\s*\{[^}]*return pageUpdated;/s,
+	"legacy C finished-vacuum-page-update fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveInvalidVacuumNeighborTid\(bool neighborTidValid, bool useRust\)\s*\{[^}]*return !neighborTidValid;/s,
+	"legacy C invalid-vacuum-neighbor-tid fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedVacuumNeighbor\(bool isDeletedNeighbor, bool useRust\)\s*\{[^}]*return isDeletedNeighbor;/s,
+	"legacy C deleted-vacuum-neighbor fallback removed");
 
 done_testing();
