@@ -2265,12 +2265,18 @@ vector_rust_hnsw_should_have_log_leader_progress(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectVarbitType(Oid typeOid, bool useRust)
+HnswShouldHaveRejectVarbitType(Oid typeOid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_varbit_type_kernel((int32) typeOid, (int32) VARBITOID);
 
 	return typeOid == VARBITOID;
+}
+
+static bool
+HnswShouldRejectVarbitType(Oid typeOid, bool useRust)
+{
+	return HnswShouldHaveRejectVarbitType(typeOid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_varbit_type);
@@ -2291,13 +2297,37 @@ vector_rust_hnsw_should_reject_varbit_type(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectVarbitType((Oid) typeOid, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_varbit_type);
+Datum
+vector_hnsw_should_have_reject_varbit_type(PG_FUNCTION_ARGS)
+{
+	int32		typeOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectVarbitType((Oid) typeOid, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_varbit_type);
+Datum
+vector_rust_hnsw_should_have_reject_varbit_type(PG_FUNCTION_ARGS)
+{
+	int32		typeOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectVarbitType((Oid) typeOid, true));
+}
+
 static bool
-HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust)
+HnswShouldHaveRejectMissingDimensions(int32 dimensions, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_missing_dimensions_kernel(dimensions);
 
 	return dimensions < 0;
+}
+
+static bool
+HnswShouldRejectMissingDimensions(int32 dimensions, bool useRust)
+{
+	return HnswShouldHaveRejectMissingDimensions(dimensions, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_missing_dimensions);
@@ -2318,13 +2348,37 @@ vector_rust_hnsw_should_reject_missing_dimensions(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectMissingDimensions(dimensions, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_missing_dimensions);
+Datum
+vector_hnsw_should_have_reject_missing_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectMissingDimensions(dimensions, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_missing_dimensions);
+Datum
+vector_rust_hnsw_should_have_reject_missing_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectMissingDimensions(dimensions, true));
+}
+
 static bool
-HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust)
+HnswShouldHaveRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(dimensions, maxDimensions);
 
 	return dimensions > maxDimensions;
+}
+
+static bool
+HnswShouldRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust)
+{
+	return HnswShouldHaveRejectExcessDimensions(dimensions, maxDimensions, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_excess_dimensions);
@@ -2347,13 +2401,39 @@ vector_rust_hnsw_should_reject_excess_dimensions(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectExcessDimensions(dimensions, maxDimensions, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_excess_dimensions);
+Datum
+vector_hnsw_should_have_reject_excess_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+	int32		maxDimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectExcessDimensions(dimensions, maxDimensions, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_excess_dimensions);
+Datum
+vector_rust_hnsw_should_have_reject_excess_dimensions(PG_FUNCTION_ARGS)
+{
+	int32		dimensions = PG_GETARG_INT32(0);
+	int32		maxDimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectExcessDimensions(dimensions, maxDimensions, true));
+}
+
 static bool
-HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust)
+HnswShouldHaveRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_low_ef_construction_kernel(efConstruction, m);
 
 	return efConstruction < 2 * m;
+}
+
+static bool
+HnswShouldRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust)
+{
+	return HnswShouldHaveRejectLowEfConstruction(efConstruction, m, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_low_ef_construction);
@@ -2374,6 +2454,26 @@ vector_rust_hnsw_should_reject_low_ef_construction(PG_FUNCTION_ARGS)
 	int32		m = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectLowEfConstruction(efConstruction, m, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_low_ef_construction);
+Datum
+vector_hnsw_should_have_reject_low_ef_construction(PG_FUNCTION_ARGS)
+{
+	int32		efConstruction = PG_GETARG_INT32(0);
+	int32		m = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectLowEfConstruction(efConstruction, m, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_low_ef_construction);
+Datum
+vector_rust_hnsw_should_have_reject_low_ef_construction(PG_FUNCTION_ARGS)
+{
+	int32		efConstruction = PG_GETARG_INT32(0);
+	int32		m = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectLowEfConstruction(efConstruction, m, true));
 }
 
 static bool
