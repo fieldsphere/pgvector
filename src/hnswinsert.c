@@ -16,6 +16,7 @@
 #endif
 
 static bool HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust);
+static bool HnswShouldHaveDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust);
 static bool HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust);
 static bool HnswShouldHaveOnDiskPointerFlag(bool hasPointer, bool useRust);
 static bool HnswShouldHaveOnDiskPointer(const void *pointer, bool useRust);
@@ -944,12 +945,18 @@ HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int3
 }
 
 static bool
-HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
+HnswShouldHaveDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 
 	return !hasEntryPoint;
+}
+
+static bool
+HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveDefaultOnDiskEntryLevel(hasEntryPoint, useRust);
 }
 
 static bool
@@ -1112,6 +1119,24 @@ vector_rust_hnsw_should_use_default_ondisk_entry_level(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultOnDiskEntryLevel(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_ondisk_entry_level);
+Datum
+vector_hnsw_should_have_default_ondisk_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultOnDiskEntryLevel(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_ondisk_entry_level);
+Datum
+vector_rust_hnsw_should_have_default_ondisk_entry_level(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultOnDiskEntryLevel(hasEntryPoint != 0, true));
 }
 
 static bool
