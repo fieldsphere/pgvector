@@ -651,6 +651,8 @@ ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(/
 	"hnswutils.c uses rust update-ondisk-insert-page kernel");
 ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_element_max_distance_kernel\(/,
 	"hnswutils.c uses rust update-element-max-distance kernel");
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_entry_point_kernel\(/,
+	"hnswutils.c uses rust update-entry-point kernel");
 
 unlike($hnsw_utils_c, qr/HnswShouldHaveQueryValuePointerFlag\(bool hasQueryValue, bool useRust\)\s*\{[^}]*return hasQueryValue;/s,
 	"legacy C query-value-pointer-flag fallback removed");
@@ -710,5 +712,35 @@ unlike($hnsw_utils_c, qr/HnswShouldHaveVisitedBasePointerFlag\(bool hasBasePoint
 	"legacy C visited-base-pointer-flag fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldHavePointerVisitedHash\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return !hasBasePointer;/s,
 	"legacy C pointer-visited-hash fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSearchIndexPointerFlag\(bool hasIndexPointer, bool useRust\)\s*\{[^}]*return hasIndexPointer;/s,
+	"legacy C search-index-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveMemoryEntryDistance\(bool inMemory, bool useRust\)\s*\{[^}]*return inMemory;/s,
+	"legacy C memory-entry-distance fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveInMemorySearchPath\(bool inMemory, bool useRust\)\s*\{[^}]*return inMemory;/s,
+	"legacy C in-memory-search-path fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSearchEntrypointPointerFlag\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return hasEntryPoint;/s,
+	"legacy C search-entrypoint-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldReturnWithoutEntryPoint\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return !hasEntryPoint;/s,
+	"legacy C return-without-entrypoint fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldPrecomputeHashForNeighbors\(bool inMemory, bool useRust\)\s*\{[^}]*return inMemory;/s,
+	"legacy C precompute-hash-for-neighbors fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldIncrementEfForExistingElement\(bool existing, bool useRust\)\s*\{[^}]*return existing;/s,
+	"legacy C increment-ef-for-existing-element fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldRemoveDiskOnlyElementsBeforeSelect\(bool inMemory, bool useRust\)\s*\{[^}]*return !inMemory;/s,
+	"legacy C remove-disk-only-elements-before-select fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldClampNeighborSearchLevel\(int level, int entryLevel, bool useRust\)\s*\{[^}]*return level > entryLevel;/s,
+	"legacy C clamp-neighbor-search-level fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHavePointerHashForBase\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return !hasBasePointer;/s,
+	"legacy C pointer-hash-for-base fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldKeepElementWithHeapTids\(int heaptidsLength, bool useRust\)\s*\{[^}]*return heaptidsLength != 0;/s,
+	"legacy C keep-element-with-heaptids fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldCountCandidateWithHeapTids\(int heaptidsLength, bool useRust\)\s*\{[^}]*return heaptidsLength != 0;/s,
+	"legacy C count-candidate-with-heaptids fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSkipElementForExisting\(bool existing, bool useRust\)\s*\{[^}]*return existing;/s,
+	"legacy C skip-element-for-existing fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSkipElementPointerFlag\(bool hasSkipElement, bool useRust\)\s*\{[^}]*return hasSkipElement;/s,
+	"legacy C skip-element-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveDefaultSkipElementTid\(bool hasSkipElement, bool useRust\)\s*\{[^}]*return !hasSkipElement;/s,
+	"legacy C default-skip-element-tid fallback removed");
 
 done_testing();
