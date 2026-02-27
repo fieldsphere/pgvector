@@ -299,10 +299,8 @@ vector_rust_hnsw_should_stop_returning_remaining_discarded(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDecreasingScanDistanceFlag(bool isDecreasingDistance, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDecreasingDistance);
-
-	return isDecreasingDistance;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDecreasingDistance);
 }
 
 static bool
@@ -314,10 +312,8 @@ HnswShouldHaveDecreasingScanDistance(double distance, double previousDistance, b
 static bool
 HnswShouldHaveStrictOutOfOrderScanMode(int iterativeScanMode, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode);
-
-	return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode);
 }
 
 static bool
@@ -408,10 +404,8 @@ vector_rust_hnsw_should_have_decreasing_scan_distance_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldStopWithoutDiscarded(bool discardedIsNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_stop_without_discarded_kernel(discardedIsNull);
-
-	return discardedIsNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_without_discarded_kernel(discardedIsNull);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_without_discarded);
@@ -435,10 +429,8 @@ vector_rust_hnsw_should_stop_without_discarded(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveIterativeScanOffMode(int iterativeScanMode, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_stop_when_iterative_scan_off_kernel(iterativeScanMode);
-
-	return iterativeScanMode == HNSW_ITERATIVE_SCAN_OFF;
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_when_iterative_scan_off_kernel(iterativeScanMode);
 }
 
 static bool
@@ -450,10 +442,8 @@ HnswShouldStopWhenIterativeScanOff(int iterativeScanMode, bool useRust)
 static bool
 HnswShouldHaveActiveIterativeScanMode(int iterativeScanMode, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
-
-	return iterativeScanMode != HNSW_ITERATIVE_SCAN_OFF;
+	(void) useRust;
+	return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
 }
 
 static bool
@@ -537,10 +527,8 @@ vector_rust_hnsw_should_have_active_iterative_scan_mode(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReachScanTupleLimitFlag(bool reachesTupleLimit, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(reachesTupleLimit);
-
-	return reachesTupleLimit;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(reachesTupleLimit);
 }
 
 static bool
@@ -552,10 +540,8 @@ HnswShouldReachScanTupleLimit(int64 tupleCount, int64 maxScanTuples, bool useRus
 static bool
 HnswShouldExceedScanMemoryLimitFlag(bool exceedsMemoryLimit, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(exceedsMemoryLimit);
-
-	return exceedsMemoryLimit;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(exceedsMemoryLimit);
 }
 
 static bool
@@ -567,12 +553,9 @@ HnswShouldExceedScanMemoryLimit(int64 memoryUsed, int64 maxMemory, bool useRust)
 static bool
 HnswShouldLimitScanByResources(int64 tupleCount, int64 maxScanTuples, int64 memoryUsed, int64 maxMemory, bool useRust)
 {
-	if (useRust)
-		return HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true) ||
-			HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, true);
-
-	return HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, false) ||
-		HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, false);
+	(void) useRust;
+	return HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true) ||
+		HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, true);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_limit_scan_by_resources);
@@ -774,10 +757,8 @@ vector_rust_hnsw_should_have_strict_scan_mode(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveEmptyWorkList(int workListLength, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_handle_empty_work_list_kernel(workListLength);
-
-	return workListLength == 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_handle_empty_work_list_kernel(workListLength);
 }
 
 static bool
@@ -991,10 +972,8 @@ HnswShouldHaveRescanKeysFlag(bool hasKeys, bool useRust)
 static bool
 HnswShouldHavePositiveRescanKeyCountFlag(bool hasPositiveKeyCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPositiveKeyCount);
-
-	return hasPositiveKeyCount;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPositiveKeyCount);
 }
 
 static bool
@@ -1147,10 +1126,8 @@ HnswShouldHaveScanInstrumentPointer(void *instrument, bool useRust)
 static bool
 HnswShouldHaveMissingDiscardedHeap(bool hasDiscardedHeap, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDiscardedHeap);
-
-	return !hasDiscardedHeap;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDiscardedHeap);
 }
 
 static bool
@@ -1638,10 +1615,8 @@ vector_rust_hnsw_should_have_missing_discarded_heap(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNullScanValue(bool orderByIsNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_null_scan_value_kernel(orderByIsNull);
-
-	return orderByIsNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_null_scan_value_kernel(orderByIsNull);
 }
 
 static bool
@@ -1689,10 +1664,8 @@ vector_rust_hnsw_should_have_null_scan_value(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNormalizedScanValue(bool hasNormproc, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_normalize_scan_value_kernel(hasNormproc);
-
-	return hasNormproc;
+	(void) useRust;
+	return vector_rust_hnsw_should_normalize_scan_value_kernel(hasNormproc);
 }
 
 static bool
@@ -1816,10 +1789,8 @@ vector_rust_hnsw_should_have_scan_normproc_pointer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveInitialScanState(bool isFirstScan, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_initialize_scan_state_kernel(isFirstScan);
-
-	return isFirstScan;
+	(void) useRust;
+	return vector_rust_hnsw_should_initialize_scan_state_kernel(isFirstScan);
 }
 
 static bool
@@ -1867,10 +1838,8 @@ vector_rust_hnsw_should_have_initial_scan_state(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveInstrumentSearches(bool hasInstrument, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_increment_instrument_searches_kernel(hasInstrument);
-
-	return hasInstrument;
+	(void) useRust;
+	return vector_rust_hnsw_should_increment_instrument_searches_kernel(hasInstrument);
 }
 
 static bool
