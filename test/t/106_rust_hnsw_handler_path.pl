@@ -1680,6 +1680,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_default_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_default_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_default_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_default_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_default_max_distance_value(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_default_max_distance_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1687,6 +1697,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_default_max_distance_value(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_max_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_default_max_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_default_max_distance_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_default_max_distance_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_default_max_distance_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -1990,6 +2010,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_memory_entry_distance(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_memory_entry_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_memory_entry_distance(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_memory_entry_distance'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_in_memory_search_path(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_in_memory_search_path'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1997,6 +2027,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_in_memory_search_path(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_in_memory_search_path'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_in_memory_search_path(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_in_memory_search_path'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_in_memory_search_path(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_in_memory_search_path'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -2080,6 +2120,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_pointer_hash_for_base(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_pointer_hash_for_base'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_pointer_hash_for_base(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_pointer_hash_for_base'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_keep_element_with_heaptids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_keep_element_with_heaptids'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2120,6 +2170,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_skip_element_for_existing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_skip_element_for_existing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_skip_element_for_existing(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_skip_element_for_existing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_default_skip_element_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_default_skip_element_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2127,6 +2187,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_default_skip_element_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_skip_element_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_default_skip_element_tid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_default_skip_element_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_default_skip_element_tid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_default_skip_element_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -2480,6 +2550,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_entry_block(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_entry_block'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_entry_block(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_entry_block'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_meta_block_number(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_meta_block_number'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -2547,6 +2627,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_build_buffer_path(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_build_buffer_path'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_buffer_path(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_buffer_path'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_buffer_path(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_buffer_path'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -6369,6 +6459,18 @@ my $use_default_distance_value_parity = $node->safe_psql("postgres", q{
 });
 is($use_default_distance_value_parity, "t\nt\nt\nt");
 
+my $have_default_distance_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_default_distance_value(has_distance_pointer) =
+		   rust_hnsw_should_have_default_distance_value(has_distance_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_distance_pointer);
+});
+is($have_default_distance_value_parity, "t\nt\nt\nt");
+
 my $use_default_max_distance_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_default_max_distance_value(has_max_distance_pointer) =
 		   rust_hnsw_should_use_default_max_distance_value(has_max_distance_pointer)
@@ -6380,6 +6482,18 @@ my $use_default_max_distance_value_parity = $node->safe_psql("postgres", q{
 	) AS t(has_max_distance_pointer);
 });
 is($use_default_max_distance_value_parity, "t\nt\nt\nt");
+
+my $have_default_max_distance_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_default_max_distance_value(has_max_distance_pointer) =
+		   rust_hnsw_should_have_default_max_distance_value(has_max_distance_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_max_distance_pointer);
+});
+is($have_default_max_distance_value_parity, "t\nt\nt\nt");
 
 my $initialize_loaded_element_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_initialize_loaded_element(has_element) =
@@ -6741,6 +6855,18 @@ my $use_memory_entry_distance_parity = $node->safe_psql("postgres", q{
 });
 is($use_memory_entry_distance_parity, "t\nt\nt\nt");
 
+my $have_memory_entry_distance_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_memory_entry_distance(in_memory) =
+		   rust_hnsw_should_have_memory_entry_distance(in_memory)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(in_memory);
+});
+is($have_memory_entry_distance_parity, "t\nt\nt\nt");
+
 my $use_in_memory_search_path_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_in_memory_search_path(in_memory) =
 		   rust_hnsw_should_use_in_memory_search_path(in_memory)
@@ -6752,6 +6878,18 @@ my $use_in_memory_search_path_parity = $node->safe_psql("postgres", q{
 	) AS t(in_memory);
 });
 is($use_in_memory_search_path_parity, "t\nt\nt\nt");
+
+my $have_in_memory_search_path_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_in_memory_search_path(in_memory) =
+		   rust_hnsw_should_have_in_memory_search_path(in_memory)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(in_memory);
+});
+is($have_in_memory_search_path_parity, "t\nt\nt\nt");
 
 my $have_search_index_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_search_index_pointer(has_index_pointer) =
@@ -6849,6 +6987,18 @@ my $use_pointer_hash_for_base_parity = $node->safe_psql("postgres", q{
 });
 is($use_pointer_hash_for_base_parity, "t\nt\nt\nt");
 
+my $have_pointer_hash_for_base_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_pointer_hash_for_base(has_base_pointer) =
+		   rust_hnsw_should_have_pointer_hash_for_base(has_base_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_base_pointer);
+});
+is($have_pointer_hash_for_base_parity, "t\nt\nt\nt");
+
 my $keep_element_with_heaptids_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_keep_element_with_heaptids(heaptids_length) =
 		   rust_hnsw_should_keep_element_with_heaptids(heaptids_length)
@@ -6897,6 +7047,18 @@ my $use_skip_element_for_existing_parity = $node->safe_psql("postgres", q{
 });
 is($use_skip_element_for_existing_parity, "t\nt\nt\nt");
 
+my $have_skip_element_for_existing_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_skip_element_for_existing(existing) =
+		   rust_hnsw_should_have_skip_element_for_existing(existing)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(existing);
+});
+is($have_skip_element_for_existing_parity, "t\nt\nt\nt");
+
 my $use_default_skip_element_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_default_skip_element_tid(has_skip_element) =
 		   rust_hnsw_should_use_default_skip_element_tid(has_skip_element)
@@ -6908,6 +7070,18 @@ my $use_default_skip_element_tid_parity = $node->safe_psql("postgres", q{
 	) AS t(has_skip_element);
 });
 is($use_default_skip_element_tid_parity, "t\nt\nt\nt");
+
+my $have_default_skip_element_tid_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_default_skip_element_tid(has_skip_element) =
+		   rust_hnsw_should_have_default_skip_element_tid(has_skip_element)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_skip_element);
+});
+is($have_default_skip_element_tid_parity, "t\nt\nt\nt");
 
 my $have_skip_element_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_skip_element_pointer(has_skip_element) =
@@ -7333,6 +7507,18 @@ my $use_meta_entry_block_parity = $node->safe_psql("postgres", q{
 });
 is($use_meta_entry_block_parity, "t\nt\nt\nt");
 
+my $have_meta_entry_block_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_entry_block(has_valid_entry_block) =
+		   rust_hnsw_should_have_meta_entry_block(has_valid_entry_block)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_valid_entry_block);
+});
+is($have_meta_entry_block_parity, "t\nt\nt\nt");
+
 my $have_meta_block_number_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_meta_block_number(block_number) =
 		   rust_hnsw_should_have_meta_block_number(block_number)
@@ -7418,6 +7604,18 @@ my $use_build_buffer_path_parity = $node->safe_psql("postgres", q{
 	) AS t(building);
 });
 is($use_build_buffer_path_parity, "t\nt\nt\nt");
+
+my $have_build_buffer_path_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_buffer_path(building) =
+		   rust_hnsw_should_have_build_buffer_path(building)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(building);
+});
+is($have_build_buffer_path_parity, "t\nt\nt\nt");
 
 my $check_type_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_check_type_value(has_check_value_fn) =
