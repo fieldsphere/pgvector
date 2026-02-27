@@ -490,6 +490,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_inmemory_duplicate_heaptid(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_inmemory_duplicate_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_inmemory_duplicate_heaptid(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_inmemory_duplicate_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_handle_empty_work_list(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_handle_empty_work_list'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1270,6 +1280,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_skip_invalid_index_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_skip_invalid_index_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_skip_invalid_index_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_skip_invalid_index_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_duplicate_search_on_value_mismatch(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_duplicate_search_on_value_mismatch'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1280,6 +1300,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_stop_duplicate_search_on_value_mismatch(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_stop_duplicate_search_on_value_mismatch'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_stop_duplicate_search_on_value_mismatch(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_stop_duplicate_search_on_value_mismatch'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_after_duplicate_insert(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_after_duplicate_insert'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1287,6 +1317,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_return_after_duplicate_insert(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_return_after_duplicate_insert'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_return_after_duplicate_insert(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_return_after_duplicate_insert'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_return_after_duplicate_insert(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_return_after_duplicate_insert'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5499,6 +5539,18 @@ my $reject_inmemory_duplicate_heaptid_parity = $node->safe_psql("postgres", q{
 });
 is($reject_inmemory_duplicate_heaptid_parity, "t\nt\nt\nt");
 
+my $have_reject_inmemory_duplicate_heaptid_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_inmemory_duplicate_heaptid(heaptids_length, max_heaptids) =
+		   rust_hnsw_should_have_reject_inmemory_duplicate_heaptid(heaptids_length, max_heaptids)
+	FROM (VALUES
+		(0, 10),
+		(9, 10),
+		(10, 10),
+		(11, 10)
+	) AS t(heaptids_length, max_heaptids);
+});
+is($have_reject_inmemory_duplicate_heaptid_parity, "t\nt\nt\nt");
+
 my $handle_empty_work_list_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_handle_empty_work_list(work_list_length) =
 		   rust_hnsw_should_handle_empty_work_list(work_list_length)
@@ -6451,6 +6503,18 @@ my $skip_invalid_index_value_parity = $node->safe_psql("postgres", q{
 });
 is($skip_invalid_index_value_parity, "t\nt\nt\nt");
 
+my $have_skip_invalid_index_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_skip_invalid_index_value(index_value_formed) =
+		   rust_hnsw_should_have_skip_invalid_index_value(index_value_formed)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(index_value_formed);
+});
+is($have_skip_invalid_index_value_parity, "t\nt\nt\nt");
+
 my $stop_duplicate_search_on_value_mismatch_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_duplicate_search_on_value_mismatch(values_equal) =
 		   rust_hnsw_should_stop_duplicate_search_on_value_mismatch(values_equal)
@@ -6463,6 +6527,18 @@ my $stop_duplicate_search_on_value_mismatch_parity = $node->safe_psql("postgres"
 });
 is($stop_duplicate_search_on_value_mismatch_parity, "t\nt\nt\nt");
 
+my $have_stop_duplicate_search_on_value_mismatch_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_stop_duplicate_search_on_value_mismatch(values_equal) =
+		   rust_hnsw_should_have_stop_duplicate_search_on_value_mismatch(values_equal)
+	FROM (VALUES
+		(1),
+		(0),
+		(0),
+		(1)
+	) AS t(values_equal);
+});
+is($have_stop_duplicate_search_on_value_mismatch_parity, "t\nt\nt\nt");
+
 my $return_after_duplicate_insert_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_after_duplicate_insert(duplicate_inserted) =
 		   rust_hnsw_should_return_after_duplicate_insert(duplicate_inserted)
@@ -6474,6 +6550,18 @@ my $return_after_duplicate_insert_parity = $node->safe_psql("postgres", q{
 	) AS t(duplicate_inserted);
 });
 is($return_after_duplicate_insert_parity, "t\nt\nt\nt");
+
+my $have_return_after_duplicate_insert_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_return_after_duplicate_insert(duplicate_inserted) =
+		   rust_hnsw_should_have_return_after_duplicate_insert(duplicate_inserted)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(duplicate_inserted);
+});
+is($have_return_after_duplicate_insert_parity, "t\nt\nt\nt");
 
 my $skip_update_graph_for_duplicate_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_update_graph_for_duplicate(duplicate_found) =
