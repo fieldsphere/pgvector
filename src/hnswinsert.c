@@ -61,6 +61,7 @@ static bool HnswShouldHaveDistinctOnDiskNeighborBufferFlag(bool hasDistinctBuffe
 static bool HnswShouldHaveDistinctOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
+static bool HnswShouldHaveNextNeighborOffset(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
 static bool HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRust);
 static bool HnswShouldHaveValidOnDiskOffsetNumberFlag(bool offsetNumberValid, bool useRust);
@@ -1921,12 +1922,18 @@ vector_rust_hnsw_should_use_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust)
+HnswShouldHaveNextNeighborOffset(bool sameBuffer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(sameBuffer);
 
 	return sameBuffer;
+}
+
+static bool
+HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust)
+{
+	return HnswShouldHaveNextNeighborOffset(sameBuffer, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_next_neighbor_offset);
@@ -1945,6 +1952,24 @@ vector_rust_hnsw_should_use_next_neighbor_offset(PG_FUNCTION_ARGS)
 	int32		sameBuffer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseNextNeighborOffset(sameBuffer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_next_neighbor_offset);
+Datum
+vector_hnsw_should_have_next_neighbor_offset(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNextNeighborOffset(sameBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_next_neighbor_offset);
+Datum
+vector_rust_hnsw_should_have_next_neighbor_offset(PG_FUNCTION_ARGS)
+{
+	int32		sameBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNextNeighborOffset(sameBuffer != 0, true));
 }
 
 static bool
