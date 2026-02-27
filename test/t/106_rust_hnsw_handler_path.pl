@@ -2790,6 +2790,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_vacuum_heaptid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_vacuum_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_vacuum_heaptid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_vacuum_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_vacuum_heaptid_scan_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_heaptid_scan_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7187,6 +7197,18 @@ my $stop_vacuum_heaptid_scan_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptid_valid);
 });
 is($stop_vacuum_heaptid_scan_parity, "t\nt\nt\nt");
+
+my $have_invalid_vacuum_heaptid_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_vacuum_heaptid(heaptid_valid) =
+		   rust_hnsw_should_have_invalid_vacuum_heaptid(heaptid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(heaptid_valid);
+});
+is($have_invalid_vacuum_heaptid_parity, "t\nt\nt\nt");
 
 my $have_vacuum_heaptid_scan_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_heaptid_scan_tid(heaptid_valid) =
