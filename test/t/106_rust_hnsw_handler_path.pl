@@ -1900,6 +1900,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_valid_insert_index_value_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_valid_insert_index_value_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_valid_insert_index_value_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_valid_insert_index_value_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1917,6 +1927,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_ondisk_value_mismatch(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_value_mismatch'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_value_mismatch_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_value_mismatch_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_value_mismatch_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_value_mismatch_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -2277,6 +2297,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_valid_ondisk_offset_number(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_valid_ondisk_offset_number'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_valid_ondisk_offset_number_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_valid_ondisk_offset_number_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_valid_ondisk_offset_number_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_valid_ondisk_offset_number_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -3980,6 +4010,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_ondisk_heaptid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_ondisk_heaptid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_ondisk_heaptid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_ondisk_heaptid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_ondisk_heaptid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_heaptid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -3987,6 +4027,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_ondisk_heaptid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_heaptid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_heaptid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_heaptid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_heaptid_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4030,6 +4080,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_ondisk_neighbor_slot_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_ondisk_neighbor_slot_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_on_invalid_ondisk_neighbor_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4050,6 +4110,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_ondisk_neighbor_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_ondisk_neighbor_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_neighbor_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4057,6 +4127,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_ondisk_neighbor_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_neighbor_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_ondisk_neighbor_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_neighbor_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_ondisk_neighbor_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_ondisk_neighbor_tid_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5370,6 +5450,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_neighbor_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_neighbor_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_neighbor_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_neighbor_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_match_ondisk_buffers(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_match_ondisk_buffers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5387,6 +5477,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_matching_ondisk_buffer(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_ondisk_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_ondisk_buffer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_ondisk_buffer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_ondisk_buffer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_ondisk_buffer_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5600,6 +5700,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_neighbor_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_neighbor_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_neighbor_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_neighbor_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_matching_neighbor_offset(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_matching_neighbor_offset'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5607,6 +5717,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_matching_neighbor_offset(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_neighbor_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_neighbor_offset_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_neighbor_offset_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_neighbor_offset_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_neighbor_offset_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -8025,6 +8145,18 @@ my $have_valid_insert_index_value_parity = $node->safe_psql("postgres", q{
 });
 is($have_valid_insert_index_value_parity, "t\nt\nt\nt");
 
+my $have_valid_insert_index_value_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_valid_insert_index_value_flag(index_value_formed) =
+		   rust_hnsw_should_have_valid_insert_index_value_flag(index_value_formed)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(index_value_formed);
+});
+is($have_valid_insert_index_value_flag_parity, "t\nt\nt\nt");
+
 my $stop_ondisk_duplicate_search_on_value_mismatch_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch(values_equal) =
 		   rust_hnsw_should_stop_ondisk_duplicate_search_on_value_mismatch(values_equal)
@@ -8048,6 +8180,18 @@ my $have_ondisk_value_mismatch_parity = $node->safe_psql("postgres", q{
 	) AS t(values_equal);
 });
 is($have_ondisk_value_mismatch_parity, "t\nt\nt\nt");
+
+my $have_ondisk_value_mismatch_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_value_mismatch_flag(values_mismatch) =
+		   rust_hnsw_should_have_ondisk_value_mismatch_flag(values_mismatch)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(values_mismatch);
+});
+is($have_ondisk_value_mismatch_flag_parity, "t\nt\nt\nt");
 
 my $return_after_ondisk_duplicate_insert_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_after_ondisk_duplicate_insert(duplicate_inserted) =
@@ -8480,6 +8624,18 @@ my $have_valid_ondisk_offset_number_parity = $node->safe_psql("postgres", q{
 	) AS t(free_offno);
 });
 is($have_valid_ondisk_offset_number_parity, "t\nt\nt\nt");
+
+my $have_valid_ondisk_offset_number_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_valid_ondisk_offset_number_flag(offset_number_valid) =
+		   rust_hnsw_should_have_valid_ondisk_offset_number_flag(offset_number_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(offset_number_valid);
+});
+is($have_valid_ondisk_offset_number_flag_parity, "t\nt\nt\nt");
 
 my $process_free_offset_result_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_process_free_offset_result(free_offset_result) =
@@ -10528,6 +10684,18 @@ my $have_invalid_ondisk_heaptid_parity = $node->safe_psql("postgres", q{
 });
 is($have_invalid_ondisk_heaptid_parity, "t\nt\nt\nt");
 
+my $have_invalid_ondisk_heaptid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_ondisk_heaptid_flag(heap_tid_valid) =
+		   rust_hnsw_should_have_invalid_ondisk_heaptid_flag(heap_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(heap_tid_valid);
+});
+is($have_invalid_ondisk_heaptid_flag_parity, "t\nt\nt\nt");
+
 my $have_ondisk_heaptid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_ondisk_heaptid(heap_tid_valid) =
 		   rust_hnsw_should_have_ondisk_heaptid(heap_tid_valid)
@@ -10539,6 +10707,18 @@ my $have_ondisk_heaptid_parity = $node->safe_psql("postgres", q{
 	) AS t(heap_tid_valid);
 });
 is($have_ondisk_heaptid_parity, "t\nt\nt\nt");
+
+my $have_ondisk_heaptid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_heaptid_flag(heap_tid_valid) =
+		   rust_hnsw_should_have_ondisk_heaptid_flag(heap_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(heap_tid_valid);
+});
+is($have_ondisk_heaptid_flag_parity, "t\nt\nt\nt");
 
 my $have_ondisk_itempointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_ondisk_itempointer(item_pointer_valid) =
@@ -10588,6 +10768,18 @@ my $have_invalid_ondisk_neighbor_slot_parity = $node->safe_psql("postgres", q{
 });
 is($have_invalid_ondisk_neighbor_slot_parity, "t\nt\nt\nt");
 
+my $have_invalid_ondisk_neighbor_slot_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(slot_tid_valid) =
+		   rust_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(slot_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(slot_tid_valid);
+});
+is($have_invalid_ondisk_neighbor_slot_flag_parity, "t\nt\nt\nt");
+
 my $stop_on_invalid_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(neighbor_tid_valid) =
 		   rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(neighbor_tid_valid)
@@ -10612,6 +10804,18 @@ my $have_invalid_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
 });
 is($have_invalid_ondisk_neighbor_tid_parity, "t\nt\nt\nt");
 
+my $have_invalid_ondisk_neighbor_tid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(neighbor_tid_valid) =
+		   rust_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(neighbor_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(neighbor_tid_valid);
+});
+is($have_invalid_ondisk_neighbor_tid_flag_parity, "t\nt\nt\nt");
+
 my $have_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_ondisk_neighbor_tid(neighbor_tid_valid) =
 		   rust_hnsw_should_have_ondisk_neighbor_tid(neighbor_tid_valid)
@@ -10623,6 +10827,18 @@ my $have_ondisk_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbor_tid_valid);
 });
 is($have_ondisk_neighbor_tid_parity, "t\nt\nt\nt");
+
+my $have_ondisk_neighbor_tid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_ondisk_neighbor_tid_flag(neighbor_tid_valid) =
+		   rust_hnsw_should_have_ondisk_neighbor_tid_flag(neighbor_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(neighbor_tid_valid);
+});
+is($have_ondisk_neighbor_tid_flag_parity, "t\nt\nt\nt");
 
 my $skip_non_element_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_non_element_tuple(is_element_tuple) =
@@ -12196,6 +12412,18 @@ my $have_matching_neighbor_page_parity = $node->safe_psql("postgres", q{
 });
 is($have_matching_neighbor_page_parity, "t\nt\nt\nt");
 
+my $have_matching_neighbor_page_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_neighbor_page_flag(has_matching_page) =
+		   rust_hnsw_should_have_matching_neighbor_page_flag(has_matching_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_matching_page);
+});
+is($have_matching_neighbor_page_flag_parity, "t\nt\nt\nt");
+
 my $match_ondisk_buffers_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_match_ondisk_buffers(left_buffer, right_buffer) =
 		   rust_hnsw_should_match_ondisk_buffers(left_buffer, right_buffer)
@@ -12219,6 +12447,18 @@ my $have_matching_ondisk_buffer_parity = $node->safe_psql("postgres", q{
 	) AS t(left_buffer, right_buffer);
 });
 is($have_matching_ondisk_buffer_parity, "t\nt\nt\nt");
+
+my $have_matching_ondisk_buffer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_ondisk_buffer_flag(has_matching_buffer) =
+		   rust_hnsw_should_have_matching_ondisk_buffer_flag(has_matching_buffer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_matching_buffer);
+});
+is($have_matching_ondisk_buffer_flag_parity, "t\nt\nt\nt");
 
 my $release_reused_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_reused_neighbor_buffer(same_buffer) =
@@ -12472,6 +12712,18 @@ my $have_matching_neighbor_block_parity = $node->safe_psql("postgres", q{
 });
 is($have_matching_neighbor_block_parity, "t\nt\nt\nt");
 
+my $have_matching_neighbor_block_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_neighbor_block_flag(has_matching_block) =
+		   rust_hnsw_should_have_matching_neighbor_block_flag(has_matching_block)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_matching_block);
+});
+is($have_matching_neighbor_block_flag_parity, "t\nt\nt\nt");
+
 my $have_matching_neighbor_offset_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_matching_neighbor_offset(indextid_offno, element_offno) =
 		   rust_hnsw_should_have_matching_neighbor_offset(indextid_offno, element_offno)
@@ -12483,6 +12735,18 @@ my $have_matching_neighbor_offset_parity = $node->safe_psql("postgres", q{
 	) AS t(indextid_offno, element_offno);
 });
 is($have_matching_neighbor_offset_parity, "t\nt\nt\nt");
+
+my $have_matching_neighbor_offset_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_neighbor_offset_flag(has_matching_offset) =
+		   rust_hnsw_should_have_matching_neighbor_offset_flag(has_matching_offset)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_matching_offset);
+});
+is($have_matching_neighbor_offset_flag_parity, "t\nt\nt\nt");
 
 my $update_connection_from_candidate_index_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_update_connection_from_candidate_index(update_idx) =
