@@ -852,6 +852,28 @@ vector_rust_hnsw_should_have_build_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_entrypoint_pointer);
+Datum
+vector_hnsw_should_have_build_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypoint(entryPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_entrypoint_pointer);
+Datum
+vector_rust_hnsw_should_have_build_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypoint(entryPoint, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_pointer);
 Datum
 vector_hnsw_should_have_build_pointer(PG_FUNCTION_ARGS)
@@ -1104,6 +1126,28 @@ vector_rust_hnsw_should_have_build_leader(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveBuildLeaderFlag(hasLeader != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_leader_pointer);
+Datum
+vector_hnsw_should_have_build_leader_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+	const char *mockLeader = "leader";
+	HnswLeader *hnswleader = hasLeader != 0 ? (HnswLeader *) mockLeader : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildLeader(hnswleader, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_leader_pointer);
+Datum
+vector_rust_hnsw_should_have_build_leader_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+	const char *mockLeader = "leader";
+	HnswLeader *hnswleader = hasLeader != 0 ? (HnswLeader *) mockLeader : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildLeader(hnswleader, true));
+}
+
 static bool
 HnswShouldHaveScanHeapForBuild(bool hasHeap, bool useRust)
 {
@@ -1183,6 +1227,28 @@ vector_rust_hnsw_should_have_build_heap(PG_FUNCTION_ARGS)
 	int32		hasHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveBuildHeapFlag(hasHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_heap_pointer);
+Datum
+vector_hnsw_should_have_build_heap_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+	const char *mockHeap = "heap";
+	Relation	heap = hasHeap != 0 ? (Relation) mockHeap : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildHeap(heap, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_heap_pointer);
+Datum
+vector_rust_hnsw_should_have_build_heap_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+	const char *mockHeap = "heap";
+	Relation	heap = hasHeap != 0 ? (Relation) mockHeap : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildHeap(heap, true));
 }
 
 static bool
