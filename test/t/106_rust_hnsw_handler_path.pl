@@ -1070,6 +1070,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_write_wal_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_write_wal_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_write_wal_page(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_write_wal_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_treat_fork_as_init(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_treat_fork_as_init'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1077,6 +1087,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_treat_fork_as_init(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_treat_fork_as_init'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_treat_fork_as_init(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_treat_fork_as_init'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_treat_fork_as_init(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_treat_fork_as_init'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4860,6 +4880,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_unregister_mvcc_snapshot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_unregister_mvcc_snapshot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_unregister_mvcc_snapshot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_unregister_mvcc_snapshot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_finish_parallel_heap_scan(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_finish_parallel_heap_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4867,6 +4897,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_finish_parallel_heap_scan(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_finish_parallel_heap_scan'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_finish_parallel_heap_scan(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_finish_parallel_heap_scan'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_finish_parallel_heap_scan(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_finish_parallel_heap_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 
@@ -6151,6 +6191,18 @@ my $write_wal_page_parity = $node->safe_psql("postgres", q{
 });
 is($write_wal_page_parity, "t\nt\nt\nt");
 
+my $have_write_wal_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_write_wal_page(needs_wal, is_init_fork) =
+		   rust_hnsw_should_have_write_wal_page(needs_wal, is_init_fork)
+	FROM (VALUES
+		(0, 0),
+		(1, 0),
+		(0, 1),
+		(1, 1)
+	) AS t(needs_wal, is_init_fork);
+});
+is($have_write_wal_page_parity, "t\nt\nt\nt");
+
 my $treat_fork_as_init_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_treat_fork_as_init(fork_num) =
 		   rust_hnsw_should_treat_fork_as_init(fork_num)
@@ -6162,6 +6214,18 @@ my $treat_fork_as_init_parity = $node->safe_psql("postgres", q{
 	) AS t(fork_num);
 });
 is($treat_fork_as_init_parity, "t\nt\nt\nt");
+
+my $have_treat_fork_as_init_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_treat_fork_as_init(fork_num) =
+		   rust_hnsw_should_have_treat_fork_as_init(fork_num)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(3)
+	) AS t(fork_num);
+});
+is($have_treat_fork_as_init_parity, "t\nt\nt\nt");
 
 my $skip_null_build_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_null_build_tuple(is_null) =
@@ -10694,6 +10758,18 @@ my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 });
 is($unregister_mvcc_snapshot_parity, "t\nt\nt\nt");
 
+my $have_unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_unregister_mvcc_snapshot(snapshot_is_mvcc) =
+		   rust_hnsw_should_have_unregister_mvcc_snapshot(snapshot_is_mvcc)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(snapshot_is_mvcc);
+});
+is($have_unregister_mvcc_snapshot_parity, "t\nt\nt\nt");
+
 my $finish_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_finish_parallel_heap_scan(participants_done, participant_count) =
 		   rust_hnsw_should_finish_parallel_heap_scan(participants_done, participant_count)
@@ -10705,5 +10781,17 @@ my $finish_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 	) AS t(participants_done, participant_count);
 });
 is($finish_parallel_heap_scan_parity, "t\nt\nt\nt");
+
+my $have_finish_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_finish_parallel_heap_scan(participants_done, participant_count) =
+		   rust_hnsw_should_have_finish_parallel_heap_scan(participants_done, participant_count)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 3),
+		(3, 3)
+	) AS t(participants_done, participant_count);
+});
+is($have_finish_parallel_heap_scan_parity, "t\nt\nt\nt");
 
 done_testing();
