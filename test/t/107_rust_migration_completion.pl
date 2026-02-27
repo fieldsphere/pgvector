@@ -164,4 +164,30 @@ unlike($hnsw_build_c, qr/HnswShouldHaveScanHeapForBuild\(bool hasHeap, bool useR
 unlike($hnsw_build_c, qr/HnswShouldHaveParallelHeapScan\(bool hasLeader, bool useRust\)\s*\{[^}]*return hasLeader;/s,
 	"legacy C parallel-heap-scan fallback removed");
 
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_leader_participate_kernel\(/,
+	"hnswbuild.c uses rust leader-participate kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_use_debug_query_string_kernel\(/,
+	"hnswbuild.c uses rust debug-query-string kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_finish_parallel_heap_scan_kernel\(/,
+	"hnswbuild.c uses rust finish-parallel-heap-scan kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel\(/,
+	"hnswbuild.c uses rust unregister-mvcc kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reserve_graph_memory_kernel\(/,
+	"hnswbuild.c uses rust reserve-graph-memory kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_log_leader_progress_kernel\(/,
+	"hnswbuild.c uses rust log-leader-progress kernel");
+
+unlike($hnsw_build_c, qr/HnswShouldHaveLeaderParticipate\(bool leaderParticipates, bool useRust\)\s*\{[^}]*return leaderParticipates;/s,
+	"legacy C leader-participate fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveDebugQueryStringFlag\(bool hasDebugQueryString, bool useRust\)\s*\{[^}]*return hasDebugQueryString;/s,
+	"legacy C debug-query-string fallback removed");
+unlike($hnsw_build_c, qr/return participantsDone == participantCount;/,
+	"legacy C finish-parallel-heap-scan fallback removed");
+unlike($hnsw_build_c, qr/return snapshotIsMVCC;/,
+	"legacy C unregister-mvcc fallback removed");
+unlike($hnsw_build_c, qr/return estHnswArea > estOther;/,
+	"legacy C reserve-graph-memory fallback removed");
+unlike($hnsw_build_c, qr/return progressIsLeader;/,
+	"legacy C log-leader-progress fallback removed");
+
 done_testing();
