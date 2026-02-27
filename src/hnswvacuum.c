@@ -1950,12 +1950,18 @@ vector_rust_hnsw_should_match_vacuum_entrypoint_tuple(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectVacuumNeighborOverwrite(bool overwriteSucceeded, bool useRust)
+HnswShouldHaveFailedVacuumNeighborOverwriteFlag(bool overwriteSucceeded, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
 
 	return !overwriteSucceeded;
+}
+
+static bool
+HnswShouldRejectVacuumNeighborOverwrite(bool overwriteSucceeded, bool useRust)
+{
+	return HnswShouldHaveFailedVacuumNeighborOverwriteFlag(overwriteSucceeded, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_vacuum_neighbor_overwrite);
@@ -1974,6 +1980,24 @@ vector_rust_hnsw_should_reject_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
 	int32		overwriteSucceeded = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectVacuumNeighborOverwrite(overwriteSucceeded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_failed_vacuum_neighbor_overwrite);
+Datum
+vector_hnsw_should_have_failed_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFailedVacuumNeighborOverwriteFlag(overwriteSucceeded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite);
+Datum
+vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFailedVacuumNeighborOverwriteFlag(overwriteSucceeded != 0, true));
 }
 
 static bool
