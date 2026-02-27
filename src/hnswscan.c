@@ -71,12 +71,24 @@ HnswShouldResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
 }
 
 static bool
-HnswShouldStopResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
+HnswShouldHaveEmptyResumeDiscardedFlag(bool discardedIsEmpty, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
 
 	return discardedIsEmpty;
+}
+
+static bool
+HnswShouldHaveEmptyResumeDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	return HnswShouldHaveEmptyResumeDiscardedFlag(discardedIsEmpty, useRust);
+}
+
+static bool
+HnswShouldStopResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	return HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_resume_from_discarded);
@@ -131,6 +143,24 @@ vector_rust_hnsw_should_stop_resume_from_discarded(PG_FUNCTION_ARGS)
 	int32		discardedIsEmpty = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopResumeFromDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_resume_discarded);
+Datum
+vector_hnsw_should_have_empty_resume_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_resume_discarded);
+Datum
+vector_rust_hnsw_should_have_empty_resume_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty != 0, true));
 }
 
 static bool
