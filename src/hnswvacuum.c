@@ -800,12 +800,18 @@ vector_rust_hnsw_should_use_default_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipVacuumElementWithoutUpdates(bool needsUpdated, bool useRust)
+HnswShouldHaveVacuumElementWithoutUpdatesFlag(bool needsUpdated, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
 
 	return !needsUpdated;
+}
+
+static bool
+HnswShouldSkipVacuumElementWithoutUpdates(bool needsUpdated, bool useRust)
+{
+	return HnswShouldHaveVacuumElementWithoutUpdatesFlag(needsUpdated, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_vacuum_element_without_updates);
@@ -824,6 +830,24 @@ vector_rust_hnsw_should_skip_vacuum_element_without_updates(PG_FUNCTION_ARGS)
 	int32		needsUpdated = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipVacuumElementWithoutUpdates(needsUpdated != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_element_without_updates);
+Datum
+vector_hnsw_should_have_vacuum_element_without_updates(PG_FUNCTION_ARGS)
+{
+	int32		needsUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumElementWithoutUpdatesFlag(needsUpdated != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_element_without_updates);
+Datum
+vector_rust_hnsw_should_have_vacuum_element_without_updates(PG_FUNCTION_ARGS)
+{
+	int32		needsUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumElementWithoutUpdatesFlag(needsUpdated != 0, true));
 }
 
 static bool
