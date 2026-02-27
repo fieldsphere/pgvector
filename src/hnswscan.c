@@ -937,9 +937,15 @@ HnswShouldUseScanNormproc(void *normprocinfo, bool useRust)
 }
 
 static bool
-HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
+HnswShouldHaveScanEntrypoint(bool hasEntryPoint, bool useRust)
 {
 	return HnswShouldHaveScanPointerFlag(hasEntryPoint, useRust);
+}
+
+static bool
+HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveScanEntrypoint(hasEntryPoint, useRust);
 }
 
 static bool
@@ -1115,6 +1121,24 @@ vector_rust_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_entrypoint);
+Datum
+vector_hnsw_should_have_scan_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanEntrypoint(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_entrypoint);
+Datum
+vector_rust_hnsw_should_have_scan_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanEntrypoint(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_discarded_heap_missing);
