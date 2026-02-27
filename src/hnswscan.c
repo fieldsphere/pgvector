@@ -750,12 +750,18 @@ vector_rust_hnsw_should_have_empty_scan_heaptids(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectMissingOrderBy(bool orderByIsNull, bool useRust)
+HnswShouldHaveMissingOrderBy(bool orderByIsNull, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_missing_orderby_kernel(orderByIsNull);
 
 	return orderByIsNull;
+}
+
+static bool
+HnswShouldRejectMissingOrderBy(bool orderByIsNull, bool useRust)
+{
+	return HnswShouldHaveMissingOrderBy(orderByIsNull, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_missing_orderby);
@@ -774,6 +780,24 @@ vector_rust_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
 	int32		orderByIsNull = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectMissingOrderBy(orderByIsNull != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_orderby);
+Datum
+vector_hnsw_should_have_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingOrderBy(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_orderby);
+Datum
+vector_rust_hnsw_should_have_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingOrderBy(orderByIsNull != 0, true));
 }
 
 static bool
