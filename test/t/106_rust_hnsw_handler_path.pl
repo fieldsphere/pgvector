@@ -380,6 +380,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_flush_pages_in_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_flush_pages_in_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_flush_pages_in_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_flush_pages_in_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_flush_graph(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_flush_graph'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1107,6 +1117,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_default_entry_level(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_entry_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_update_entry_point(integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_update_entry_point'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_update_entry_point(integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_update_entry_point'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4737,6 +4757,18 @@ my $flush_graph_pages_at_end_parity = $node->safe_psql("postgres", q{
 });
 is($flush_graph_pages_at_end_parity, "t\nt\nt\nt");
 
+my $have_flush_pages_in_build_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_flush_pages_in_build(graph_flushed) =
+		   rust_hnsw_should_have_flush_pages_in_build(graph_flushed)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(graph_flushed);
+});
+is($have_flush_pages_in_build_parity, "t\nt\nt\nt");
+
 my $have_flush_graph_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_flush_graph(memory_used, memory_total) =
 		   rust_hnsw_should_have_flush_graph(memory_used, memory_total)
@@ -5626,6 +5658,18 @@ my $use_default_entry_level_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entrypoint);
 });
 is($use_default_entry_level_parity, "t\nt\nt\nt");
+
+my $have_update_entry_point_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_update_entry_point(entrypoint_is_null, element_level, entry_level) =
+		   rust_hnsw_should_have_update_entry_point(entrypoint_is_null, element_level, entry_level)
+	FROM (VALUES
+		(1, 0, -1),
+		(0, 2, 1),
+		(0, 1, 1),
+		(0, 0, 1)
+	) AS t(entrypoint_is_null, element_level, entry_level);
+});
+is($have_update_entry_point_parity, "t\nt\nt\nt");
 
 my $have_default_entry_level_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_default_entry_level(has_entrypoint) =
