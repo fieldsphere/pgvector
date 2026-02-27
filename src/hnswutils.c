@@ -819,28 +819,22 @@ HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
 static bool
 HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
-
-	return !found;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
 }
 
 static bool
 HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
-
-	return !found;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
 }
 
 static bool
 HnswShouldHaveDiskNeighborIndexTidFlag(bool isValidIndexTid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isValidIndexTid);
-
-	return isValidIndexTid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isValidIndexTid);
 }
 
 static bool
@@ -852,28 +846,22 @@ HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRust)
 static bool
 HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isValidIndexTid);
-
-	return !isValidIndexTid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isValidIndexTid);
 }
 
 static bool
 HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
-
-	return !neighborTidsLoaded;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
 }
 
 static bool
 HnswShouldHaveConsistentNeighborTupleFlag(bool tupleConsistent, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleConsistent);
-
-	return tupleConsistent;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleConsistent);
 }
 
 static bool
@@ -887,19 +875,15 @@ HnswShouldHaveConsistentNeighborTuple(uint8 tupleVersion, uint8 elementVersion, 
 static bool
 HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(tupleConsistent);
-
-	return !tupleConsistent;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(tupleConsistent);
 }
 
 static bool
 HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDiscardedHeap);
-
-	return hasDiscardedHeap;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDiscardedHeap);
 }
 
 static bool
@@ -917,10 +901,8 @@ HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
 static bool
 HnswShouldHaveTupleCounterPointerFlag(bool hasTupleCounter, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasTupleCounter);
-
-	return hasTupleCounter;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasTupleCounter);
 }
 
 static bool
@@ -938,10 +920,8 @@ HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
 static bool
 HnswShouldHaveVisitedHashPointerFlag(bool hasVisitedHash, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasVisitedHash);
-
-	return hasVisitedHash;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasVisitedHash);
 }
 
 static bool
@@ -953,28 +933,22 @@ HnswShouldHaveVisitedHashPointer(visited_hash *v, bool useRust)
 static bool
 HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasVisitedHash);
-
-	return !hasVisitedHash;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasVisitedHash);
 }
 
 static bool
 HnswShouldInitializeVisitedState(bool initVisited, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(initVisited);
-
-	return initVisited;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(initVisited);
 }
 
 static bool
 HnswShouldHaveTidVisitedHash(bool inMemory, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
-
-	return !inMemory;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
 }
 
 static bool
@@ -986,10 +960,8 @@ HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
 static bool
 HnswShouldHaveVisitedBasePointerFlag(bool hasBasePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
-
-	return hasBasePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
 }
 
 static bool
@@ -1013,10 +985,8 @@ HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
 static bool
 HnswShouldHavePointerVisitedHash(bool hasBasePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
-
-	return !hasBasePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
 }
 
 static bool
