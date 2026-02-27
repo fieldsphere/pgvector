@@ -372,12 +372,18 @@ vector_rust_hnsw_can_add_duplicate_heap_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldStopDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
+HnswShouldHaveStopDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
 
 	return !valuesEqual;
+}
+
+static bool
+HnswShouldStopDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
+{
+	return HnswShouldHaveStopDuplicateSearchOnValueMismatch(valuesEqual, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_duplicate_search_on_value_mismatch);
@@ -398,13 +404,37 @@ vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS
 	PG_RETURN_BOOL(HnswShouldStopDuplicateSearchOnValueMismatch(valuesEqual != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_stop_duplicate_search_on_value_mismatch);
+Datum
+vector_hnsw_should_have_stop_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStopDuplicateSearchOnValueMismatch(valuesEqual != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_stop_duplicate_search_on_value_mismatch);
+Datum
+vector_rust_hnsw_should_have_stop_duplicate_search_on_value_mismatch(PG_FUNCTION_ARGS)
+{
+	int32		valuesEqual = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStopDuplicateSearchOnValueMismatch(valuesEqual != 0, true));
+}
+
 static bool
-HnswShouldReturnAfterDuplicateInsert(bool duplicateInserted, bool useRust)
+HnswShouldHaveReturnAfterDuplicateInsert(bool duplicateInserted, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_return_after_duplicate_insert_kernel(duplicateInserted);
 
 	return duplicateInserted;
+}
+
+static bool
+HnswShouldReturnAfterDuplicateInsert(bool duplicateInserted, bool useRust)
+{
+	return HnswShouldHaveReturnAfterDuplicateInsert(duplicateInserted, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_after_duplicate_insert);
@@ -423,6 +453,24 @@ vector_rust_hnsw_should_return_after_duplicate_insert(PG_FUNCTION_ARGS)
 	int32		duplicateInserted = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnAfterDuplicateInsert(duplicateInserted != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_return_after_duplicate_insert);
+Datum
+vector_hnsw_should_have_return_after_duplicate_insert(PG_FUNCTION_ARGS)
+{
+	int32		duplicateInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveReturnAfterDuplicateInsert(duplicateInserted != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_return_after_duplicate_insert);
+Datum
+vector_rust_hnsw_should_have_return_after_duplicate_insert(PG_FUNCTION_ARGS)
+{
+	int32		duplicateInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveReturnAfterDuplicateInsert(duplicateInserted != 0, true));
 }
 
 static bool
@@ -559,12 +607,18 @@ vector_rust_hnsw_should_have_ondisk_phase(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipInvalidIndexValue(bool indexValueFormed, bool useRust)
+HnswShouldHaveSkipInvalidIndexValue(bool indexValueFormed, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(indexValueFormed);
 
 	return !indexValueFormed;
+}
+
+static bool
+HnswShouldSkipInvalidIndexValue(bool indexValueFormed, bool useRust)
+{
+	return HnswShouldHaveSkipInvalidIndexValue(indexValueFormed, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_invalid_index_value);
@@ -583,6 +637,24 @@ vector_rust_hnsw_should_skip_invalid_index_value(PG_FUNCTION_ARGS)
 	int32		indexValueFormed = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipInvalidIndexValue(indexValueFormed != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_invalid_index_value);
+Datum
+vector_hnsw_should_have_skip_invalid_index_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipInvalidIndexValue(indexValueFormed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_invalid_index_value);
+Datum
+vector_rust_hnsw_should_have_skip_invalid_index_value(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipInvalidIndexValue(indexValueFormed != 0, true));
 }
 
 static bool
@@ -1068,12 +1140,18 @@ vector_rust_hnsw_should_have_parallel_heap_scan(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectInMemoryDuplicateHeapTid(int32 heaptidsLength, int32 maxHeaptids, bool useRust)
+HnswShouldHaveRejectInMemoryDuplicateHeapTid(int32 heaptidsLength, int32 maxHeaptids, bool useRust)
 {
 	if (useRust)
 		return !vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
 
 	return heaptidsLength >= maxHeaptids;
+}
+
+static bool
+HnswShouldRejectInMemoryDuplicateHeapTid(int32 heaptidsLength, int32 maxHeaptids, bool useRust)
+{
+	return HnswShouldHaveRejectInMemoryDuplicateHeapTid(heaptidsLength, maxHeaptids, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_inmemory_duplicate_heaptid);
@@ -1094,6 +1172,26 @@ vector_rust_hnsw_should_reject_inmemory_duplicate_heaptid(PG_FUNCTION_ARGS)
 	int32		maxHeaptids = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldRejectInMemoryDuplicateHeapTid(heaptidsLength, maxHeaptids, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_inmemory_duplicate_heaptid);
+Datum
+vector_hnsw_should_have_reject_inmemory_duplicate_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectInMemoryDuplicateHeapTid(heaptidsLength, maxHeaptids, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_inmemory_duplicate_heaptid);
+Datum
+vector_rust_hnsw_should_have_reject_inmemory_duplicate_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+	int32		maxHeaptids = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectInMemoryDuplicateHeapTid(heaptidsLength, maxHeaptids, true));
 }
 
 /*
