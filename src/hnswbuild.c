@@ -654,11 +654,9 @@ HnswShouldHaveHigherBuildEntrypointLevel(int elementLevel, int entryLevel, bool 
 static bool
 HnswShouldHaveUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
-			HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, true);
-
-	return entryPointIsNull || HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
+		HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, true);
 }
 
 static bool
@@ -1345,10 +1343,8 @@ vector_rust_hnsw_should_have_parallel_heap_scan(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectInMemoryDuplicateHeapTid(int32 heaptidsLength, int32 maxHeaptids, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
-
-	return heaptidsLength >= maxHeaptids;
+	(void) useRust;
+	return !vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
 }
 
 static bool
@@ -3044,10 +3040,8 @@ vector_rust_hnsw_should_have_update_progress_after_insert(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(tupleSize, allocSize);
-
-	return tupleSize > allocSize;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(tupleSize, allocSize);
 }
 
 static bool
@@ -3099,10 +3093,8 @@ vector_rust_hnsw_should_have_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, neighborTupleSize);
-
-	return freeSpace < neighborTupleSize;
+	(void) useRust;
+	return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, neighborTupleSize);
 }
 
 static bool
@@ -3154,10 +3146,8 @@ vector_rust_hnsw_should_have_append_neighbor_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_element_page_kernel(freeSpace, elementTupleSize, combinedSize, maxSize);
-
-	return freeSpace < elementTupleSize || (combinedSize <= maxSize && freeSpace < combinedSize);
+	(void) useRust;
+	return vector_rust_hnsw_should_append_element_page_kernel(freeSpace, elementTupleSize, combinedSize, maxSize);
 }
 
 static bool
@@ -3217,10 +3207,8 @@ vector_rust_hnsw_should_have_append_element_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(insertedOffset, expectedOffset);
-
-	return insertedOffset != expectedOffset;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(insertedOffset, expectedOffset);
 }
 
 static bool
@@ -3272,10 +3260,8 @@ vector_rust_hnsw_should_have_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
-
-	return !overwriteSucceeded;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
 }
 
 static bool
@@ -3323,10 +3309,8 @@ vector_rust_hnsw_should_have_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(combinedSize, maxSize);
-
-	return combinedSize <= maxSize;
+	(void) useRust;
+	return vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(combinedSize, maxSize);
 }
 
 static bool
