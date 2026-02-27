@@ -838,5 +838,35 @@ unlike($hnsw_utils_c, qr/HnswShouldHaveExpectedMetaMagicFlag\(bool hasExpectedMa
 	"legacy C expected-meta-magic-flag fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldRejectInvalidMetaMagic\(bool hasExpectedMagic, bool useRust\)\s*\{[^}]*return !hasExpectedMagic;/s,
 	"legacy C reject-invalid-meta-magic fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveRejectCloserNeighbor\(float8 distance, float8 candidateDistance, bool useRust\)\s*\{[^}]*return distance <= candidateDistance;/s,
+	"legacy C reject-closer-neighbor fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSelectNeighborsEarlyReturn\(int candidateCount, int maxNeighbors, bool useRust\)\s*\{[^}]*return candidateCount <= maxNeighbors;/s,
+	"legacy C select-neighbors-early-return fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveAddSearchCandidate\(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust\)\s*\{[^}]*return candidateDistance < frontierDistance \|\| alwaysAdd;/s,
+	"legacy C add-search-candidate fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveStopSearchLayer\(float8 candidateDistance, float8 frontierDistance, bool useRust\)\s*\{[^}]*return candidateDistance > frontierDistance;/s,
+	"legacy C stop-search-layer fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveAppendNeighborWithoutPrune\(int neighborsLength, int maxNeighbors, bool useRust\)\s*\{[^}]*return neighborsLength < maxNeighbors;/s,
+	"legacy C append-neighbor-without-prune fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSkipLowerLevelCandidate\(int candidateLevel, int searchLevel, bool useRust\)\s*\{[^}]*return candidateLevel < searchLevel;/s,
+	"legacy C skip-lower-level-candidate fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveKeepPrunedConnection\(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust\)\s*\{[^}]*return wdoff < wdlen && resultLength < maxNeighbors;/s,
+	"legacy C keep-pruned-connection fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSetPrunedFromArray\(int wdoff, int wdlen, bool useRust\)\s*\{[^}]*return wdoff < wdlen;/s,
+	"legacy C set-pruned-from-array fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTrackDiscardedCandidates\(bool hasDiscardedHeap, bool useRust\)\s*\{[^}]*return hasDiscardedHeap;/s,
+	"legacy C track-discarded-candidates fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldLoadElementWithMaxDistanceCap\(bool alwaysAdd, bool trackDiscarded, bool useRust\)\s*\{[^}]*return !alwaysAdd && !trackDiscarded;/s,
+	"legacy C load-element-with-max-distance-cap fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveUpdateIndexPointerFlag\(bool hasUpdateIndexPointer, bool useRust\)\s*\{[^}]*return hasUpdateIndexPointer;/s,
+	"legacy C update-index-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTrackUpdateIndex\(bool hasUpdateIndexPointer, bool useRust\)\s*\{[^}]*return hasUpdateIndexPointer;/s,
+	"legacy C track-update-index fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveProcessPrunedCandidate\(bool hasPrunedCandidate, bool useRust\)\s*\{[^}]*return hasPrunedCandidate;/s,
+	"legacy C process-pruned-candidate fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTrimCandidateList\(int candidateCount, int ef, bool useRust\)\s*\{[^}]*return candidateCount > ef;/s,
+	"legacy C trim-candidate-list fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveAlwaysAddCandidate\(int candidateCount, int ef, bool useRust\)\s*\{[^}]*return candidateCount < ef;/s,
+	"legacy C always-add-candidate fallback removed");
 
 done_testing();
