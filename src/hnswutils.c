@@ -985,12 +985,18 @@ HnswShouldInitializeVisitedState(bool initVisited, bool useRust)
 }
 
 static bool
-HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
+HnswShouldHaveTidVisitedHash(bool inMemory, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
 
 	return !inMemory;
+}
+
+static bool
+HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
+{
+	return HnswShouldHaveTidVisitedHash(inMemory, useRust);
 }
 
 static bool
@@ -1009,18 +1015,30 @@ HnswShouldHaveVisitedBasePointer(const void *base, bool useRust)
 }
 
 static bool
-HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
+HnswShouldHaveOffsetVisitedHash(bool hasBasePointer, bool useRust)
 {
 	return HnswShouldHaveVisitedBasePointerFlag(hasBasePointer, useRust);
 }
 
 static bool
-HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
+HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHaveOffsetVisitedHash(hasBasePointer, useRust);
+}
+
+static bool
+HnswShouldHavePointerVisitedHash(bool hasBasePointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
 
 	return !hasBasePointer;
+}
+
+static bool
+HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHavePointerVisitedHash(hasBasePointer, useRust);
 }
 
 static bool
@@ -2310,6 +2328,24 @@ vector_rust_hnsw_should_use_tid_visited_hash(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseTidVisitedHash(inMemory != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_tid_visited_hash);
+Datum
+vector_hnsw_should_have_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTidVisitedHash(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_tid_visited_hash);
+Datum
+vector_rust_hnsw_should_have_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTidVisitedHash(inMemory != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_offset_visited_hash);
 Datum
 vector_hnsw_should_use_offset_visited_hash(PG_FUNCTION_ARGS)
@@ -2328,6 +2364,24 @@ vector_rust_hnsw_should_use_offset_visited_hash(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseOffsetVisitedHash(hasBasePointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_offset_visited_hash);
+Datum
+vector_hnsw_should_have_offset_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOffsetVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_offset_visited_hash);
+Datum
+vector_rust_hnsw_should_have_offset_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOffsetVisitedHash(hasBasePointer != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_pointer_visited_hash);
 Datum
 vector_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
@@ -2344,6 +2398,24 @@ vector_rust_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
 	int32		hasBasePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pointer_visited_hash);
+Datum
+vector_hnsw_should_have_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pointer_visited_hash);
+Datum
+vector_rust_hnsw_should_have_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerVisitedHash(hasBasePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_base_pointer);
