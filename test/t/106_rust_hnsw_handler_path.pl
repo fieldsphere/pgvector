@@ -160,6 +160,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_nonempty_resume_discarded_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_nonempty_resume_discarded_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_nonempty_resume_discarded_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_nonempty_resume_discarded_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_resume_from_discarded(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_resume_from_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -180,6 +190,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_empty_resume_discarded_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_empty_resume_discarded_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_empty_resume_discarded_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_empty_resume_discarded_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_return_remaining_discarded(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_return_remaining_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -197,6 +217,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_nonempty_remaining_discarded(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_nonempty_remaining_discarded'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_nonempty_remaining_discarded_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_nonempty_remaining_discarded_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_nonempty_remaining_discarded_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_nonempty_remaining_discarded_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -700,6 +730,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_rescan_keys_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_rescan_keys_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_rescan_keys_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_rescan_keys_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_positive_rescan_key_count(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_positive_rescan_key_count'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -707,6 +747,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_positive_rescan_key_count(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_positive_rescan_key_count'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_positive_rescan_key_count_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_positive_rescan_key_count_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_positive_rescan_key_count_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_positive_rescan_key_count_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5483,6 +5533,18 @@ my $have_nonempty_resume_discarded_parity = $node->safe_psql("postgres", q{
 });
 is($have_nonempty_resume_discarded_parity, "t\nt\nt\nt");
 
+my $have_nonempty_resume_discarded_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_nonempty_resume_discarded_flag(has_nonempty_discarded) =
+		   rust_hnsw_should_have_nonempty_resume_discarded_flag(has_nonempty_discarded)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_nonempty_discarded);
+});
+is($have_nonempty_resume_discarded_flag_parity, "t\nt\nt\nt");
+
 my $stop_resume_from_discarded_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_resume_from_discarded(discarded_is_empty) =
 		   rust_hnsw_should_stop_resume_from_discarded(discarded_is_empty)
@@ -5507,6 +5569,18 @@ my $have_empty_resume_discarded_parity = $node->safe_psql("postgres", q{
 });
 is($have_empty_resume_discarded_parity, "t\nt\nt\nt");
 
+my $have_empty_resume_discarded_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_empty_resume_discarded_flag(discarded_is_empty) =
+		   rust_hnsw_should_have_empty_resume_discarded_flag(discarded_is_empty)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(discarded_is_empty);
+});
+is($have_empty_resume_discarded_flag_parity, "t\nt\nt\nt");
+
 my $return_remaining_discarded_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_return_remaining_discarded(discarded_is_empty) =
 		   rust_hnsw_should_return_remaining_discarded(discarded_is_empty)
@@ -5530,6 +5604,18 @@ my $have_nonempty_remaining_discarded_parity = $node->safe_psql("postgres", q{
 	) AS t(discarded_is_empty);
 });
 is($have_nonempty_remaining_discarded_parity, "t\nt\nt\nt");
+
+my $have_nonempty_remaining_discarded_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_nonempty_remaining_discarded_flag(has_nonempty_discarded) =
+		   rust_hnsw_should_have_nonempty_remaining_discarded_flag(has_nonempty_discarded)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_nonempty_discarded);
+});
+is($have_nonempty_remaining_discarded_flag_parity, "t\nt\nt\nt");
 
 my $stop_returning_remaining_discarded_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_returning_remaining_discarded(discarded_is_empty) =
@@ -6131,6 +6217,18 @@ my $have_rescan_keys_parity = $node->safe_psql("postgres", q{
 });
 is($have_rescan_keys_parity, "t\nt\nt\nt");
 
+my $have_rescan_keys_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_rescan_keys_flag(has_keys) =
+		   rust_hnsw_should_have_rescan_keys_flag(has_keys)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_keys);
+});
+is($have_rescan_keys_flag_parity, "t\nt\nt\nt");
+
 my $have_positive_rescan_key_count_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_positive_rescan_key_count(key_count) =
 		   rust_hnsw_should_have_positive_rescan_key_count(key_count)
@@ -6142,6 +6240,18 @@ my $have_positive_rescan_key_count_parity = $node->safe_psql("postgres", q{
 	) AS t(key_count);
 });
 is($have_positive_rescan_key_count_parity, "t\nt\nt\nt");
+
+my $have_positive_rescan_key_count_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_positive_rescan_key_count_flag(has_positive_key_count) =
+		   rust_hnsw_should_have_positive_rescan_key_count_flag(has_positive_key_count)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_positive_key_count);
+});
+is($have_positive_rescan_key_count_flag_parity, "t\nt\nt\nt");
 
 my $use_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_provided_rescan_key_array(has_key_array) =
