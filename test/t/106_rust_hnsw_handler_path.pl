@@ -380,6 +380,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_flush_graph(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_flush_graph'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_flush_graph(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_flush_graph'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_ondisk_phase(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_ondisk_phase'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4676,6 +4686,18 @@ my $flush_graph_pages_at_end_parity = $node->safe_psql("postgres", q{
 	) AS t(graph_flushed);
 });
 is($flush_graph_pages_at_end_parity, "t\nt\nt\nt");
+
+my $have_flush_graph_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_flush_graph(memory_used, memory_total) =
+		   rust_hnsw_should_have_flush_graph(memory_used, memory_total)
+	FROM (VALUES
+		(0::bigint, 1::bigint),
+		(1::bigint, 1::bigint),
+		(2::bigint, 1::bigint),
+		(5::bigint, 9::bigint)
+	) AS t(memory_used, memory_total);
+});
+is($have_flush_graph_parity, "t\nt\nt\nt");
 
 my $have_ondisk_phase_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_ondisk_phase(graph_flushed) =
