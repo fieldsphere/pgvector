@@ -460,6 +460,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_parallel_heap_scan(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_parallel_heap_scan'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_parallel_heap_scan(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_parallel_heap_scan'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_inmemory_duplicate_heaptid(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_inmemory_duplicate_heaptid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -780,6 +790,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_relation_parallel_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_relation_parallel_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_relation_parallel_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_relation_parallel_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_fallback_without_workers(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_fallback_without_workers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -830,6 +850,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_non_concurrent_snapshot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_non_concurrent_snapshot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_non_concurrent_snapshot(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_non_concurrent_snapshot'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_non_concurrent_lock_modes(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_non_concurrent_lock_modes'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -837,6 +867,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_non_concurrent_lock_modes(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_non_concurrent_lock_modes'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_non_concurrent_lock_modes(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_non_concurrent_lock_modes'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_non_concurrent_lock_modes(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_non_concurrent_lock_modes'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -1067,6 +1107,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_default_entry_level(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_default_entry_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_default_entry_level(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_default_entry_level'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_default_entry_level(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_default_entry_level'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4783,6 +4833,18 @@ my $use_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 });
 is($use_parallel_heap_scan_parity, "t\nt\nt\nt");
 
+my $have_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_parallel_heap_scan(has_leader) =
+		   rust_hnsw_should_have_parallel_heap_scan(has_leader)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_leader);
+});
+is($have_parallel_heap_scan_parity, "t\nt\nt\nt");
+
 my $reject_inmemory_duplicate_heaptid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_inmemory_duplicate_heaptid(heaptids_length, max_heaptids) =
 		   rust_hnsw_should_reject_inmemory_duplicate_heaptid(heaptids_length, max_heaptids)
@@ -5167,6 +5229,18 @@ my $use_relation_parallel_workers_parity = $node->safe_psql("postgres", q{
 });
 is($use_relation_parallel_workers_parity, "t\nt\nt\nt");
 
+my $have_relation_parallel_workers_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_relation_parallel_workers(parallel_workers) =
+		   rust_hnsw_should_have_relation_parallel_workers(parallel_workers)
+	FROM (VALUES
+		(-1),
+		(0),
+		(4),
+		(2)
+	) AS t(parallel_workers);
+});
+is($have_relation_parallel_workers_parity, "t\nt\nt\nt");
+
 my $fallback_without_workers_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fallback_without_workers(workers_launched) =
 		   rust_hnsw_should_fallback_without_workers(workers_launched)
@@ -5239,6 +5313,18 @@ my $use_non_concurrent_snapshot_parity = $node->safe_psql("postgres", q{
 });
 is($use_non_concurrent_snapshot_parity, "t\nt\nt\nt");
 
+my $have_non_concurrent_snapshot_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_non_concurrent_snapshot(is_concurrent) =
+		   rust_hnsw_should_have_non_concurrent_snapshot(is_concurrent)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_concurrent);
+});
+is($have_non_concurrent_snapshot_parity, "t\nt\nt\nt");
+
 my $use_non_concurrent_lock_modes_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_non_concurrent_lock_modes(is_concurrent) =
 		   rust_hnsw_should_use_non_concurrent_lock_modes(is_concurrent)
@@ -5250,6 +5336,18 @@ my $use_non_concurrent_lock_modes_parity = $node->safe_psql("postgres", q{
 	) AS t(is_concurrent);
 });
 is($use_non_concurrent_lock_modes_parity, "t\nt\nt\nt");
+
+my $have_non_concurrent_lock_modes_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_non_concurrent_lock_modes(is_concurrent) =
+		   rust_hnsw_should_have_non_concurrent_lock_modes(is_concurrent)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_concurrent);
+});
+is($have_non_concurrent_lock_modes_parity, "t\nt\nt\nt");
 
 my $fallback_without_dsm_segment_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_fallback_without_dsm_segment(has_dsm_segment) =
@@ -5528,6 +5626,18 @@ my $use_default_entry_level_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entrypoint);
 });
 is($use_default_entry_level_parity, "t\nt\nt\nt");
+
+my $have_default_entry_level_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_default_entry_level(has_entrypoint) =
+		   rust_hnsw_should_have_default_entry_level(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_default_entry_level_parity, "t\nt\nt\nt");
 
 my $skip_null_insert_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_null_insert_tuple(is_null) =
