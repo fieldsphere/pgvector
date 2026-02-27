@@ -1019,10 +1019,8 @@ vector_rust_hnsw_should_have_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveBeginParallelBuild(int parallelWorkers, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_begin_parallel_build_kernel(parallelWorkers);
-
-	return parallelWorkers > 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_begin_parallel_build_kernel(parallelWorkers);
 }
 
 static bool
@@ -2148,10 +2146,8 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
 static bool
 HnswShouldHaveSkipParallelWorkers(int parallelWorkers, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_parallel_workers_kernel(parallelWorkers);
-
-	return parallelWorkers == 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_parallel_workers_kernel(parallelWorkers);
 }
 
 static bool
@@ -2199,10 +2195,8 @@ vector_rust_hnsw_should_have_skip_parallel_workers(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRelationParallelWorkers(int parallelWorkers, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_relation_parallel_workers_kernel(parallelWorkers);
-
-	return parallelWorkers != -1;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_relation_parallel_workers_kernel(parallelWorkers);
 }
 
 static bool
@@ -2214,10 +2208,8 @@ HnswShouldUseRelationParallelWorkers(int parallelWorkers, bool useRust)
 static bool
 HnswShouldHaveFallbackWithoutWorkers(int workersLaunched, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_fallback_without_workers_kernel(workersLaunched);
-
-	return workersLaunched == 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_fallback_without_workers_kernel(workersLaunched);
 }
 
 static bool
@@ -2499,10 +2491,8 @@ vector_rust_hnsw_should_have_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_fallback_without_dsm_segment_kernel(hasDsmSegment);
-
-	return !hasDsmSegment;
+	(void) useRust;
+	return vector_rust_hnsw_should_fallback_without_dsm_segment_kernel(hasDsmSegment);
 }
 
 static bool
@@ -3432,10 +3422,8 @@ vector_rust_hnsw_should_have_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonConcurrentLockModes(bool isConcurrent, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel(isConcurrent);
-
-	return !isConcurrent;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel(isConcurrent);
 }
 
 static bool
@@ -3483,10 +3471,8 @@ vector_rust_hnsw_should_have_non_concurrent_lock_modes(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonConcurrentSnapshot(bool isConcurrent, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel(isConcurrent);
-
-	return !isConcurrent;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel(isConcurrent);
 }
 
 static bool
