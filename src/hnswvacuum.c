@@ -38,9 +38,15 @@ HnswShouldHaveDeletedTidPointer(const void *deletedTid, bool useRust)
 }
 
 static bool
-HnswShouldContainDeletedTid(bool hasDeletedTid, bool useRust)
+HnswShouldHaveDeletedTidContainment(bool hasDeletedTid, bool useRust)
 {
 	return HnswShouldHaveDeletedTidPointerFlag(hasDeletedTid, useRust);
+}
+
+static bool
+HnswShouldContainDeletedTid(bool hasDeletedTid, bool useRust)
+{
+	return HnswShouldHaveDeletedTidContainment(hasDeletedTid, useRust);
 }
 
 static bool
@@ -65,6 +71,24 @@ vector_rust_hnsw_should_contain_deleted_tid(PG_FUNCTION_ARGS)
 	int32		hasDeletedTid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldContainDeletedTid(hasDeletedTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_deleted_tid_containment);
+Datum
+vector_hnsw_should_have_deleted_tid_containment(PG_FUNCTION_ARGS)
+{
+	int32		hasDeletedTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedTidContainment(hasDeletedTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_deleted_tid_containment);
+Datum
+vector_rust_hnsw_should_have_deleted_tid_containment(PG_FUNCTION_ARGS)
+{
+	int32		hasDeletedTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedTidContainment(hasDeletedTid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_contain_deleted_tid_pointer);
