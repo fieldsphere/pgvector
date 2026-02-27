@@ -570,6 +570,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_provided_orderby_data(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_provided_orderby_data'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_provided_orderby_data(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_provided_orderby_data'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_null_scan_value(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_null_scan_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4674,6 +4684,18 @@ my $use_provided_orderby_data_parity = $node->safe_psql("postgres", q{
 	) AS t(has_orderby_data);
 });
 is($use_provided_orderby_data_parity, "t\nt\nt\nt");
+
+my $have_provided_orderby_data_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_provided_orderby_data(has_orderby_data) =
+		   rust_hnsw_should_have_provided_orderby_data(has_orderby_data)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_orderby_data);
+});
+is($have_provided_orderby_data_parity, "t\nt\nt\nt");
 
 my $use_null_scan_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_null_scan_value(orderby_is_null) =
