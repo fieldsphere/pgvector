@@ -699,12 +699,18 @@ vector_rust_hnsw_should_have_empty_work_list(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldAdvanceOnExhaustedHeapTids(int heaptidsLength, bool useRust)
+HnswShouldHaveEmptyScanHeapTids(int heaptidsLength, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
 
 	return heaptidsLength == 0;
+}
+
+static bool
+HnswShouldAdvanceOnExhaustedHeapTids(int heaptidsLength, bool useRust)
+{
+	return HnswShouldHaveEmptyScanHeapTids(heaptidsLength, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_advance_on_exhausted_heaptids);
@@ -723,6 +729,24 @@ vector_rust_hnsw_should_advance_on_exhausted_heaptids(PG_FUNCTION_ARGS)
 	int32		heaptidsLength = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAdvanceOnExhaustedHeapTids(heaptidsLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_scan_heaptids);
+Datum
+vector_hnsw_should_have_empty_scan_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyScanHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_scan_heaptids);
+Datum
+vector_rust_hnsw_should_have_empty_scan_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyScanHeapTids(heaptidsLength, true));
 }
 
 static bool
