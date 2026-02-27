@@ -90,6 +90,7 @@ static bool HnswShouldHaveOnDiskHeapTid(ItemPointer heaptid, bool useRust);
 static bool HnswShouldHaveOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust);
 static bool HnswShouldHaveOnDiskNeighborTid(ItemPointer indextid, bool useRust);
 static bool HnswShouldUseFreeOnDiskNeighborSlot(bool slotTidValid, bool useRust);
+static bool HnswShouldHaveInvalidOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust);
 static bool HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust);
 static bool HnswShouldHaveMatchingNeighborBlockFlag(bool hasMatchingBlock, bool useRust);
 static bool HnswShouldHaveMatchingNeighborBlock(int32 indextidBlkno, int32 elementBlkno, bool useRust);
@@ -2453,12 +2454,18 @@ vector_rust_hnsw_should_use_free_ondisk_neighbor_slot(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust)
+HnswShouldHaveInvalidOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
 
 	return !neighborTidValid;
+}
+
+static bool
+HnswShouldStopOnInvalidOnDiskNeighborTid(bool neighborTidValid, bool useRust)
+{
+	return HnswShouldHaveInvalidOnDiskNeighborTidFlag(neighborTidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_on_invalid_ondisk_neighbor_tid);
@@ -2477,6 +2484,24 @@ vector_rust_hnsw_should_stop_on_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
 	int32		neighborTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopOnInvalidOnDiskNeighborTid(neighborTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_ondisk_neighbor_tid);
+Datum
+vector_hnsw_should_have_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborTidFlag(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid);
+Datum
+vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborTidFlag(neighborTidValid != 0, true));
 }
 
 static bool
