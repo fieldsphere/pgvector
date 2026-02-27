@@ -401,6 +401,24 @@ vector_rust_hnsw_should_have_decreasing_scan_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistance(distance, previousDistance, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_decreasing_scan_distance_flag);
+Datum
+vector_hnsw_should_have_decreasing_scan_distance_flag(PG_FUNCTION_ARGS)
+{
+	int32		isDecreasingDistance = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistanceFlag(isDecreasingDistance != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_decreasing_scan_distance_flag);
+Datum
+vector_rust_hnsw_should_have_decreasing_scan_distance_flag(PG_FUNCTION_ARGS)
+{
+	int32		isDecreasingDistance = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistanceFlag(isDecreasingDistance != 0, true));
+}
+
 static bool
 HnswShouldStopWithoutDiscarded(bool discardedIsNull, bool useRust)
 {
@@ -615,6 +633,24 @@ vector_rust_hnsw_should_reach_scan_tuple_limit(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reach_scan_tuple_limit_flag);
+Datum
+vector_hnsw_should_reach_scan_tuple_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		reachedTupleLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimitFlag(reachedTupleLimit != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reach_scan_tuple_limit_flag);
+Datum
+vector_rust_hnsw_should_reach_scan_tuple_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		reachedTupleLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimitFlag(reachedTupleLimit != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_exceed_scan_memory_limit);
 Datum
 vector_hnsw_should_exceed_scan_memory_limit(PG_FUNCTION_ARGS)
@@ -633,6 +669,24 @@ vector_rust_hnsw_should_exceed_scan_memory_limit(PG_FUNCTION_ARGS)
 	int64		maxMemory = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_exceed_scan_memory_limit_flag);
+Datum
+vector_hnsw_should_exceed_scan_memory_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		exceededMemoryLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimitFlag(exceededMemoryLimit != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_exceed_scan_memory_limit_flag);
+Datum
+vector_rust_hnsw_should_exceed_scan_memory_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		exceededMemoryLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimitFlag(exceededMemoryLimit != 0, true));
 }
 
 static bool
@@ -1263,6 +1317,24 @@ vector_rust_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_rescan_key_array_flag);
+Datum
+vector_hnsw_should_use_provided_rescan_key_array_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_rescan_key_array_flag);
+Datum
+vector_rust_hnsw_should_use_provided_rescan_key_array_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_rescan_key_array);
 Datum
 vector_hnsw_should_have_provided_rescan_key_array(PG_FUNCTION_ARGS)
@@ -1379,6 +1451,24 @@ vector_rust_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_orderby_data_flag);
+Datum
+vector_hnsw_should_use_provided_orderby_data_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_orderby_data_flag);
+Datum
+vector_rust_hnsw_should_use_provided_orderby_data_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_orderby_data);
 Datum
 vector_hnsw_should_have_provided_orderby_data(PG_FUNCTION_ARGS)
@@ -1431,6 +1521,24 @@ vector_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_entrypoint_for_scan);
 Datum
 vector_rust_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_entrypoint_for_scan_flag);
+Datum
+vector_hnsw_should_use_entrypoint_for_scan_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_entrypoint_for_scan_flag);
+Datum
+vector_rust_hnsw_should_use_entrypoint_for_scan_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
@@ -1507,6 +1615,24 @@ vector_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_discarded_heap_missing);
 Datum
 vector_rust_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_discarded_heap_missing_flag);
+Datum
+vector_hnsw_should_discarded_heap_missing_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_discarded_heap_missing_flag);
+Datum
+vector_rust_hnsw_should_discarded_heap_missing_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
 
@@ -1645,6 +1771,24 @@ vector_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_normproc);
 Datum
 vector_rust_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_normproc_flag);
+Datum
+vector_hnsw_should_use_scan_normproc_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_normproc_flag);
+Datum
+vector_rust_hnsw_should_use_scan_normproc_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasNormproc = PG_GETARG_INT32(0);
 
@@ -1805,6 +1949,24 @@ vector_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_instrument);
 Datum
 vector_rust_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_instrument_flag);
+Datum
+vector_hnsw_should_use_scan_instrument_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_instrument_flag);
+Datum
+vector_rust_hnsw_should_use_scan_instrument_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasInstrument = PG_GETARG_INT32(0);
 
