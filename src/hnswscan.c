@@ -943,9 +943,15 @@ HnswShouldUseEntrypointForScan(HnswElement entryPoint, bool useRust)
 }
 
 static bool
-HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
+HnswShouldHaveScanInstrument(bool hasInstrument, bool useRust)
 {
 	return HnswShouldHaveScanPointerFlag(hasInstrument, useRust);
+}
+
+static bool
+HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
+{
+	return HnswShouldHaveScanInstrument(hasInstrument, useRust);
 }
 
 #if PG_VERSION_NUM >= 180000
@@ -1379,6 +1385,24 @@ vector_rust_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
 	int32		hasInstrument = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_instrument);
+Datum
+vector_hnsw_should_have_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrument(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_instrument);
+Datum
+vector_rust_hnsw_should_have_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrument(hasInstrument != 0, true));
 }
 
 /*
