@@ -36,6 +36,7 @@ static bool HnswShouldUpdateOnDiskInsertPage(bool hasNewInsertPage, bool useRust
 static bool HnswShouldHaveBoundaryDuplicateInsertSlotFlag(bool hasBoundarySlot, bool useRust);
 static bool HnswShouldHaveBoundaryDuplicateInsertSlot(int32 freeSlotIndex, int32 maxHeaptids, bool useRust);
 static bool HnswShouldRejectOnDiskDuplicateInsertSlot(bool hasBoundarySlot, bool useRust);
+static bool HnswShouldHaveInvalidOnDiskHeapTidFlag(bool heapTidValid, bool useRust);
 static bool HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRust);
 static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
@@ -1371,12 +1372,18 @@ vector_rust_hnsw_should_have_boundary_duplicate_insert_slot(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRust)
+HnswShouldHaveInvalidOnDiskHeapTidFlag(bool heapTidValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
 
 	return !heapTidValid;
+}
+
+static bool
+HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRust)
+{
+	return HnswShouldHaveInvalidOnDiskHeapTidFlag(heapTidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_break_on_invalid_ondisk_heaptid);
@@ -1395,6 +1402,24 @@ vector_rust_hnsw_should_break_on_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
 	int32		heapTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldBreakOnInvalidOnDiskHeapTid(heapTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_ondisk_heaptid);
+Datum
+vector_hnsw_should_have_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskHeapTidFlag(heapTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_heaptid);
+Datum
+vector_rust_hnsw_should_have_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskHeapTidFlag(heapTidValid != 0, true));
 }
 
 static bool
