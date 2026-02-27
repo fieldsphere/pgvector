@@ -2870,6 +2870,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_finished_vacuum_page_update(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_finished_vacuum_page_update'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_finished_vacuum_page_update(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_finished_vacuum_page_update'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_invalid_vacuum_neighbor_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_invalid_vacuum_neighbor_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7353,6 +7363,18 @@ my $finish_vacuum_page_update_parity = $node->safe_psql("postgres", q{
 	) AS t(page_updated);
 });
 is($finish_vacuum_page_update_parity, "t\nt\nt\nt");
+
+my $have_finished_vacuum_page_update_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_finished_vacuum_page_update(page_updated) =
+		   rust_hnsw_should_have_finished_vacuum_page_update(page_updated)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(page_updated);
+});
+is($have_finished_vacuum_page_update_parity, "t\nt\nt\nt");
 
 my $skip_invalid_vacuum_neighbor_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_invalid_vacuum_neighbor_tid(neighbor_tid_valid) =
