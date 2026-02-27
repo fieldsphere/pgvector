@@ -3185,6 +3185,24 @@ vector_rust_hnsw_should_have_ondisk_insert_page(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertPageFlag(hasInsertPage != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_insert_page_flag);
+Datum
+vector_hnsw_should_have_ondisk_insert_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertPageFlag(hasInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_insert_page_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_insert_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertPageFlag(hasInsertPage != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_block_number);
 Datum
 vector_hnsw_should_have_ondisk_block_number(PG_FUNCTION_ARGS)
@@ -3219,6 +3237,42 @@ vector_rust_hnsw_should_have_valid_ondisk_block_number(PG_FUNCTION_ARGS)
 	int32		blkno = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskBlockNumber((BlockNumber) blkno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_valid_ondisk_block_number_flag);
+Datum
+vector_hnsw_should_have_valid_ondisk_block_number_flag(PG_FUNCTION_ARGS)
+{
+	int32		blockNumberValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskBlockNumberFlag(blockNumberValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_valid_ondisk_block_number_flag);
+Datum
+vector_rust_hnsw_should_have_valid_ondisk_block_number_flag(PG_FUNCTION_ARGS)
+{
+	int32		blockNumberValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskBlockNumberFlag(blockNumberValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_block_flag);
+Datum
+vector_hnsw_should_have_ondisk_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		blockValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskBlockFlag(blockValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_block_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		blockValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskBlockFlag(blockValid != 0, true));
 }
 
 static bool
@@ -4201,6 +4255,24 @@ vector_rust_hnsw_should_have_ondisk_next_page(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskNextPageFlag(nextPageValid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_next_page_flag);
+Datum
+vector_hnsw_should_have_ondisk_next_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		nextPageValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskNextPageFlag(nextPageValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_next_page_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_next_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		nextPageValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskNextPageFlag(nextPageValid != 0, true));
+}
+
 static bool
 HnswShouldHaveOnDiskInsertSpaceFlag(bool hasSpace, bool useRust)
 {
@@ -4249,6 +4321,24 @@ vector_hnsw_should_have_ondisk_insert_space(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_insert_space);
 Datum
 vector_rust_hnsw_should_have_ondisk_insert_space(PG_FUNCTION_ARGS)
+{
+	int32		hasSpace = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertSpaceFlag(hasSpace != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_insert_space_flag);
+Datum
+vector_hnsw_should_have_ondisk_insert_space_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSpace = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskInsertSpaceFlag(hasSpace != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_insert_space_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_insert_space_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasSpace = PG_GETARG_INT32(0);
 
