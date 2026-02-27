@@ -68,6 +68,7 @@ static bool HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRus
 static bool HnswShouldHaveValidOnDiskOffsetNumberFlag(bool offsetNumberValid, bool useRust);
 static bool HnswShouldHaveValidOnDiskOffsetNumber(OffsetNumber freeOffno, bool useRust);
 static bool HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust);
+static bool HnswShouldHaveFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
 static bool HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust);
 static bool HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust);
 static bool HnswShouldHaveOnDiskSpaceForCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust);
@@ -2027,12 +2028,18 @@ HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust)
 }
 
 static bool
-HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
+HnswShouldHaveFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(freeOffsetValid);
 
 	return freeOffsetValid;
+}
+
+static bool
+HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
+{
+	return HnswShouldHaveFreeOnDiskOffsets(freeOffsetValid, useRust);
 }
 
 static bool
@@ -2051,6 +2058,24 @@ vector_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
 	int32		freeOffsetValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseFreeOnDiskOffsets(freeOffsetValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_free_ondisk_offsets);
+Datum
+vector_hnsw_should_have_free_ondisk_offsets(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFreeOnDiskOffsets(freeOffsetValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_free_ondisk_offsets);
+Datum
+vector_rust_hnsw_should_have_free_ondisk_offsets(PG_FUNCTION_ARGS)
+{
+	int32		freeOffsetValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFreeOnDiskOffsets(freeOffsetValid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_free_ondisk_offset);
