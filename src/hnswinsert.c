@@ -4314,10 +4314,8 @@ vector_rust_hnsw_should_have_candidate_update_index_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldRejectOnDiskElementOverwrite(bool overwriteSucceeded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
-
-	return !overwriteSucceeded;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_ondisk_element_overwrite);
@@ -4341,10 +4339,8 @@ vector_rust_hnsw_should_reject_ondisk_element_overwrite(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveExpectedOnDiskOffsetFlag(bool hasExpectedOffset, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedOffset);
-
-	return hasExpectedOffset;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedOffset);
 }
 
 static bool
@@ -4356,10 +4352,8 @@ HnswShouldHaveExpectedOnDiskOffset(int32 insertedOffset, int32 expectedOffset, b
 static bool
 HnswShouldRejectOnDiskUnexpectedOffset(bool hasExpectedOffset, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedOffset);
-
-	return !hasExpectedOffset;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedOffset);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_ondisk_unexpected_offset);
@@ -4423,10 +4417,8 @@ vector_rust_hnsw_should_have_expected_ondisk_offset_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldFollowOnDiskNextPage(bool nextPageValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(nextPageValid);
-
-	return nextPageValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(nextPageValid);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_follow_ondisk_next_page);
@@ -4498,10 +4490,8 @@ vector_rust_hnsw_should_have_ondisk_next_page_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveOnDiskInsertSpaceFlag(bool hasSpace, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasSpace);
-
-	return hasSpace;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasSpace);
 }
 
 static bool
@@ -4570,19 +4560,15 @@ vector_rust_hnsw_should_have_ondisk_insert_space_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDistinctOnDiskNeighborBufferFlag(bool hasDistinctBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDistinctBuffer);
-
-	return hasDistinctBuffer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDistinctBuffer);
 }
 
 static bool
 HnswShouldHaveDistinctOnDiskNeighborBuffer(bool sameBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
-
-	return HnswShouldHaveDistinctOnDiskNeighborBufferFlag(!sameBuffer, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
 }
 
 static bool
@@ -4648,10 +4634,8 @@ vector_rust_hnsw_should_have_distinct_ondisk_neighbor_buffer_flag(PG_FUNCTION_AR
 static bool
 HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(updateIndex);
-
-	return updateIndex == -1;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(updateIndex);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_unselected_ondisk_neighbor);
@@ -4675,10 +4659,8 @@ vector_rust_hnsw_should_skip_unselected_ondisk_neighbor(PG_FUNCTION_ARGS)
 static bool
 HnswShouldSkipNullInsertTuple(bool isNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_null_insert_tuple_kernel(isNull);
-
-	return isNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_null_insert_tuple_kernel(isNull);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_null_insert_tuple);
