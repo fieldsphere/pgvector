@@ -195,40 +195,30 @@ IvfflatGetMetaPageInfo(Relation index, int *lists, int *dimensions)
 static bool
 IvfflatShouldWriteListInsertPage(BlockNumber insertPage, BlockNumber currentInsertPage, bool useRust)
 {
-	if (useRust)
-	{
-		bool		isValid;
+	bool		isValid;
 
-		isValid = vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
-		return isValid &&
-			vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) currentInsertPage);
-	}
-
-	return BlockNumberIsValid(insertPage) && insertPage != currentInsertPage;
+	(void) useRust;
+	isValid = vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) insertPage);
+	return isValid &&
+		vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) currentInsertPage);
 }
 
 static bool
 IvfflatShouldAllowInsertPageAfterOriginal(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_allow_insert_page_after_original_kernel((int32) insertPage, (int32) originalInsertPage);
-
-	return !BlockNumberIsValid(originalInsertPage) || insertPage >= originalInsertPage;
+	(void) useRust;
+	return vector_rust_ivfflat_should_allow_insert_page_after_original_kernel((int32) insertPage, (int32) originalInsertPage);
 }
 
 static bool
 IvfflatShouldWriteListStartPage(BlockNumber startPage, BlockNumber currentStartPage, bool useRust)
 {
-	if (useRust)
-	{
-		bool		isValid;
+	bool		isValid;
 
-		isValid = vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) startPage);
-		return isValid &&
-			vector_rust_ivfflat_should_update_insert_page_kernel((int32) startPage, (int32) currentStartPage);
-	}
-
-	return BlockNumberIsValid(startPage) && startPage != currentStartPage;
+	(void) useRust;
+	isValid = vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) startPage);
+	return isValid &&
+		vector_rust_ivfflat_should_update_insert_page_kernel((int32) startPage, (int32) currentStartPage);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_write_list_insert_page);
@@ -384,13 +374,8 @@ IvfflatVectorSumCenter(ArrayType *leftArray, ArrayType *rightArray, bool useRust
 		center[i] = DatumGetFloat4(rightDatums[i]);
 	}
 
-	if (useRust)
-		vector_rust_ivfflat_vector_sum_center_kernel(leftLength, center, agg);
-	else
-	{
-		for (int i = 0; i < leftLength; i++)
-			agg[i] += center[i];
-	}
+	(void) useRust;
+	vector_rust_ivfflat_vector_sum_center_kernel(leftLength, center, agg);
 
 	resultDatums = palloc(sizeof(Datum) * leftLength);
 	for (int i = 0; i < leftLength; i++)
@@ -417,13 +402,8 @@ IvfflatBitSumCenter(VarBit *vec, bool useRust)
 
 	agg = palloc0(sizeof(float) * dimensions);
 
-	if (useRust)
-		vector_rust_ivfflat_bit_sum_center_kernel(dimensions, VARBITS(vec), agg);
-	else
-	{
-		for (int i = 0; i < dimensions; i++)
-			agg[i] += (float) (((VARBITS(vec)[i / 8]) >> (7 - (i % 8))) & 0x01);
-	}
+	(void) useRust;
+	vector_rust_ivfflat_bit_sum_center_kernel(dimensions, VARBITS(vec), agg);
 
 	resultDatums = palloc(sizeof(Datum) * dimensions);
 	for (int i = 0; i < dimensions; i++)
@@ -481,13 +461,8 @@ IvfflatVectorUpdateCenter(ArrayType *valuesArray, bool useRust)
 	values = IvfflatRealArrayToFloat(valuesArray, &dimensions);
 	vec = InitVector(dimensions);
 
-	if (useRust)
-		vector_rust_ivfflat_vector_update_center_kernel(dimensions, values, vec->x);
-	else
-	{
-		for (int i = 0; i < dimensions; i++)
-			vec->x[i] = values[i];
-	}
+	(void) useRust;
+	vector_rust_ivfflat_vector_update_center_kernel(dimensions, values, vec->x);
 
 	resultDatums = palloc(sizeof(Datum) * dimensions);
 	for (int i = 0; i < dimensions; i++)
@@ -514,16 +489,8 @@ IvfflatBitUpdateCenter(ArrayType *valuesArray, bool useRust)
 	vec = InitBitVector(dimensions);
 	nx = VARBITS(vec);
 
-	if (useRust)
-		vector_rust_ivfflat_bit_update_center_kernel(dimensions, values, nx);
-	else
-	{
-		for (uint32 i = 0; i < VARBITBYTES(vec); i++)
-			nx[i] = 0;
-
-		for (int i = 0; i < dimensions; i++)
-			nx[i / 8] |= (values[i] > 0.5 ? 1 : 0) << (7 - (i % 8));
-	}
+	(void) useRust;
+	vector_rust_ivfflat_bit_update_center_kernel(dimensions, values, nx);
 
 	pfree(values);
 	return vec;
@@ -542,13 +509,8 @@ IvfflatHalfvecUpdateCenter(ArrayType *valuesArray, bool useRust)
 	values = IvfflatRealArrayToFloat(valuesArray, &dimensions);
 	vec = InitHalfVector(dimensions);
 
-	if (useRust)
-		vector_rust_ivfflat_halfvec_update_center_kernel(dimensions, values, vec->x);
-	else
-	{
-		for (int i = 0; i < dimensions; i++)
-			vec->x[i] = Float4ToHalfUnchecked(values[i]);
-	}
+	(void) useRust;
+	vector_rust_ivfflat_halfvec_update_center_kernel(dimensions, values, vec->x);
 
 	outputValues = palloc(sizeof(float) * dimensions);
 	vector_rust_halfvec_to_vector(dimensions, vec->x, outputValues);
@@ -587,21 +549,9 @@ IvfflatHalfvecSumCenter(ArrayType *leftArray, ArrayType *rightArray, bool useRus
 				 errmsg("array dimensions must match")));
 
 	center = InitHalfVector(centerLength);
-	if (useRust)
-		vector_rust_ivfflat_halfvec_update_center_kernel(centerLength, centerValues, center->x);
-	else
-	{
-		for (int i = 0; i < centerLength; i++)
-			center->x[i] = Float4ToHalfUnchecked(centerValues[i]);
-	}
-
-	if (useRust)
-		vector_rust_ivfflat_halfvec_sum_center_kernel(centerLength, center->x, agg);
-	else
-	{
-		for (int i = 0; i < centerLength; i++)
-			agg[i] += HalfToFloat4(center->x[i]);
-	}
+	(void) useRust;
+	vector_rust_ivfflat_halfvec_update_center_kernel(centerLength, centerValues, center->x);
+	vector_rust_ivfflat_halfvec_sum_center_kernel(centerLength, center->x, agg);
 
 	resultDatums = palloc(sizeof(Datum) * aggLength);
 	for (int i = 0; i < aggLength; i++)
