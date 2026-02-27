@@ -379,4 +379,40 @@ unlike($hnsw_insert_c, qr/HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject\(bo
 unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskItemPointerFlag\(bool itemPointerValid, bool useRust\)\s*\{[^}]*return itemPointerValid;/s,
 	"legacy C ondisk-itempointer fallback removed");
 
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_skip_invalid_index_value_kernel\(/,
+	"hnswinsert.c uses rust skip-invalid-index-value kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswinsert.c uses rust update-progress-after-insert kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(/,
+	"hnswinsert.c uses rust update-ondisk-insert-page kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_match_neighbor_connection_kernel\(/,
+	"hnswinsert.c uses rust match-neighbor-connection kernel");
+
+unlike($hnsw_insert_c, qr/HnswShouldHaveInvalidOnDiskNeighborSlotFlag\(bool slotTidValid, bool useRust\)\s*\{[^}]*return !slotTidValid;/s,
+	"legacy C invalid-ondisk-neighbor-slot fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveInvalidOnDiskNeighborTidFlag\(bool neighborTidValid, bool useRust\)\s*\{[^}]*return !neighborTidValid;/s,
+	"legacy C invalid-ondisk-neighbor-tid fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingNeighborBlockFlag\(bool hasMatchingBlock, bool useRust\)\s*\{[^}]*return hasMatchingBlock;/s,
+	"legacy C matching-neighbor-block fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingNeighborOffsetFlag\(bool hasMatchingOffset, bool useRust\)\s*\{[^}]*return hasMatchingOffset;/s,
+	"legacy C matching-neighbor-offset fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldSkipNonElementTuple\(bool isElementTuple, bool useRust\)\s*\{[^}]*return !isElementTuple;/s,
+	"legacy C skip-non-element-tuple fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldReuseDeletedOnDiskTuple\(bool isDeleted, bool useRust\)\s*\{[^}]*return isDeleted;/s,
+	"legacy C reuse-deleted-ondisk-tuple fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskBlockFlag\(bool blockValid, bool useRust\)\s*\{[^}]*return blockValid;/s,
+	"legacy C ondisk-block-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMissingOnDiskInsertPage\(bool hasInsertPage, bool useRust\)\s*\{[^}]*return !hasInsertPage;/s,
+	"legacy C missing-ondisk-insert-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldReuseElementBufferForNeighborPage\(bool samePage, bool useRust\)\s*\{[^}]*return samePage;/s,
+	"legacy C reuse-element-buffer-for-neighbor-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingNeighborPageFlag\(bool hasMatchingPage, bool useRust\)\s*\{[^}]*return hasMatchingPage;/s,
+	"legacy C matching-neighbor-page-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingNeighborPage\(int32 neighborPage, int32 elementPage, bool useRust\)\s*\{[^}]*return HnswShouldHaveMatchingNeighborPageFlag\(neighborPage == elementPage, false\);/s,
+	"legacy C matching-neighbor-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingOnDiskBufferFlag\(bool hasMatchingBuffer, bool useRust\)\s*\{[^}]*return hasMatchingBuffer;/s,
+	"legacy C matching-ondisk-buffer-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingOnDiskBuffer\(int32 leftBuffer, int32 rightBuffer, bool useRust\)\s*\{[^}]*return HnswShouldHaveMatchingOnDiskBufferFlag\(leftBuffer == rightBuffer, false\);/s,
+	"legacy C matching-ondisk-buffer fallback removed");
+
 done_testing();
