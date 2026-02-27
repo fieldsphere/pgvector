@@ -2908,12 +2908,18 @@ vector_rust_hnsw_should_have_append_element_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
+HnswShouldHaveRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_unexpected_item_offset_kernel(insertedOffset, expectedOffset);
 
 	return insertedOffset != expectedOffset;
+}
+
+static bool
+HnswShouldRejectUnexpectedItemOffset(int32 insertedOffset, int32 expectedOffset, bool useRust)
+{
+	return HnswShouldHaveRejectUnexpectedItemOffset(insertedOffset, expectedOffset, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_unexpected_item_offset);
@@ -2936,13 +2942,39 @@ vector_rust_hnsw_should_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectUnexpectedItemOffset(insertedOffset, expectedOffset, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_unexpected_item_offset);
+Datum
+vector_hnsw_should_have_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
+{
+	int32		insertedOffset = PG_GETARG_INT32(0);
+	int32		expectedOffset = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectUnexpectedItemOffset(insertedOffset, expectedOffset, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_unexpected_item_offset);
+Datum
+vector_rust_hnsw_should_have_reject_unexpected_item_offset(PG_FUNCTION_ARGS)
+{
+	int32		insertedOffset = PG_GETARG_INT32(0);
+	int32		expectedOffset = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectUnexpectedItemOffset(insertedOffset, expectedOffset, true));
+}
+
 static bool
-HnswShouldRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust)
+HnswShouldHaveRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
 
 	return !overwriteSucceeded;
+}
+
+static bool
+HnswShouldRejectNeighborOverwrite(bool overwriteSucceeded, bool useRust)
+{
+	return HnswShouldHaveRejectNeighborOverwrite(overwriteSucceeded, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_neighbor_overwrite);
@@ -2961,6 +2993,24 @@ vector_rust_hnsw_should_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
 	int32		overwriteSucceeded = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectNeighborOverwrite(overwriteSucceeded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_neighbor_overwrite);
+Datum
+vector_hnsw_should_have_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectNeighborOverwrite(overwriteSucceeded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_neighbor_overwrite);
+Datum
+vector_rust_hnsw_should_have_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectNeighborOverwrite(overwriteSucceeded != 0, true));
 }
 
 static bool
