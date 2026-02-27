@@ -295,4 +295,30 @@ unlike($hnsw_insert_c, qr/HnswShouldSkipOnDiskGraphUpdateForDuplicate\(bool dupl
 unlike($hnsw_insert_c, qr/HnswShouldUpdateOnDiskInsertPage\(bool hasNewInsertPage, bool useRust\)\s*\{[^}]*return hasNewInsertPage;/s,
 	"legacy C update-ondisk-insert-page fallback removed");
 
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel\(/,
+	"hnswinsert.c uses rust commit-ondisk-duplicate-dirty kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_append_neighbor_page_kernel\(/,
+	"hnswinsert.c uses rust append-neighbor-page kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_append_ondisk_element_page_kernel\(/,
+	"hnswinsert.c uses rust append-ondisk-element-page kernel");
+
+unlike($hnsw_insert_c, qr/HnswShouldHaveBoundaryDuplicateInsertSlotFlag\(bool hasBoundarySlot, bool useRust\)\s*\{[^}]*return hasBoundarySlot;/s,
+	"legacy C boundary-duplicate-insert-slot fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveInvalidOnDiskHeapTidFlag\(bool heapTidValid, bool useRust\)\s*\{[^}]*return !heapTidValid;/s,
+	"legacy C invalid-ondisk-heaptid fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldCommitOnDiskDuplicateWithBufferDirty\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C commit-ondisk-duplicate-with-dirty fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C commit-ondisk-neighbor-update-with-dirty fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveNonBuildingOnDiskNeighborUpdate\(bool building, bool useRust\)\s*\{[^}]*return !building;/s,
+	"legacy C nonbuilding-ondisk-neighbor-update fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveInsufficientOnDiskNeighborSpace\(int64 freeSpace, int64 tupleSize, bool useRust\)\s*\{[^}]*return freeSpace < tupleSize;/s,
+	"legacy C insufficient-ondisk-neighbor-space fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldExceedOnDiskElementMaxSizeFlag\(bool exceedsMaxSize, bool useRust\)\s*\{[^}]*return exceedsMaxSize;/s,
+	"legacy C exceed-ondisk-element-max-size fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskElementWithoutNextPage\(bool hasNextPage, bool useRust\)\s*\{[^}]*return !hasNextPage;/s,
+	"legacy C ondisk-element-without-next-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldAppendOnDiskElementPage\(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust\)\s*\{[^}]*return HnswShouldExceedOnDiskElementMaxSize\(combinedSize, maxSize, false\) &&\s*HnswShouldHavePageSpaceForTuple\(freeSpace, elementTupleSize, false\) &&\s*HnswShouldHaveOnDiskElementWithoutNextPage\(hasNextPage, false\);/s,
+	"legacy C append-ondisk-element-page fallback removed");
+
 done_testing();
