@@ -620,6 +620,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_initial_scan_state(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_initial_scan_state'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_initial_scan_state(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_initial_scan_state'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_increment_instrument_searches(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_increment_instrument_searches'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4684,6 +4694,18 @@ my $initialize_scan_state_parity = $node->safe_psql("postgres", q{
 	) AS t(is_first_scan);
 });
 is($initialize_scan_state_parity, "t\nt\nt\nt");
+
+my $have_initial_scan_state_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_initial_scan_state(is_first_scan) =
+		   rust_hnsw_should_have_initial_scan_state(is_first_scan)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_first_scan);
+});
+is($have_initial_scan_state_parity, "t\nt\nt\nt");
 
 my $increment_instrument_searches_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_increment_instrument_searches(has_instrument) =
