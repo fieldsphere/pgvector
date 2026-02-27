@@ -17,6 +17,7 @@ my $ivf_scan_path = "$repo_root/src/ivfscan.c";
 my $ivf_core_path = "$repo_root/src/ivfflat.c";
 my $ivf_build_path = "$repo_root/src/ivfbuild.c";
 my $ivf_utils_path = "$repo_root/src/ivfutils.c";
+my $ivf_kmeans_path = "$repo_root/src/ivfkmeans.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -66,6 +67,10 @@ close($ivf_build_fh);
 open(my $ivf_utils_fh, '<', $ivf_utils_path) or die "could not open $ivf_utils_path: $!";
 my $ivf_utils_c = <$ivf_utils_fh>;
 close($ivf_utils_fh);
+
+open(my $ivf_kmeans_fh, '<', $ivf_kmeans_path) or die "could not open $ivf_kmeans_path: $!";
+my $ivf_kmeans_c = <$ivf_kmeans_fh>;
+close($ivf_kmeans_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -1020,5 +1025,39 @@ unlike($ivf_utils_c, qr/IvfflatHalfvecSumCenter\(ArrayType \*leftArray, ArrayTyp
 	"legacy C ivfutils-halfvec-sum-center-update fallback removed");
 unlike($ivf_utils_c, qr/IvfflatHalfvecSumCenter\(ArrayType \*leftArray, ArrayType \*rightArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_halfvec_sum_center_kernel\([^;]*;.*?else.*?agg\[i\] \+= HalfToFloat4\(center->x\[i\]\);/s,
 	"legacy C ivfutils-halfvec-sum-center fallback removed");
+
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_center_counts_kernel\(/,
+	"ivfkmeans.c uses rust center-counts kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_finalize_center_kernel\(/,
+	"ivfkmeans.c uses rust finalize-center kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_zero_agg_kernel\(/,
+	"ivfkmeans.c uses rust zero-agg kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_all_finite_kernel\(/,
+	"ivfkmeans.c uses rust all-finite kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_adjust_lower_bounds_kernel\(/,
+	"ivfkmeans.c uses rust adjust-lower-bounds kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_adjust_upper_bounds_kernel\(/,
+	"ivfkmeans.c uses rust adjust-upper-bounds kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_init_bounds_kernel\(/,
+	"ivfkmeans.c uses rust init-bounds kernel");
+ok($ivf_kmeans_c =~ /vector_rust_ivfflat_compute_s_kernel\(/,
+	"ivfkmeans.c uses rust compute-s kernel");
+
+unlike($ivf_kmeans_c, qr/IvfflatCenterCounts\(ArrayType \*assignmentsArray, int32 centerCount, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_center_counts_kernel\([^;]*;.*?else.*?counts\[assignments\[i\]\] \+= 1;/s,
+	"legacy C ivfkmeans-center-counts fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatFinalizeCenter\(ArrayType \*aggArray, int32 centerCount, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_finalize_center_kernel\([^;]*;.*?else.*?if \(isinf\(agg\[i\]\)\).*?agg\[i\] \/= centerCount;/s,
+	"legacy C ivfkmeans-finalize-center fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatZeroAgg\(int32 centerCount, int32 dimensions, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_zero_agg_kernel\([^;]*;.*?else.*?values\[i\] = 0\.0;/s,
+	"legacy C ivfkmeans-zero-agg fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatAllFinite\(ArrayType \*valuesArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_all_finite_kernel\([^;]*;.*?else.*?if \(isnan\(values\[i\]\) \|\| isinf\(values\[i\]\)\).*?allFinite = false;/s,
+	"legacy C ivfkmeans-all-finite fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatAdjustLowerBounds\(ArrayType \*lowerBoundsArray, int32 centerCount, ArrayType \*centerDistancesArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_adjust_lower_bounds_kernel\([^;]*;.*?else.*?row\[center\] = updated < 0 \? 0 : updated;/s,
+	"legacy C ivfkmeans-adjust-lower-bounds fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatAdjustUpperBounds\(ArrayType \*upperBoundsArray, ArrayType \*closestCentersArray, ArrayType \*centerDistancesArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_adjust_upper_bounds_kernel\([^;]*;.*?else.*?upperBounds\[i\] \+= centerDistances\[closestCenters\[i\]\];/s,
+	"legacy C ivfkmeans-adjust-upper-bounds fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatInitBoundsArrays\(ArrayType \*lowerBoundsArray, int32 centerCount, bool useRust, float \*\*upperBoundsOut, int32 \*\*closestCentersOut, int \*sampleCountOut\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_init_bounds_kernel\([^;]*;.*?else.*?closestCenters\[sample\] = closestCenter;/s,
+	"legacy C ivfkmeans-init-bounds fallback removed");
+unlike($ivf_kmeans_c, qr/IvfflatComputeS\(ArrayType \*halfcdistArray, int32 centerCount, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_compute_s_kernel\([^;]*;.*?else.*?s\[center\] = minDistance;/s,
+	"legacy C ivfkmeans-compute-s fallback removed");
 
 done_testing();
