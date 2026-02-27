@@ -1321,6 +1321,24 @@ vector_rust_hnsw_should_have_valid_insert_index_value(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveValidInsertIndexValue(indexValueFormed != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_valid_insert_index_value_flag);
+Datum
+vector_hnsw_should_have_valid_insert_index_value_flag(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidInsertIndexValueFlag(indexValueFormed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_valid_insert_index_value_flag);
+Datum
+vector_rust_hnsw_should_have_valid_insert_index_value_flag(PG_FUNCTION_ARGS)
+{
+	int32		indexValueFormed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidInsertIndexValueFlag(indexValueFormed != 0, true));
+}
+
 static bool
 HnswShouldHaveOnDiskValueMismatchFlag(bool valuesMismatch, bool useRust)
 {
@@ -1379,6 +1397,24 @@ vector_rust_hnsw_should_have_ondisk_value_mismatch(PG_FUNCTION_ARGS)
 	int32		valuesEqual = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskValueMismatch(valuesEqual != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_value_mismatch_flag);
+Datum
+vector_hnsw_should_have_ondisk_value_mismatch_flag(PG_FUNCTION_ARGS)
+{
+	int32		valuesMismatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskValueMismatchFlag(valuesMismatch != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_value_mismatch_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_value_mismatch_flag(PG_FUNCTION_ARGS)
+{
+	int32		valuesMismatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskValueMismatchFlag(valuesMismatch != 0, true));
 }
 
 static bool
@@ -1586,6 +1622,24 @@ vector_hnsw_should_have_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_heaptid);
 Datum
 vector_rust_hnsw_should_have_invalid_ondisk_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskHeapTidFlag(heapTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_ondisk_heaptid_flag);
+Datum
+vector_hnsw_should_have_invalid_ondisk_heaptid_flag(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskHeapTidFlag(heapTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_heaptid_flag);
+Datum
+vector_rust_hnsw_should_have_invalid_ondisk_heaptid_flag(PG_FUNCTION_ARGS)
 {
 	int32		heapTidValid = PG_GETARG_INT32(0);
 
@@ -2306,6 +2360,24 @@ vector_rust_hnsw_should_have_valid_ondisk_offset_number(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskOffsetNumber((OffsetNumber) freeOffno, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_valid_ondisk_offset_number_flag);
+Datum
+vector_hnsw_should_have_valid_ondisk_offset_number_flag(PG_FUNCTION_ARGS)
+{
+	int32		offsetNumberValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskOffsetNumberFlag(offsetNumberValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_valid_ondisk_offset_number_flag);
+Datum
+vector_rust_hnsw_should_have_valid_ondisk_offset_number_flag(PG_FUNCTION_ARGS)
+{
+	int32		offsetNumberValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveValidOnDiskOffsetNumberFlag(offsetNumberValid != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_free_ondisk_offsets);
 Datum
 vector_rust_hnsw_should_use_free_ondisk_offsets(PG_FUNCTION_ARGS)
@@ -2817,6 +2889,24 @@ vector_rust_hnsw_should_have_ondisk_heaptid(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskHeapTidFlag(heapTidValid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_heaptid_flag);
+Datum
+vector_hnsw_should_have_ondisk_heaptid_flag(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskHeapTidFlag(heapTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_heaptid_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_heaptid_flag(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskHeapTidFlag(heapTidValid != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_itempointer);
 Datum
 vector_hnsw_should_have_ondisk_itempointer(PG_FUNCTION_ARGS)
@@ -2859,6 +2949,24 @@ vector_hnsw_should_have_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_neighbor_tid);
 Datum
 vector_rust_hnsw_should_have_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskNeighborTidFlag(neighborTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_neighbor_tid_flag);
+Datum
+vector_hnsw_should_have_ondisk_neighbor_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskNeighborTidFlag(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_neighbor_tid_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_neighbor_tid_flag(PG_FUNCTION_ARGS)
 {
 	int32		neighborTidValid = PG_GETARG_INT32(0);
 
@@ -2940,6 +3048,24 @@ vector_rust_hnsw_should_have_invalid_ondisk_neighbor_slot(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborSlotFlag(slotTidValid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_ondisk_neighbor_slot_flag);
+Datum
+vector_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(PG_FUNCTION_ARGS)
+{
+	int32		slotTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborSlotFlag(slotTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_neighbor_slot_flag);
+Datum
+vector_rust_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(PG_FUNCTION_ARGS)
+{
+	int32		slotTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborSlotFlag(slotTidValid != 0, true));
+}
+
 static bool
 HnswShouldHaveInvalidOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust)
 {
@@ -2985,6 +3111,24 @@ vector_hnsw_should_have_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid);
 Datum
 vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborTidFlag(neighborTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_ondisk_neighbor_tid_flag);
+Datum
+vector_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidOnDiskNeighborTidFlag(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid_flag);
+Datum
+vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(PG_FUNCTION_ARGS)
 {
 	int32		neighborTidValid = PG_GETARG_INT32(0);
 
@@ -3072,6 +3216,24 @@ vector_rust_hnsw_should_have_matching_neighbor_block(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborBlock(indextidBlkno, elementBlkno, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_neighbor_block_flag);
+Datum
+vector_hnsw_should_have_matching_neighbor_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborBlockFlag(hasMatchingBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_neighbor_block_flag);
+Datum
+vector_rust_hnsw_should_have_matching_neighbor_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborBlockFlag(hasMatchingBlock != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_neighbor_offset);
 Datum
 vector_hnsw_should_have_matching_neighbor_offset(PG_FUNCTION_ARGS)
@@ -3090,6 +3252,24 @@ vector_rust_hnsw_should_have_matching_neighbor_offset(PG_FUNCTION_ARGS)
 	int32		elementOffno = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborOffset(indextidOffno, elementOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_neighbor_offset_flag);
+Datum
+vector_hnsw_should_have_matching_neighbor_offset_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingOffset = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborOffsetFlag(hasMatchingOffset != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_neighbor_offset_flag);
+Datum
+vector_rust_hnsw_should_have_matching_neighbor_offset_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingOffset = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborOffsetFlag(hasMatchingOffset != 0, true));
 }
 
 static bool
@@ -3459,6 +3639,24 @@ vector_rust_hnsw_should_have_matching_neighbor_page(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborPage(neighborPage, elementPage, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_neighbor_page_flag);
+Datum
+vector_hnsw_should_have_matching_neighbor_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborPageFlag(hasMatchingPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_neighbor_page_flag);
+Datum
+vector_rust_hnsw_should_have_matching_neighbor_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingNeighborPageFlag(hasMatchingPage != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_ondisk_buffers);
 Datum
 vector_hnsw_should_match_ondisk_buffers(PG_FUNCTION_ARGS)
@@ -3497,6 +3695,24 @@ vector_rust_hnsw_should_have_matching_ondisk_buffer(PG_FUNCTION_ARGS)
 	int32		rightBuffer = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldHaveMatchingOnDiskBuffer(leftBuffer, rightBuffer, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_ondisk_buffer_flag);
+Datum
+vector_hnsw_should_have_matching_ondisk_buffer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingOnDiskBufferFlag(hasMatchingBuffer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_ondisk_buffer_flag);
+Datum
+vector_rust_hnsw_should_have_matching_ondisk_buffer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingBuffer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingOnDiskBufferFlag(hasMatchingBuffer != 0, true));
 }
 
 static bool
