@@ -1827,12 +1827,18 @@ HnswBeginParallel(HnswBuildState * buildstate, bool isconcurrent, int request)
  * Compute parallel workers
  */
 static bool
-HnswShouldSkipParallelWorkers(int parallelWorkers, bool useRust)
+HnswShouldHaveSkipParallelWorkers(int parallelWorkers, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_parallel_workers_kernel(parallelWorkers);
 
 	return parallelWorkers == 0;
+}
+
+static bool
+HnswShouldSkipParallelWorkers(int parallelWorkers, bool useRust)
+{
+	return HnswShouldHaveSkipParallelWorkers(parallelWorkers, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_parallel_workers);
@@ -1853,6 +1859,24 @@ vector_rust_hnsw_should_skip_parallel_workers(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipParallelWorkers(parallelWorkers, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_parallel_workers);
+Datum
+vector_hnsw_should_have_skip_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipParallelWorkers(parallelWorkers, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_parallel_workers);
+Datum
+vector_rust_hnsw_should_have_skip_parallel_workers(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipParallelWorkers(parallelWorkers, true));
+}
+
 static bool
 HnswShouldHaveRelationParallelWorkers(int parallelWorkers, bool useRust)
 {
@@ -1869,12 +1893,18 @@ HnswShouldUseRelationParallelWorkers(int parallelWorkers, bool useRust)
 }
 
 static bool
-HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust)
+HnswShouldHaveFallbackWithoutWorkers(int workersLaunched, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_fallback_without_workers_kernel(workersLaunched);
 
 	return workersLaunched == 0;
+}
+
+static bool
+HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust)
+{
+	return HnswShouldHaveFallbackWithoutWorkers(workersLaunched, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_fallback_without_workers);
@@ -1895,13 +1925,37 @@ vector_rust_hnsw_should_fallback_without_workers(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFallbackWithoutWorkers(workersLaunched, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_fallback_without_workers);
+Datum
+vector_hnsw_should_have_fallback_without_workers(PG_FUNCTION_ARGS)
+{
+	int32		workersLaunched = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFallbackWithoutWorkers(workersLaunched, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_fallback_without_workers);
+Datum
+vector_rust_hnsw_should_have_fallback_without_workers(PG_FUNCTION_ARGS)
+{
+	int32		workersLaunched = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFallbackWithoutWorkers(workersLaunched, true));
+}
+
 static bool
-HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust)
+HnswShouldHaveLeaderParticipate(bool leaderParticipates, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_leader_participate_kernel(leaderParticipates);
 
 	return leaderParticipates;
+}
+
+static bool
+HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust)
+{
+	return HnswShouldHaveLeaderParticipate(leaderParticipates, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_leader_participate);
@@ -1920,6 +1974,24 @@ vector_rust_hnsw_should_leader_participate(PG_FUNCTION_ARGS)
 	int32		leaderParticipates = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLeaderParticipate(leaderParticipates != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_leader_participate);
+Datum
+vector_hnsw_should_have_leader_participate(PG_FUNCTION_ARGS)
+{
+	int32		leaderParticipates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLeaderParticipate(leaderParticipates != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_leader_participate);
+Datum
+vector_rust_hnsw_should_have_leader_participate(PG_FUNCTION_ARGS)
+{
+	int32		leaderParticipates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLeaderParticipate(leaderParticipates != 0, true));
 }
 
 static bool
@@ -2032,12 +2104,18 @@ vector_rust_hnsw_should_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
+HnswShouldHaveFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_fallback_without_dsm_segment_kernel(hasDsmSegment);
 
 	return !hasDsmSegment;
+}
+
+static bool
+HnswShouldFallbackWithoutDsmSegment(bool hasDsmSegment, bool useRust)
+{
+	return HnswShouldHaveFallbackWithoutDsmSegment(hasDsmSegment, useRust);
 }
 
 static bool
@@ -2068,6 +2146,24 @@ vector_rust_hnsw_should_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
 	int32		hasDsmSegment = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFallbackWithoutDsmSegment(hasDsmSegment != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_fallback_without_dsm_segment);
+Datum
+vector_hnsw_should_have_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFallbackWithoutDsmSegment(hasDsmSegment != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_fallback_without_dsm_segment);
+Datum
+vector_rust_hnsw_should_have_fallback_without_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFallbackWithoutDsmSegment(hasDsmSegment != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_parallel_dsm_segment);
@@ -2118,12 +2214,18 @@ vector_rust_hnsw_should_reserve_graph_memory(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust)
+HnswShouldHaveLogLeaderProgress(bool progressIsLeader, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_log_leader_progress_kernel(progressIsLeader);
 
 	return progressIsLeader;
+}
+
+static bool
+HnswShouldLogLeaderProgress(bool progressIsLeader, bool useRust)
+{
+	return HnswShouldHaveLogLeaderProgress(progressIsLeader, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_log_leader_progress);
@@ -2142,6 +2244,24 @@ vector_rust_hnsw_should_log_leader_progress(PG_FUNCTION_ARGS)
 	int32		progressIsLeader = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldLogLeaderProgress(progressIsLeader != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_log_leader_progress);
+Datum
+vector_hnsw_should_have_log_leader_progress(PG_FUNCTION_ARGS)
+{
+	int32		progressIsLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLogLeaderProgress(progressIsLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_log_leader_progress);
+Datum
+vector_rust_hnsw_should_have_log_leader_progress(PG_FUNCTION_ARGS)
+{
+	int32		progressIsLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLogLeaderProgress(progressIsLeader != 0, true));
 }
 
 static bool
