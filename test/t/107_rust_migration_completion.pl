@@ -806,5 +806,37 @@ unlike($hnsw_utils_c, qr/HnswShouldHaveMetaOutputPointerFlag\(bool hasOutputPoin
 	"legacy C meta-output-pointer-flag fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldLoadMetaEntrypoint\(bool hasEntrypointOutputPointer, bool useRust\)\s*\{[^}]*return hasEntrypointOutputPointer;/s,
 	"legacy C load-meta-entrypoint fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveMetaBlockFlag\(bool hasValidBlock, bool useRust\)\s*\{[^}]*return hasValidBlock;/s,
+	"legacy C meta-block-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldUpdateMetaEntryInfo\(int updateEntry, bool useRust\)\s*\{[^}]*return updateEntry != 0;/s,
+	"legacy C update-meta-entry-info fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldResetMetaEntrypoint\(bool hasEntrypoint, bool useRust\)\s*\{[^}]*return !hasEntrypoint;/s,
+	"legacy C reset-meta-entrypoint fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldForceMetaEntryUpdate\(int updateEntry, bool useRust\)\s*\{[^}]*return updateEntry == HNSW_UPDATE_ENTRY_ALWAYS;/s,
+	"legacy C force-meta-entry-update fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldWriteMetaEntrypoint\(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust\)\s*\{.*return !hasEntrypoint \|\| entryLevel > currentEntryLevel \|\| HnswShouldForceMetaEntryUpdate\(updateEntry, false\);.*\}/s,
+	"legacy C write-meta-entrypoint fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveBuildBufferPath\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-buffer-path fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldCheckTypeValue\(bool hasCheckValueFunction, bool useRust\)\s*\{[^}]*return hasCheckValueFunction;/s,
+	"legacy C check-type-value fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTypeCheckFunctionFlag\(bool hasCheckValueFunction, bool useRust\)\s*\{[^}]*return hasCheckValueFunction;/s,
+	"legacy C type-check-function-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldNormalizeIndexValue\(bool hasNormProcInfo, bool useRust\)\s*\{[^}]*return hasNormProcInfo;/s,
+	"legacy C normalize-index-value fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveNormProcInfoFlag\(bool hasNormProcInfo, bool useRust\)\s*\{[^}]*return hasNormProcInfo;/s,
+	"legacy C norm-procinfo-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldRejectInvalidNorm\(bool hasValidNorm, bool useRust\)\s*\{[^}]*return !hasValidNorm;/s,
+	"legacy C reject-invalid-norm fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldPrioritizeLowerDistance\(double leftDistance, double rightDistance, bool useRust\)\s*\{[^}]*return leftDistance < rightDistance;/s,
+	"legacy C prioritize-lower-distance fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldPrioritizePointerTiebreak\(bool leftPointerPrecedes, bool useRust\)\s*\{[^}]*return leftPointerPrecedes;/s,
+	"legacy C prioritize-pointer-tiebreak fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldPrioritizeOffsetTiebreak\(bool leftOffsetPrecedes, bool useRust\)\s*\{[^}]*return leftOffsetPrecedes;/s,
+	"legacy C prioritize-offset-tiebreak fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveExpectedMetaMagicFlag\(bool hasExpectedMagic, bool useRust\)\s*\{[^}]*return hasExpectedMagic;/s,
+	"legacy C expected-meta-magic-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldRejectInvalidMetaMagic\(bool hasExpectedMagic, bool useRust\)\s*\{[^}]*return !hasExpectedMagic;/s,
+	"legacy C reject-invalid-meta-magic fallback removed");
 
 done_testing();
