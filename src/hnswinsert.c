@@ -1900,10 +1900,8 @@ vector_rust_hnsw_should_have_ondisk_element_without_next_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonBuildingOnDiskElementMoveNext(bool building, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return !building;
+	(void) useRust;
+	return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -1951,10 +1949,8 @@ vector_rust_hnsw_should_have_nonbuilding_ondisk_element_move_next(PG_FUNCTION_AR
 static bool
 HnswShouldCommitOnDiskAddElementWithBufferDirty(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_commit_ondisk_add_element_with_buffer_dirty);
@@ -1978,10 +1974,8 @@ vector_rust_hnsw_should_commit_ondisk_add_element_with_buffer_dirty(PG_FUNCTION_
 static bool
 HnswShouldMarkOnDiskNeighborBufferDirty(bool sameBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
-
-	return !sameBuffer;
+	(void) useRust;
+	return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_mark_ondisk_neighbor_buffer_dirty);
@@ -2005,10 +1999,8 @@ vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveChangedOnDiskInsertPageFlag(bool pageChanged, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(pageChanged);
-
-	return pageChanged;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(pageChanged);
 }
 
 static bool
@@ -2022,10 +2014,8 @@ HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pageChanged, bo
 {
 	bool		shouldUpdate = hasNewInsertPage && pageChanged;
 
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(shouldUpdate);
-
-	return shouldUpdate;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(shouldUpdate);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_add_element_insert_page);
@@ -2089,10 +2079,8 @@ vector_rust_hnsw_should_have_changed_ondisk_insert_page_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasNewInsertPage);
-
-	return !hasNewInsertPage;
+	(void) useRust;
+	return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasNewInsertPage);
 }
 
 static bool
@@ -2140,10 +2128,8 @@ vector_rust_hnsw_should_have_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNextNeighborOffset(bool sameBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(sameBuffer);
-
-	return sameBuffer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(sameBuffer);
 }
 
 static bool
@@ -2191,10 +2177,8 @@ vector_rust_hnsw_should_have_next_neighbor_offset(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFreeOnDiskOffsetFlag(bool freeOffsetValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(freeOffsetValid);
-
-	return freeOffsetValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(freeOffsetValid);
 }
 
 static bool
@@ -2218,10 +2202,8 @@ HnswShouldHaveFreeOnDiskOffset(OffsetNumber freeOffno, bool useRust)
 static bool
 HnswShouldHaveFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(freeOffsetValid);
-
-	return freeOffsetValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(freeOffsetValid);
 }
 
 static bool
@@ -2233,10 +2215,8 @@ HnswShouldUseFreeOnDiskOffsets(bool freeOffsetValid, bool useRust)
 static bool
 HnswShouldProcessFreeOffsetResult(bool freeOffsetResult, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(freeOffsetResult);
-
-	return freeOffsetResult;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(freeOffsetResult);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_free_ondisk_offsets);
