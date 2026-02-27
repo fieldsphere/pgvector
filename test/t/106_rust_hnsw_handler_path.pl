@@ -990,6 +990,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_varbit_type(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_varbit_type'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_varbit_type(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_varbit_type'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_missing_dimensions(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_missing_dimensions'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -997,6 +1007,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_reject_missing_dimensions(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_missing_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_missing_dimensions(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_missing_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_missing_dimensions(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_missing_dimensions'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -1010,6 +1030,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_excess_dimensions(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_excess_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_excess_dimensions(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_excess_dimensions'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_low_ef_construction(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_low_ef_construction'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1017,6 +1047,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_reject_low_ef_construction(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_low_ef_construction'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_low_ef_construction(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_low_ef_construction'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_low_ef_construction(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_low_ef_construction'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5953,6 +5993,20 @@ my $reject_varbit_type_parity = $node->safe_psql("postgres", q{
 });
 is($reject_varbit_type_parity, "t\nt\nt\nt");
 
+my $have_reject_varbit_type_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_varbit_type(type_oid) =
+		   rust_hnsw_should_have_reject_varbit_type(type_oid)
+	FROM (
+		SELECT unnest(ARRAY[
+			0::integer,
+			'varbit'::regtype::oid::integer,
+			42::integer,
+			'varbit'::regtype::oid::integer
+		]) AS type_oid
+	) AS t;
+});
+is($have_reject_varbit_type_parity, "t\nt\nt\nt");
+
 my $reject_missing_dimensions_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_missing_dimensions(dimensions) =
 		   rust_hnsw_should_reject_missing_dimensions(dimensions)
@@ -5964,6 +6018,18 @@ my $reject_missing_dimensions_parity = $node->safe_psql("postgres", q{
 	) AS t(dimensions);
 });
 is($reject_missing_dimensions_parity, "t\nt\nt\nt");
+
+my $have_reject_missing_dimensions_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_missing_dimensions(dimensions) =
+		   rust_hnsw_should_have_reject_missing_dimensions(dimensions)
+	FROM (VALUES
+		(-1),
+		(0),
+		(1024),
+		(-42)
+	) AS t(dimensions);
+});
+is($have_reject_missing_dimensions_parity, "t\nt\nt\nt");
 
 my $reject_excess_dimensions_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_excess_dimensions(dimensions, max_dimensions) =
@@ -5977,6 +6043,18 @@ my $reject_excess_dimensions_parity = $node->safe_psql("postgres", q{
 });
 is($reject_excess_dimensions_parity, "t\nt\nt\nt");
 
+my $have_reject_excess_dimensions_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_excess_dimensions(dimensions, max_dimensions) =
+		   rust_hnsw_should_have_reject_excess_dimensions(dimensions, max_dimensions)
+	FROM (VALUES
+		(3, 3),
+		(4, 3),
+		(16, 1024),
+		(2048, 1024)
+	) AS t(dimensions, max_dimensions);
+});
+is($have_reject_excess_dimensions_parity, "t\nt\nt\nt");
+
 my $reject_low_ef_construction_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_low_ef_construction(ef_construction, m) =
 		   rust_hnsw_should_reject_low_ef_construction(ef_construction, m)
@@ -5988,6 +6066,18 @@ my $reject_low_ef_construction_parity = $node->safe_psql("postgres", q{
 	) AS t(ef_construction, m);
 });
 is($reject_low_ef_construction_parity, "t\nt\nt\nt");
+
+my $have_reject_low_ef_construction_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_low_ef_construction(ef_construction, m) =
+		   rust_hnsw_should_have_reject_low_ef_construction(ef_construction, m)
+	FROM (VALUES
+		(15, 8),
+		(16, 8),
+		(31, 16),
+		(32, 16)
+	) AS t(ef_construction, m);
+});
+is($have_reject_low_ef_construction_parity, "t\nt\nt\nt");
 
 my $write_wal_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_write_wal_page(needs_wal, is_init_fork) =
