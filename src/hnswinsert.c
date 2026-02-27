@@ -2173,12 +2173,18 @@ vector_rust_hnsw_should_commit_ondisk_page_append_with_buffer_dirty(PG_FUNCTION_
 }
 
 static bool
-HnswShouldUseBuildPathForAppendedOnDiskBuffer(bool building, bool useRust)
+HnswShouldHaveBuildPathForAppendedOnDiskBuffer(bool building, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 
 	return building;
+}
+
+static bool
+HnswShouldUseBuildPathForAppendedOnDiskBuffer(bool building, bool useRust)
+{
+	return HnswShouldHaveBuildPathForAppendedOnDiskBuffer(building, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_build_path_for_appended_ondisk_buffer);
@@ -2197,6 +2203,24 @@ vector_rust_hnsw_should_use_build_path_for_appended_ondisk_buffer(PG_FUNCTION_AR
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildPathForAppendedOnDiskBuffer(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_path_for_appended_ondisk_buffer);
+Datum
+vector_hnsw_should_have_build_path_for_appended_ondisk_buffer(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPathForAppendedOnDiskBuffer(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_path_for_appended_ondisk_buffer);
+Datum
+vector_rust_hnsw_should_have_build_path_for_appended_ondisk_buffer(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPathForAppendedOnDiskBuffer(building != 0, true));
 }
 
 static bool
