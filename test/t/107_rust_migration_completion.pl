@@ -190,4 +190,38 @@ unlike($hnsw_build_c, qr/return estHnswArea > estOther;/,
 unlike($hnsw_build_c, qr/return progressIsLeader;/,
 	"legacy C log-leader-progress fallback removed");
 
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_varbit_type_kernel\(/,
+	"hnswbuild.c uses rust reject-varbit kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_missing_dimensions_kernel\(/,
+	"hnswbuild.c uses rust reject-missing-dimensions kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_excess_dimensions_kernel\(/,
+	"hnswbuild.c uses rust reject-excess-dimensions kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_low_ef_construction_kernel\(/,
+	"hnswbuild.c uses rust reject-low-ef-construction kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_match_neighbor_connection_kernel\(/,
+	"hnswbuild.c uses rust treat-fork-as-init kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_write_wal_page_kernel\(/,
+	"hnswbuild.c uses rust write-wal-page kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_skip_null_build_tuple_kernel\(/,
+	"hnswbuild.c uses rust skip-null-build-tuple kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswbuild.c uses rust update-progress-after-insert kernel");
+
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectVarbitType\(Oid typeOid, bool useRust\)\s*\{[^}]*return typeOid == VARBITOID;/s,
+	"legacy C reject-varbit fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectMissingDimensions\(int32 dimensions, bool useRust\)\s*\{[^}]*return dimensions < 0;/s,
+	"legacy C reject-missing-dimensions fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectExcessDimensions\(int32 dimensions, int32 maxDimensions, bool useRust\)\s*\{[^}]*return dimensions > maxDimensions;/s,
+	"legacy C reject-excess-dimensions fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectLowEfConstruction\(int32 efConstruction, int32 m, bool useRust\)\s*\{[^}]*return efConstruction < 2 \* m;/s,
+	"legacy C reject-low-ef-construction fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveTreatForkAsInit\(int32 forkNum, bool useRust\)\s*\{[^}]*return forkNum == INIT_FORKNUM;/s,
+	"legacy C treat-fork-as-init fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveWriteWalPage\(bool needsWal, bool isInitFork, bool useRust\)\s*\{[^}]*return needsWal \|\| isInitFork;/s,
+	"legacy C write-wal-page fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveSkipNullBuildTuple\(bool isNull, bool useRust\)\s*\{[^}]*return isNull;/s,
+	"legacy C skip-null-build-tuple fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveUpdateProgressAfterInsert\(bool tupleInserted, bool useRust\)\s*\{[^}]*return tupleInserted;/s,
+	"legacy C update-progress-after-insert fallback removed");
+
 done_testing();
