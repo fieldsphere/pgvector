@@ -2348,10 +2348,8 @@ vector_rust_hnsw_should_process_free_offset_result(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveOnDiskSpaceForCombinedTuple(int64 freeSpace, int64 combinedSize, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, combinedSize);
-
-	return freeSpace >= combinedSize;
+	(void) useRust;
+	return !vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, combinedSize);
 }
 
 static bool
@@ -2403,10 +2401,8 @@ vector_rust_hnsw_should_have_ondisk_space_for_combined_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveBuildPathForOnDiskAddElement(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2454,10 +2450,8 @@ vector_rust_hnsw_should_have_build_path_for_ondisk_add_element(PG_FUNCTION_ARGS)
 static bool
 HnswShouldCommitOnDiskPageAppendWithBufferDirty(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_commit_ondisk_page_append_with_buffer_dirty);
@@ -2481,10 +2475,8 @@ vector_rust_hnsw_should_commit_ondisk_page_append_with_buffer_dirty(PG_FUNCTION_
 static bool
 HnswShouldHaveBuildPathForAppendedOnDiskBuffer(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2532,10 +2524,8 @@ vector_rust_hnsw_should_have_build_path_for_appended_ondisk_buffer(PG_FUNCTION_A
 static bool
 HnswShouldHaveBuildPathForReusedOnDiskBuffer(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2583,10 +2573,8 @@ vector_rust_hnsw_should_have_build_path_for_reused_ondisk_buffer(PG_FUNCTION_ARG
 static bool
 HnswShouldHaveBuildPathForOnDiskAppendPage(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2634,10 +2622,8 @@ vector_rust_hnsw_should_have_build_path_for_ondisk_append_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveBuildPathForOnDiskNeighborUpdate(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2685,10 +2671,8 @@ vector_rust_hnsw_should_have_build_path_for_ondisk_neighbor_update(PG_FUNCTION_A
 static bool
 HnswShouldHaveBuildPathForOnDiskDuplicatePage(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2736,10 +2720,8 @@ vector_rust_hnsw_should_have_build_path_for_ondisk_duplicate_page(PG_FUNCTION_AR
 static bool
 HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject(bool building, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return !building;
+	(void) useRust;
+	return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -2787,10 +2769,8 @@ vector_rust_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(PG_FUNCTIO
 static bool
 HnswShouldHaveOnDiskItemPointerFlag(bool itemPointerValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemPointerValid);
-
-	return itemPointerValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemPointerValid);
 }
 
 static bool
