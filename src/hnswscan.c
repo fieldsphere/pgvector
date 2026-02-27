@@ -21,6 +21,7 @@
 
 static bool HnswShouldHaveProvidedRescanKeyPointer(ScanKey keys, bool useRust);
 static bool HnswShouldHaveProvidedOrderByPointer(ScanKey orderByData, bool useRust);
+static bool HnswShouldHaveScanNormprocPointer(void *normprocinfo, bool useRust);
 static bool HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool useRust);
 
 static bool
@@ -991,6 +992,12 @@ HnswShouldUseScanNormprocFlag(bool hasNormproc, bool useRust)
 static bool
 HnswShouldUseScanNormproc(void *normprocinfo, bool useRust)
 {
+	return HnswShouldHaveScanNormprocPointer(normprocinfo, useRust);
+}
+
+static bool
+HnswShouldHaveScanNormprocPointer(void *normprocinfo, bool useRust)
+{
 	return HnswShouldHaveScanPointer((const void *) normprocinfo, useRust);
 }
 
@@ -1523,6 +1530,28 @@ vector_rust_hnsw_should_have_scan_normproc(PG_FUNCTION_ARGS)
 	int32		hasNormproc = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveScanNormproc(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_normproc_pointer);
+Datum
+vector_hnsw_should_have_scan_normproc_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+	const char *mockNormproc = "normproc";
+	void	   *normprocinfo = hasNormproc != 0 ? (void *) mockNormproc : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormprocPointer(normprocinfo, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_normproc_pointer);
+Datum
+vector_rust_hnsw_should_have_scan_normproc_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+	const char *mockNormproc = "normproc";
+	void	   *normprocinfo = hasNormproc != 0 ? (void *) mockNormproc : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormprocPointer(normprocinfo, true));
 }
 
 static bool
