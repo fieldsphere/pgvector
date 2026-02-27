@@ -730,6 +730,26 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_scan_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_scan_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_scan_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_scan_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_scan_pointer_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_scan_pointer_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_scan_pointer_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_scan_pointer_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_provided_orderby_data(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_provided_orderby_data'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6066,6 +6086,30 @@ my $have_scan_pointer_parity = $node->safe_psql("postgres", q{
 	) AS t(has_pointer);
 });
 is($have_scan_pointer_parity, "t\nt\nt\nt");
+
+my $have_scan_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_scan_pointer_flag(has_pointer) =
+		   rust_hnsw_should_have_scan_pointer_flag(has_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pointer);
+});
+is($have_scan_pointer_flag_parity, "t\nt\nt\nt");
+
+my $have_scan_pointer_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_scan_pointer_value(has_pointer) =
+		   rust_hnsw_should_have_scan_pointer_value(has_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pointer);
+});
+is($have_scan_pointer_value_parity, "t\nt\nt\nt");
 
 my $use_provided_orderby_data_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_provided_orderby_data(has_orderby_data) =
