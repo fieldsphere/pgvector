@@ -482,6 +482,10 @@ ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_match_neighbor_connection_kernel\(
 	"hnswvacuum.c uses rust match-neighbor-connection kernel");
 ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_update_entry_point_kernel\(/,
 	"hnswvacuum.c uses rust update-entry-point kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel\(/,
+	"hnswvacuum.c uses rust mark-ondisk-neighbor-buffer-dirty kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_assign_new_lock_tranche_kernel\(/,
+	"hnswvacuum.c uses rust assign-new-lock-tranche kernel");
 
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedTidPointerFlag\(bool hasDeletedTid, bool useRust\)\s*\{[^}]*return hasDeletedTid;/s,
 	"legacy C deleted-tid-pointer-flag fallback removed");
@@ -551,5 +555,19 @@ unlike($hnsw_vacuum_c, qr/HnswShouldHaveLiveMarkDeletedTuple\(bool isLiveTuple, 
 	"legacy C live-markdeleted-tuple fallback removed");
 unlike($hnsw_vacuum_c, qr/HnswShouldSetVacuumInsertPageWhenMissing\(bool hasInsertPage, bool useRust\)\s*\{[^}]*return !hasInsertPage;/s,
 	"legacy C set-vacuum-insert-page-when-missing fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingMarkDeletedNeighborPageFlag\(bool pagesMatch, bool useRust\)\s*\{[^}]*return pagesMatch;/s,
+	"legacy C matching-markdeleted-neighbor-page-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingMarkDeletedNeighborPage\(int32 neighborPage, int32 elementPage, bool useRust\)\s*\{[^}]*return HnswShouldHaveMatchingMarkDeletedNeighborPageFlag\(neighborPage == elementPage, false\);/s,
+	"legacy C matching-markdeleted-neighbor-page fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingMarkDeletedBuffersFlag\(bool buffersMatch, bool useRust\)\s*\{[^}]*return buffersMatch;/s,
+	"legacy C matching-markdeleted-buffers-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingMarkDeletedBuffers\(int32 leftBuffer, int32 rightBuffer, bool useRust\)\s*\{[^}]*return HnswShouldHaveMatchingMarkDeletedBuffersFlag\(leftBuffer == rightBuffer, false\);/s,
+	"legacy C matching-markdeleted-buffers fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldReuseMarkDeletedBufferForNeighborPage\(bool samePage, bool useRust\)\s*\{[^}]*return samePage;/s,
+	"legacy C reuse-markdeleted-buffer-for-neighbor-page fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveDistinctMarkDeletedBuffersFlag\(bool buffersMatch, bool useRust\)\s*\{[^}]*return !buffersMatch;/s,
+	"legacy C distinct-markdeleted-buffers-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMarkDeletedVersionBeyondMaxFlag\(bool versionWithinRange, bool useRust\)\s*\{[^}]*return !versionWithinRange;/s,
+	"legacy C markdeleted-version-beyond-max-flag fallback removed");
 
 done_testing();
