@@ -4240,6 +4240,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_highest_point_pointer_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_highest_point_pointer_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_highest_point_pointer_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_highest_point_pointer_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_vacuum_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4247,6 +4257,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_pointer_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_pointer_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_pointer_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_pointer_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4327,6 +4347,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_entrypoint_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_entrypoint_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_entrypoint_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_entrypoint_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -10180,6 +10210,18 @@ my $have_vacuum_highest_point_pointer_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_highest_point_pointer_parity, "t\nt\nt\nt");
 
+my $have_vacuum_highest_point_pointer_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_highest_point_pointer_value(has_highest_point) =
+		   rust_hnsw_should_have_vacuum_highest_point_pointer_value(has_highest_point)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_highest_point);
+});
+is($have_vacuum_highest_point_pointer_value_parity, "t\nt\nt\nt");
+
 my $have_vacuum_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_pointer(has_pointer) =
 		   rust_hnsw_should_have_vacuum_pointer(has_pointer)
@@ -10191,6 +10233,18 @@ my $have_vacuum_pointer_parity = $node->safe_psql("postgres", q{
 	) AS t(has_pointer);
 });
 is($have_vacuum_pointer_parity, "t\nt\nt\nt");
+
+my $have_vacuum_pointer_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_pointer_value(has_pointer) =
+		   rust_hnsw_should_have_vacuum_pointer_value(has_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pointer);
+});
+is($have_vacuum_pointer_value_parity, "t\nt\nt\nt");
 
 my $repair_vacuum_highest_point_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_repair_vacuum_highest_point(needs_updated) =
@@ -10287,6 +10341,18 @@ my $have_vacuum_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entrypoint);
 });
 is($have_vacuum_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_vacuum_entrypoint_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_entrypoint_pointer(has_entrypoint) =
+		   rust_hnsw_should_have_vacuum_entrypoint_pointer(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_vacuum_entrypoint_pointer_parity, "t\nt\nt\nt");
 
 my $skip_deleted_markdeleted_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_deleted_markdeleted_tuple(is_deleted_tuple) =
