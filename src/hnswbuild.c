@@ -2533,12 +2533,18 @@ vector_rust_hnsw_should_write_wal_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipNullBuildTuple(bool isNull, bool useRust)
+HnswShouldHaveSkipNullBuildTuple(bool isNull, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_null_build_tuple_kernel(isNull);
 
 	return isNull;
+}
+
+static bool
+HnswShouldSkipNullBuildTuple(bool isNull, bool useRust)
+{
+	return HnswShouldHaveSkipNullBuildTuple(isNull, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_null_build_tuple);
@@ -2559,13 +2565,37 @@ vector_rust_hnsw_should_skip_null_build_tuple(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipNullBuildTuple(isNull != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_null_build_tuple);
+Datum
+vector_hnsw_should_have_skip_null_build_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipNullBuildTuple(isNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_null_build_tuple);
+Datum
+vector_rust_hnsw_should_have_skip_null_build_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipNullBuildTuple(isNull != 0, true));
+}
+
 static bool
-HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust)
+HnswShouldHaveUpdateProgressAfterInsert(bool tupleInserted, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleInserted);
 
 	return tupleInserted;
+}
+
+static bool
+HnswShouldUpdateProgressAfterInsert(bool tupleInserted, bool useRust)
+{
+	return HnswShouldHaveUpdateProgressAfterInsert(tupleInserted, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_progress_after_insert);
@@ -2586,13 +2616,37 @@ vector_rust_hnsw_should_update_progress_after_insert(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUpdateProgressAfterInsert(tupleInserted != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_progress_after_insert);
+Datum
+vector_hnsw_should_have_update_progress_after_insert(PG_FUNCTION_ARGS)
+{
+	int32		tupleInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateProgressAfterInsert(tupleInserted != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_progress_after_insert);
+Datum
+vector_rust_hnsw_should_have_update_progress_after_insert(PG_FUNCTION_ARGS)
+{
+	int32		tupleInserted = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateProgressAfterInsert(tupleInserted != 0, true));
+}
+
 static bool
-HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust)
+HnswShouldHaveRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_oversized_element_tuple_kernel(tupleSize, allocSize);
 
 	return tupleSize > allocSize;
+}
+
+static bool
+HnswShouldRejectOversizedElementTuple(int64 tupleSize, int64 allocSize, bool useRust)
+{
+	return HnswShouldHaveRejectOversizedElementTuple(tupleSize, allocSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_oversized_element_tuple);
@@ -2615,13 +2669,39 @@ vector_rust_hnsw_should_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectOversizedElementTuple(tupleSize, allocSize, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_oversized_element_tuple);
+Datum
+vector_hnsw_should_have_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
+{
+	int64		tupleSize = PG_GETARG_INT64(0);
+	int64		allocSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectOversizedElementTuple(tupleSize, allocSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_oversized_element_tuple);
+Datum
+vector_rust_hnsw_should_have_reject_oversized_element_tuple(PG_FUNCTION_ARGS)
+{
+	int64		tupleSize = PG_GETARG_INT64(0);
+	int64		allocSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectOversizedElementTuple(tupleSize, allocSize, true));
+}
+
 static bool
-HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust)
+HnswShouldHaveAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, neighborTupleSize);
 
 	return freeSpace < neighborTupleSize;
+}
+
+static bool
+HnswShouldAppendNeighborPage(int64 freeSpace, int64 neighborTupleSize, bool useRust)
+{
+	return HnswShouldHaveAppendNeighborPage(freeSpace, neighborTupleSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_neighbor_page);
@@ -2644,13 +2724,39 @@ vector_rust_hnsw_should_append_neighbor_page(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldAppendNeighborPage(freeSpace, neighborTupleSize, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_append_neighbor_page);
+Datum
+vector_hnsw_should_have_append_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		neighborTupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendNeighborPage(freeSpace, neighborTupleSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_append_neighbor_page);
+Datum
+vector_rust_hnsw_should_have_append_neighbor_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		neighborTupleSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendNeighborPage(freeSpace, neighborTupleSize, true));
+}
+
 static bool
-HnswShouldAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust)
+HnswShouldHaveAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_append_element_page_kernel(freeSpace, elementTupleSize, combinedSize, maxSize);
 
 	return freeSpace < elementTupleSize || (combinedSize <= maxSize && freeSpace < combinedSize);
+}
+
+static bool
+HnswShouldAppendElementPage(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust)
+{
+	return HnswShouldHaveAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_element_page);
@@ -2675,6 +2781,30 @@ vector_rust_hnsw_should_append_element_page(PG_FUNCTION_ARGS)
 	int64		maxSize = PG_GETARG_INT64(3);
 
 	PG_RETURN_BOOL(HnswShouldAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_append_element_page);
+Datum
+vector_hnsw_should_have_append_element_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		elementTupleSize = PG_GETARG_INT64(1);
+	int64		combinedSize = PG_GETARG_INT64(2);
+	int64		maxSize = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_append_element_page);
+Datum
+vector_rust_hnsw_should_have_append_element_page(PG_FUNCTION_ARGS)
+{
+	int64		freeSpace = PG_GETARG_INT64(0);
+	int64		elementTupleSize = PG_GETARG_INT64(1);
+	int64		combinedSize = PG_GETARG_INT64(2);
+	int64		maxSize = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendElementPage(freeSpace, elementTupleSize, combinedSize, maxSize, true));
 }
 
 static bool
@@ -2734,12 +2864,18 @@ vector_rust_hnsw_should_reject_neighbor_overwrite(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust)
+HnswShouldHaveStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_store_neighbors_on_same_page_kernel(combinedSize, maxSize);
 
 	return combinedSize <= maxSize;
+}
+
+static bool
+HnswShouldStoreNeighborsOnSamePage(int64 combinedSize, int64 maxSize, bool useRust)
+{
+	return HnswShouldHaveStoreNeighborsOnSamePage(combinedSize, maxSize, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_store_neighbors_on_same_page);
@@ -2760,6 +2896,26 @@ vector_rust_hnsw_should_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
 	int64		maxSize = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldStoreNeighborsOnSamePage(combinedSize, maxSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_store_neighbors_on_same_page);
+Datum
+vector_hnsw_should_have_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveStoreNeighborsOnSamePage(combinedSize, maxSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_store_neighbors_on_same_page);
+Datum
+vector_rust_hnsw_should_have_store_neighbors_on_same_page(PG_FUNCTION_ARGS)
+{
+	int64		combinedSize = PG_GETARG_INT64(0);
+	int64		maxSize = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveStoreNeighborsOnSamePage(combinedSize, maxSize, true));
 }
 
 static bool
