@@ -4512,7 +4512,7 @@ HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool
 }
 
 static bool
-HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
+HnswShouldHaveSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_lower_level_candidate_kernel(candidateLevel, searchLevel);
@@ -4521,7 +4521,13 @@ HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useR
 }
 
 static bool
-HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
+HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
+{
+	return HnswShouldHaveSkipLowerLevelCandidate(candidateLevel, searchLevel, useRust);
+}
+
+static bool
+HnswShouldHaveKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_keep_pruned_connection_kernel(wdoff, wdlen, resultLength, maxNeighbors);
@@ -4530,7 +4536,13 @@ HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNe
 }
 
 static bool
-HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
+HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
+{
+	return HnswShouldHaveKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, useRust);
+}
+
+static bool
+HnswShouldHaveSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_set_pruned_from_array_kernel(wdoff, wdlen);
@@ -4539,12 +4551,24 @@ HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
 }
 
 static bool
-HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
+HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
+{
+	return HnswShouldHaveSetPrunedFromArray(wdoff, wdlen, useRust);
+}
+
+static bool
+HnswShouldHaveTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_track_discarded_candidates_kernel(hasDiscardedHeap);
 
 	return hasDiscardedHeap;
+}
+
+static bool
+HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
+{
+	return HnswShouldHaveTrackDiscardedCandidates(hasDiscardedHeap, useRust);
 }
 
 static bool
@@ -4572,7 +4596,7 @@ HnswShouldHaveUpdateIndexPointer(int *updateIdx, bool useRust)
 }
 
 static bool
-HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
+HnswShouldHaveTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_track_update_index_kernel(hasUpdateIndexPointer);
@@ -4581,7 +4605,13 @@ HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 }
 
 static bool
-HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
+{
+	return HnswShouldHaveTrackUpdateIndex(hasUpdateIndexPointer, useRust);
+}
+
+static bool
+HnswShouldHaveProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_process_pruned_candidate_kernel(hasPrunedCandidate);
@@ -4590,7 +4620,13 @@ HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 }
 
 static bool
-HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
+HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+{
+	return HnswShouldHaveProcessPrunedCandidate(hasPrunedCandidate, useRust);
+}
+
+static bool
+HnswShouldHaveTrimCandidateList(int candidateCount, int ef, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_trim_candidate_list_kernel(candidateCount, ef);
@@ -4599,12 +4635,24 @@ HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
 }
 
 static bool
-HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
+HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
+{
+	return HnswShouldHaveTrimCandidateList(candidateCount, ef, useRust);
+}
+
+static bool
+HnswShouldHaveAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_always_add_candidate_kernel(candidateCount, ef);
 
 	return candidateCount < ef;
+}
+
+static bool
+HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
+{
+	return HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
@@ -4831,6 +4879,26 @@ vector_rust_hnsw_should_skip_lower_level_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSkipLowerLevelCandidate(candidateLevel, searchLevel, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_lower_level_candidate);
+Datum
+vector_hnsw_should_have_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipLowerLevelCandidate(candidateLevel, searchLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_lower_level_candidate);
+Datum
+vector_rust_hnsw_should_have_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipLowerLevelCandidate(candidateLevel, searchLevel, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_keep_pruned_connection);
 Datum
 vector_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
@@ -4855,6 +4923,30 @@ vector_rust_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_keep_pruned_connection);
+Datum
+vector_hnsw_should_have_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_keep_pruned_connection);
+Datum
+vector_rust_hnsw_should_have_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_pruned_from_array);
 Datum
 vector_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
@@ -4875,6 +4967,26 @@ vector_rust_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldSetPrunedFromArray(wdoff, wdlen, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_set_pruned_from_array);
+Datum
+vector_hnsw_should_have_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSetPrunedFromArray(wdoff, wdlen, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_set_pruned_from_array);
+Datum
+vector_rust_hnsw_should_have_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSetPrunedFromArray(wdoff, wdlen, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_discarded_candidates);
 Datum
 vector_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
@@ -4891,6 +5003,24 @@ vector_rust_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
 	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_track_discarded_candidates);
+Datum
+vector_hnsw_should_have_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackDiscardedCandidates(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_track_discarded_candidates);
+Datum
+vector_rust_hnsw_should_have_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_with_max_distance_cap);
@@ -4949,6 +5079,24 @@ vector_rust_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_track_update_index);
+Datum
+vector_hnsw_should_have_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackUpdateIndex(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_track_update_index);
+Datum
+vector_rust_hnsw_should_have_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackUpdateIndex(hasUpdateIndexPointer != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_pruned_candidate);
 Datum
 vector_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
@@ -4965,6 +5113,24 @@ vector_rust_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
 	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldProcessPrunedCandidate(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_process_pruned_candidate);
+Datum
+vector_hnsw_should_have_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProcessPrunedCandidate(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_process_pruned_candidate);
+Datum
+vector_rust_hnsw_should_have_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProcessPrunedCandidate(hasPrunedCandidate != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_trim_candidate_list);
@@ -4987,6 +5153,26 @@ vector_rust_hnsw_should_trim_candidate_list(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldTrimCandidateList(candidateCount, ef, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_trim_candidate_list);
+Datum
+vector_hnsw_should_have_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrimCandidateList(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_trim_candidate_list);
+Datum
+vector_rust_hnsw_should_have_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrimCandidateList(candidateCount, ef, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_always_add_candidate);
 Datum
 vector_hnsw_should_always_add_candidate(PG_FUNCTION_ARGS)
@@ -5005,6 +5191,26 @@ vector_rust_hnsw_should_always_add_candidate(PG_FUNCTION_ARGS)
 	int32		ef = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldAlwaysAddCandidate(candidateCount, ef, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_always_add_candidate);
+Datum
+vector_hnsw_should_have_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_always_add_candidate);
+Datum
+vector_rust_hnsw_should_have_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, true));
 }
 
 /*
