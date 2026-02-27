@@ -907,9 +907,15 @@ HnswShouldUseProvidedRescanKeyArray(ScanKey keys, bool useRust)
 }
 
 static bool
-HnswShouldUseProvidedOrderByDataFlag(bool hasOrderByData, bool useRust)
+HnswShouldHaveProvidedOrderByData(bool hasOrderByData, bool useRust)
 {
 	return HnswShouldHaveScanPointerFlag(hasOrderByData, useRust);
+}
+
+static bool
+HnswShouldUseProvidedOrderByDataFlag(bool hasOrderByData, bool useRust)
+{
+	return HnswShouldHaveProvidedOrderByData(hasOrderByData, useRust);
 }
 
 static bool
@@ -1103,6 +1109,24 @@ vector_rust_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
 	int32		hasOrderByData = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_orderby_data);
+Datum
+vector_hnsw_should_have_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByData(hasOrderByData != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_orderby_data);
+Datum
+vector_rust_hnsw_should_have_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByData(hasOrderByData != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_entrypoint_for_scan);
