@@ -1142,12 +1142,18 @@ vector_rust_hnsw_should_have_missing_discarded_heap(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseNullScanValue(bool orderByIsNull, bool useRust)
+HnswShouldHaveNullScanValue(bool orderByIsNull, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_use_null_scan_value_kernel(orderByIsNull);
 
 	return orderByIsNull;
+}
+
+static bool
+HnswShouldUseNullScanValue(bool orderByIsNull, bool useRust)
+{
+	return HnswShouldHaveNullScanValue(orderByIsNull, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_null_scan_value);
@@ -1166,6 +1172,24 @@ vector_rust_hnsw_should_use_null_scan_value(PG_FUNCTION_ARGS)
 	int32		orderByIsNull = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseNullScanValue(orderByIsNull != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_null_scan_value);
+Datum
+vector_hnsw_should_have_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNullScanValue(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_null_scan_value);
+Datum
+vector_rust_hnsw_should_have_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNullScanValue(orderByIsNull != 0, true));
 }
 
 static bool
