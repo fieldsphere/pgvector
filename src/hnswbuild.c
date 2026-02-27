@@ -2241,10 +2241,8 @@ vector_rust_hnsw_should_have_fallback_without_workers(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveLeaderParticipate(bool leaderParticipates, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_leader_participate_kernel(leaderParticipates);
-
-	return leaderParticipates;
+	(void) useRust;
+	return vector_rust_hnsw_should_leader_participate_kernel(leaderParticipates);
 }
 
 static bool
@@ -2298,10 +2296,8 @@ HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust)
 static bool
 HnswShouldHaveDebugQueryStringFlag(bool hasDebugQueryString, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_debug_query_string_kernel(hasDebugQueryString);
-
-	return hasDebugQueryString;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_debug_query_string_kernel(hasDebugQueryString);
 }
 
 static bool
@@ -2369,10 +2365,8 @@ vector_rust_hnsw_should_have_debug_query_string_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(participantsDone, participantCount);
-
-	return participantsDone == participantCount;
+	(void) useRust;
+	return vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(participantsDone, participantCount);
 }
 
 static bool
@@ -2424,10 +2418,8 @@ vector_rust_hnsw_should_have_finish_parallel_heap_scan(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(snapshotIsMVCC);
-
-	return snapshotIsMVCC;
+	(void) useRust;
+	return vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(snapshotIsMVCC);
 }
 
 static bool
@@ -2572,10 +2564,8 @@ vector_rust_hnsw_should_have_parallel_dsm_segment_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReserveGraphMemory(int64 estHnswArea, int64 estOther, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reserve_graph_memory_kernel(estHnswArea, estOther);
-
-	return estHnswArea > estOther;
+	(void) useRust;
+	return vector_rust_hnsw_should_reserve_graph_memory_kernel(estHnswArea, estOther);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reserve_graph_memory);
@@ -2601,10 +2591,8 @@ vector_rust_hnsw_should_reserve_graph_memory(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveLogLeaderProgress(bool progressIsLeader, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_log_leader_progress_kernel(progressIsLeader);
-
-	return progressIsLeader;
+	(void) useRust;
+	return vector_rust_hnsw_should_log_leader_progress_kernel(progressIsLeader);
 }
 
 static bool
