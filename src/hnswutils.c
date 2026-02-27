@@ -1472,10 +1472,8 @@ HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust)
 static bool
 HnswShouldHaveMetaBlockFlag(bool hasValidBlock, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
-
-	return hasValidBlock;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
 }
 
 static bool
@@ -1499,19 +1497,15 @@ HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
 static bool
 HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry != 0);
-
-	return updateEntry != 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry != 0);
 }
 
 static bool
 HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntrypoint);
-
-	return !hasEntrypoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntrypoint);
 }
 
 static bool
@@ -1529,24 +1523,19 @@ HnswShouldHaveMetaUpdateEntrypoint(HnswElement entryPoint, bool useRust)
 static bool
 HnswShouldForceMetaEntryUpdate(int updateEntry, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry == HNSW_UPDATE_ENTRY_ALWAYS);
-
-	return updateEntry == HNSW_UPDATE_ENTRY_ALWAYS;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry == HNSW_UPDATE_ENTRY_ALWAYS);
 }
 
 static bool
 HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust)
 {
-	if (useRust)
-	{
-		if (HnswShouldForceMetaEntryUpdate(updateEntry, true))
-			return true;
+	(void) useRust;
 
-		return vector_rust_hnsw_should_update_entry_point_kernel(!hasEntrypoint, entryLevel, currentEntryLevel);
-	}
+	if (HnswShouldForceMetaEntryUpdate(updateEntry, true))
+		return true;
 
-	return !hasEntrypoint || entryLevel > currentEntryLevel || HnswShouldForceMetaEntryUpdate(updateEntry, false);
+	return vector_rust_hnsw_should_update_entry_point_kernel(!hasEntrypoint, entryLevel, currentEntryLevel);
 }
 
 static bool
@@ -1558,10 +1547,8 @@ HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust)
 static bool
 HnswShouldHaveBuildBufferPath(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(building);
 }
 
 static bool
@@ -1573,19 +1560,15 @@ HnswShouldUseBuildBufferPath(bool building, bool useRust)
 static bool
 HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
-
-	return hasCheckValueFunction;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
 }
 
 static bool
 HnswShouldHaveTypeCheckFunctionFlag(bool hasCheckValueFunction, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
-
-	return hasCheckValueFunction;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
 }
 
 static bool
@@ -1597,19 +1580,15 @@ HnswShouldHaveTypeCheckFunction(void (*checkValue) (Pointer v), bool useRust)
 static bool
 HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
-
-	return hasNormProcInfo;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
 }
 
 static bool
 HnswShouldHaveNormProcInfoFlag(bool hasNormProcInfo, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
-
-	return hasNormProcInfo;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
 }
 
 static bool
@@ -1621,46 +1600,36 @@ HnswShouldHaveNormProcInfo(FmgrInfo *normprocinfo, bool useRust)
 static bool
 HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasValidNorm);
-
-	return !hasValidNorm;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasValidNorm);
 }
 
 static bool
 HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, leftDistance, rightDistance);
-
-	return leftDistance < rightDistance;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, leftDistance, rightDistance);
 }
 
 static bool
 HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftPointerPrecedes);
-
-	return leftPointerPrecedes;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftPointerPrecedes);
 }
 
 static bool
 HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftOffsetPrecedes);
-
-	return leftOffsetPrecedes;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftOffsetPrecedes);
 }
 
 static bool
 HnswShouldHaveExpectedMetaMagicFlag(bool hasExpectedMagic, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedMagic);
-
-	return hasExpectedMagic;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedMagic);
 }
 
 static bool
@@ -1672,10 +1641,8 @@ HnswShouldHaveExpectedMetaMagic(uint32 magicNumber, bool useRust)
 static bool
 HnswShouldRejectInvalidMetaMagic(bool hasExpectedMagic, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedMagic);
-
-	return !hasExpectedMagic;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedMagic);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
