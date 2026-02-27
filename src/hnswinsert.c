@@ -1481,10 +1481,8 @@ vector_rust_hnsw_should_update_ondisk_insert_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveBoundaryDuplicateInsertSlotFlag(bool hasBoundarySlot, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBoundarySlot);
-
-	return hasBoundarySlot;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBoundarySlot);
 }
 
 static bool
@@ -1560,10 +1558,8 @@ vector_rust_hnsw_should_have_boundary_duplicate_insert_slot_flag(PG_FUNCTION_ARG
 static bool
 HnswShouldHaveInvalidOnDiskHeapTidFlag(bool heapTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
-
-	return !heapTidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
 }
 
 static bool
@@ -1629,10 +1625,8 @@ vector_rust_hnsw_should_have_invalid_ondisk_heaptid_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty);
@@ -1656,10 +1650,8 @@ vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(PG_FUNCTION_AR
 static bool
 HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return building;
+	(void) useRust;
+	return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_commit_ondisk_neighbor_update_with_buffer_dirty);
@@ -1683,10 +1675,8 @@ vector_rust_hnsw_should_commit_ondisk_neighbor_update_with_buffer_dirty(PG_FUNCT
 static bool
 HnswShouldHaveNonBuildingOnDiskNeighborUpdate(bool building, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
-
-	return !building;
+	(void) useRust;
+	return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 }
 
 static bool
@@ -1734,10 +1724,8 @@ vector_rust_hnsw_should_have_nonbuilding_ondisk_neighbor_update(PG_FUNCTION_ARGS
 static bool
 HnswShouldHaveInsufficientOnDiskNeighborSpace(int64 freeSpace, int64 tupleSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, tupleSize);
-
-	return freeSpace < tupleSize;
+	(void) useRust;
+	return vector_rust_hnsw_should_append_neighbor_page_kernel(freeSpace, tupleSize);
 }
 
 static bool
@@ -1789,10 +1777,8 @@ vector_rust_hnsw_should_have_insufficient_ondisk_neighbor_space(PG_FUNCTION_ARGS
 static bool
 HnswShouldExceedOnDiskElementMaxSizeFlag(bool exceedsMaxSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(exceedsMaxSize);
-
-	return exceedsMaxSize;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(exceedsMaxSize);
 }
 
 static bool
@@ -1804,25 +1790,19 @@ HnswShouldExceedOnDiskElementMaxSize(int64 combinedSize, int64 maxSize, bool use
 static bool
 HnswShouldHaveOnDiskElementWithoutNextPage(bool hasNextPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasNextPage);
-
-	return !hasNextPage;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasNextPage);
 }
 
 static bool
 HnswShouldAppendOnDiskElementPage(int64 combinedSize, int64 maxSize, int64 freeSpace, int64 elementTupleSize, bool hasNextPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_ondisk_element_page_kernel(combinedSize,
-																		 maxSize,
-																		 freeSpace,
-																		 elementTupleSize,
-																		 hasNextPage);
-
-	return HnswShouldExceedOnDiskElementMaxSize(combinedSize, maxSize, false) &&
-		HnswShouldHavePageSpaceForTuple(freeSpace, elementTupleSize, false) &&
-		HnswShouldHaveOnDiskElementWithoutNextPage(hasNextPage, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_append_ondisk_element_page_kernel(combinedSize,
+																	 maxSize,
+																	 freeSpace,
+																	 elementTupleSize,
+																	 hasNextPage);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_ondisk_element_page);
