@@ -2048,12 +2048,18 @@ vector_rust_hnsw_should_have_debug_query_string(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust)
+HnswShouldHaveFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_finish_parallel_heap_scan_kernel(participantsDone, participantCount);
 
 	return participantsDone == participantCount;
+}
+
+static bool
+HnswShouldFinishParallelHeapScan(int participantsDone, int participantCount, bool useRust)
+{
+	return HnswShouldHaveFinishParallelHeapScan(participantsDone, participantCount, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_finish_parallel_heap_scan);
@@ -2076,13 +2082,39 @@ vector_rust_hnsw_should_finish_parallel_heap_scan(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFinishParallelHeapScan(participantsDone, participantCount, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_finish_parallel_heap_scan);
+Datum
+vector_hnsw_should_have_finish_parallel_heap_scan(PG_FUNCTION_ARGS)
+{
+	int32		participantsDone = PG_GETARG_INT32(0);
+	int32		participantCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveFinishParallelHeapScan(participantsDone, participantCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_finish_parallel_heap_scan);
+Datum
+vector_rust_hnsw_should_have_finish_parallel_heap_scan(PG_FUNCTION_ARGS)
+{
+	int32		participantsDone = PG_GETARG_INT32(0);
+	int32		participantCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveFinishParallelHeapScan(participantsDone, participantCount, true));
+}
+
 static bool
-HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+HnswShouldHaveUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_unregister_mvcc_snapshot_kernel(snapshotIsMVCC);
 
 	return snapshotIsMVCC;
+}
+
+static bool
+HnswShouldUnregisterMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+{
+	return HnswShouldHaveUnregisterMVCCSnapshot(snapshotIsMVCC, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_unregister_mvcc_snapshot);
@@ -2101,6 +2133,24 @@ vector_rust_hnsw_should_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
 	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUnregisterMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_unregister_mvcc_snapshot);
+Datum
+vector_hnsw_should_have_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUnregisterMVCCSnapshot(snapshotIsMVCC != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_unregister_mvcc_snapshot);
+Datum
+vector_rust_hnsw_should_have_unregister_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUnregisterMVCCSnapshot(snapshotIsMVCC != 0, true));
 }
 
 static bool
@@ -2477,12 +2527,18 @@ vector_rust_hnsw_should_have_reject_low_ef_construction(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldTreatForkAsInit(int32 forkNum, bool useRust)
+HnswShouldHaveTreatForkAsInit(int32 forkNum, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_match_neighbor_connection_kernel(forkNum, 0, INIT_FORKNUM, 0);
 
 	return forkNum == INIT_FORKNUM;
+}
+
+static bool
+HnswShouldTreatForkAsInit(int32 forkNum, bool useRust)
+{
+	return HnswShouldHaveTreatForkAsInit(forkNum, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_treat_fork_as_init);
@@ -2503,13 +2559,37 @@ vector_rust_hnsw_should_treat_fork_as_init(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldTreatForkAsInit(forkNum, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_treat_fork_as_init);
+Datum
+vector_hnsw_should_have_treat_fork_as_init(PG_FUNCTION_ARGS)
+{
+	int32		forkNum = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTreatForkAsInit(forkNum, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_treat_fork_as_init);
+Datum
+vector_rust_hnsw_should_have_treat_fork_as_init(PG_FUNCTION_ARGS)
+{
+	int32		forkNum = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTreatForkAsInit(forkNum, true));
+}
+
 static bool
-HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
+HnswShouldHaveWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_write_wal_page_kernel(needsWal, isInitFork);
 
 	return needsWal || isInitFork;
+}
+
+static bool
+HnswShouldWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
+{
+	return HnswShouldHaveWriteWalPage(needsWal, isInitFork, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_wal_page);
@@ -2530,6 +2610,26 @@ vector_rust_hnsw_should_write_wal_page(PG_FUNCTION_ARGS)
 	int32		isInitFork = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldWriteWalPage(needsWal != 0, isInitFork != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_write_wal_page);
+Datum
+vector_hnsw_should_have_write_wal_page(PG_FUNCTION_ARGS)
+{
+	int32		needsWal = PG_GETARG_INT32(0);
+	int32		isInitFork = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveWriteWalPage(needsWal != 0, isInitFork != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_write_wal_page);
+Datum
+vector_rust_hnsw_should_have_write_wal_page(PG_FUNCTION_ARGS)
+{
+	int32		needsWal = PG_GETARG_INT32(0);
+	int32		isInitFork = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveWriteWalPage(needsWal != 0, isInitFork != 0, true));
 }
 
 static bool
