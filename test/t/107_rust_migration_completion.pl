@@ -680,5 +680,35 @@ unlike($hnsw_utils_c, qr/HnswShouldStopLoadingElementHeapTids\(bool heaptidValid
 	"legacy C stop-loading-element-heaptids fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldCountWithoutSkipElement\(bool hasSkipElement, bool useRust\)\s*\{[^}]*return !hasSkipElement;/s,
 	"legacy C count-without-skip-element fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldAppendUnvisitedNeighbor\(bool found, bool useRust\)\s*\{[^}]*return !found;/s,
+	"legacy C append-unvisited-neighbor fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldAppendUnvisitedDiskNeighbor\(bool found, bool useRust\)\s*\{[^}]*return !found;/s,
+	"legacy C append-unvisited-disk-neighbor fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveDiskNeighborIndexTidFlag\(bool isValidIndexTid, bool useRust\)\s*\{[^}]*return isValidIndexTid;/s,
+	"legacy C disk-neighbor-indextid-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldStopLoadingDiskNeighbor\(bool isValidIndexTid, bool useRust\)\s*\{[^}]*return !isValidIndexTid;/s,
+	"legacy C stop-loading-disk-neighbor fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldAbortUnvisitedDiskLoad\(bool neighborTidsLoaded, bool useRust\)\s*\{[^}]*return !neighborTidsLoaded;/s,
+	"legacy C abort-unvisited-disk-load fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveConsistentNeighborTupleFlag\(bool tupleConsistent, bool useRust\)\s*\{[^}]*return tupleConsistent;/s,
+	"legacy C consistent-neighbor-tuple-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldRejectStaleNeighborTuple\(bool tupleConsistent, bool useRust\)\s*\{[^}]*return !tupleConsistent;/s,
+	"legacy C reject-stale-neighbor-tuple fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveDiscardedHeapPointerFlag\(bool hasDiscardedHeap, bool useRust\)\s*\{[^}]*return hasDiscardedHeap;/s,
+	"legacy C discarded-heap-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTupleCounterPointerFlag\(bool hasTupleCounter, bool useRust\)\s*\{[^}]*return hasTupleCounter;/s,
+	"legacy C tuple-counter-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveVisitedHashPointerFlag\(bool hasVisitedHash, bool useRust\)\s*\{[^}]*return hasVisitedHash;/s,
+	"legacy C visited-hash-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldInitializeVisitedHash\(bool hasVisitedHash, bool useRust\)\s*\{[^}]*return !hasVisitedHash;/s,
+	"legacy C initialize-visited-hash fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldInitializeVisitedState\(bool initVisited, bool useRust\)\s*\{[^}]*return initVisited;/s,
+	"legacy C initialize-visited-state fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveTidVisitedHash\(bool inMemory, bool useRust\)\s*\{[^}]*return !inMemory;/s,
+	"legacy C tid-visited-hash fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveVisitedBasePointerFlag\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return hasBasePointer;/s,
+	"legacy C visited-base-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHavePointerVisitedHash\(bool hasBasePointer, bool useRust\)\s*\{[^}]*return !hasBasePointer;/s,
+	"legacy C pointer-visited-hash fallback removed");
 
 done_testing();
