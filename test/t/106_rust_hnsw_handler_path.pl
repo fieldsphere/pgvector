@@ -3350,6 +3350,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_null_vacuum_cleanup_stats(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_null_vacuum_cleanup_stats'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_null_vacuum_cleanup_stats(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_null_vacuum_cleanup_stats'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7829,6 +7839,18 @@ my $return_null_vacuum_cleanup_stats_parity = $node->safe_psql("postgres", q{
 	) AS t(has_stats);
 });
 is($return_null_vacuum_cleanup_stats_parity, "t\nt\nt\nt");
+
+my $have_null_vacuum_cleanup_stats_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_null_vacuum_cleanup_stats(has_stats) =
+		   rust_hnsw_should_have_null_vacuum_cleanup_stats(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_stats);
+});
+is($have_null_vacuum_cleanup_stats_parity, "t\nt\nt\nt");
 
 my $reuse_markdeleted_buffer_for_neighbor_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page(same_page) =
