@@ -2656,10 +2656,8 @@ vector_rust_hnsw_should_have_deleted_repairgraph_element(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveHigherVacuumElementLevelFlag(bool isHigherLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isHigherLevel);
-
-	return isHigherLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isHigherLevel);
 }
 
 static bool
@@ -2671,10 +2669,8 @@ HnswShouldHaveHigherVacuumElementLevel(int32 elementLevel, int32 highestLevel, b
 static bool
 HnswShouldHaveVacuumNonEntrypointFlag(bool isEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(isEntryPoint);
-
-	return !isEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(isEntryPoint);
 }
 
 static bool
@@ -2693,29 +2689,23 @@ HnswShouldTrackVacuumHighestNonEntrypoint(bool isHigherLevel, bool isEntryPoint,
 static bool
 HnswShouldHaveMatchingVacuumEntrypointTidFlag(bool hasMatchingTid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingTid);
-
-	return hasMatchingTid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingTid);
 }
 
 static bool
 HnswShouldHaveMatchingVacuumEntrypointTid(int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(blkno, offno, entryBlkno, entryOffno);
-
-	return HnswShouldHaveMatchingVacuumEntrypointTidFlag(blkno == entryBlkno && offno == entryOffno, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(blkno, offno, entryBlkno, entryOffno);
 }
 
 static bool
 HnswShouldMatchVacuumEntrypointTuple(bool hasEntryPoint, int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint) &&
-			HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, true);
-
-	return hasEntryPoint && HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint) &&
+		HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, true);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_vacuum_highest_non_entrypoint);
@@ -2883,10 +2873,8 @@ vector_rust_hnsw_should_match_vacuum_entrypoint_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFailedVacuumNeighborOverwriteFlag(bool overwriteSucceeded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
-
-	return !overwriteSucceeded;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_neighbor_overwrite_kernel(overwriteSucceeded);
 }
 
 static bool
@@ -2952,10 +2940,8 @@ vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(PG_FUNCTION_A
 static bool
 HnswShouldHaveMissingVacuumStatsFlag(bool hasStats, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasStats);
-
-	return !hasStats;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasStats);
 }
 
 static bool
@@ -3113,10 +3099,8 @@ vector_rust_hnsw_should_have_vacuum_stats_value(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumCleanupAnalyzeOnly(bool analyzeOnly, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(analyzeOnly);
-
-	return analyzeOnly;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(analyzeOnly);
 }
 
 static bool
@@ -3212,10 +3196,8 @@ vector_rust_hnsw_should_have_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedTuple);
-
-	return isDeletedTuple;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedTuple);
 }
 
 static bool
