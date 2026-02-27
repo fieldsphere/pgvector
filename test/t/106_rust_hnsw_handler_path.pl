@@ -110,6 +110,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_entrypoint_for_scan_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_entrypoint_for_scan_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_entrypoint_for_scan_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_entrypoint_for_scan_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_entrypoint_for_scan(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_entrypoint_for_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -270,6 +280,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_decreasing_scan_distance_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_decreasing_scan_distance_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_decreasing_scan_distance_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_decreasing_scan_distance_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_without_discarded(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_without_discarded'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -287,6 +307,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_discarded_heap_missing(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_discarded_heap_missing'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_discarded_heap_missing_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_discarded_heap_missing_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_discarded_heap_missing_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_discarded_heap_missing_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -360,6 +390,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_reach_scan_tuple_limit_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_reach_scan_tuple_limit_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_reach_scan_tuple_limit_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_reach_scan_tuple_limit_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_exceed_scan_memory_limit(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_exceed_scan_memory_limit'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -367,6 +407,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_exceed_scan_memory_limit(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_exceed_scan_memory_limit'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_exceed_scan_memory_limit_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_exceed_scan_memory_limit_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_exceed_scan_memory_limit_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_exceed_scan_memory_limit_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -770,6 +820,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_provided_rescan_key_array_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_provided_rescan_key_array_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_provided_rescan_key_array_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_provided_rescan_key_array_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_provided_rescan_key_array(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_provided_rescan_key_array'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -827,6 +887,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_provided_orderby_data(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_provided_orderby_data'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_provided_orderby_data_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_provided_orderby_data_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_provided_orderby_data_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_provided_orderby_data_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -900,6 +970,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_scan_normproc_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_scan_normproc_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_scan_normproc_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_scan_normproc_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_scan_normproc(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_scan_normproc'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -967,6 +1047,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_scan_instrument(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_scan_instrument'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_use_scan_instrument_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_use_scan_instrument_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_use_scan_instrument_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_use_scan_instrument_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5473,6 +5563,18 @@ my $use_entrypoint_for_scan_parity = $node->safe_psql("postgres", q{
 });
 is($use_entrypoint_for_scan_parity, "t\nt\nt\nt");
 
+my $use_entrypoint_for_scan_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_entrypoint_for_scan_flag(has_entrypoint) =
+		   rust_hnsw_should_use_entrypoint_for_scan_flag(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($use_entrypoint_for_scan_flag_parity, "t\nt\nt\nt");
+
 my $have_entrypoint_for_scan_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_entrypoint_for_scan(has_entrypoint) =
 		   rust_hnsw_should_have_entrypoint_for_scan(has_entrypoint)
@@ -5665,6 +5767,18 @@ my $have_decreasing_scan_distance_parity = $node->safe_psql("postgres", q{
 });
 is($have_decreasing_scan_distance_parity, "t\nt\nt\nt");
 
+my $have_decreasing_scan_distance_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_decreasing_scan_distance_flag(has_decreasing_distance) =
+		   rust_hnsw_should_have_decreasing_scan_distance_flag(has_decreasing_distance)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_decreasing_distance);
+});
+is($have_decreasing_scan_distance_flag_parity, "t\nt\nt\nt");
+
 my $stop_without_discarded_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_without_discarded(discarded_is_null) =
 		   rust_hnsw_should_stop_without_discarded(discarded_is_null)
@@ -5688,6 +5802,18 @@ my $discarded_heap_missing_parity = $node->safe_psql("postgres", q{
 	) AS t(has_discarded_heap);
 });
 is($discarded_heap_missing_parity, "t\nt\nt\nt");
+
+my $discarded_heap_missing_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_discarded_heap_missing_flag(has_discarded_heap) =
+		   rust_hnsw_should_discarded_heap_missing_flag(has_discarded_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_discarded_heap);
+});
+is($discarded_heap_missing_flag_parity, "t\nt\nt\nt");
 
 my $have_missing_discarded_heap_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_missing_discarded_heap(has_discarded_heap) =
@@ -5773,6 +5899,18 @@ my $reach_scan_tuple_limit_parity = $node->safe_psql("postgres", q{
 });
 is($reach_scan_tuple_limit_parity, "t\nt\nt\nt");
 
+my $reach_scan_tuple_limit_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_reach_scan_tuple_limit_flag(has_reached_tuple_limit) =
+		   rust_hnsw_should_reach_scan_tuple_limit_flag(has_reached_tuple_limit)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_reached_tuple_limit);
+});
+is($reach_scan_tuple_limit_flag_parity, "t\nt\nt\nt");
+
 my $exceed_scan_memory_limit_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_exceed_scan_memory_limit(memory_used, max_memory) =
 		   rust_hnsw_should_exceed_scan_memory_limit(memory_used, max_memory)
@@ -5784,6 +5922,18 @@ my $exceed_scan_memory_limit_parity = $node->safe_psql("postgres", q{
 	) AS t(memory_used, max_memory);
 });
 is($exceed_scan_memory_limit_parity, "t\nt\nt\nt");
+
+my $exceed_scan_memory_limit_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_exceed_scan_memory_limit_flag(has_exceeded_memory_limit) =
+		   rust_hnsw_should_exceed_scan_memory_limit_flag(has_exceeded_memory_limit)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_exceeded_memory_limit);
+});
+is($exceed_scan_memory_limit_flag_parity, "t\nt\nt\nt");
 
 my $release_iterative_scan_memory_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_iterative_scan_memory(iterative_scan_mode) =
@@ -6265,6 +6415,18 @@ my $use_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
 });
 is($use_provided_rescan_key_array_parity, "t\nt\nt\nt");
 
+my $use_provided_rescan_key_array_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_provided_rescan_key_array_flag(has_key_array) =
+		   rust_hnsw_should_use_provided_rescan_key_array_flag(has_key_array)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_key_array);
+});
+is($use_provided_rescan_key_array_flag_parity, "t\nt\nt\nt");
+
 my $have_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_provided_rescan_key_array(has_key_array) =
 		   rust_hnsw_should_have_provided_rescan_key_array(has_key_array)
@@ -6336,6 +6498,18 @@ my $use_provided_orderby_data_parity = $node->safe_psql("postgres", q{
 	) AS t(has_orderby_data);
 });
 is($use_provided_orderby_data_parity, "t\nt\nt\nt");
+
+my $use_provided_orderby_data_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_provided_orderby_data_flag(has_orderby_data) =
+		   rust_hnsw_should_use_provided_orderby_data_flag(has_orderby_data)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_orderby_data);
+});
+is($use_provided_orderby_data_flag_parity, "t\nt\nt\nt");
 
 my $have_provided_orderby_data_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_provided_orderby_data(has_orderby_data) =
@@ -6421,6 +6595,18 @@ my $use_scan_normproc_parity = $node->safe_psql("postgres", q{
 });
 is($use_scan_normproc_parity, "t\nt\nt\nt");
 
+my $use_scan_normproc_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_scan_normproc_flag(has_normproc) =
+		   rust_hnsw_should_use_scan_normproc_flag(has_normproc)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_normproc);
+});
+is($use_scan_normproc_flag_parity, "t\nt\nt\nt");
+
 my $have_scan_normproc_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_scan_normproc(has_normproc) =
 		   rust_hnsw_should_have_scan_normproc(has_normproc)
@@ -6504,6 +6690,18 @@ my $use_scan_instrument_parity = $node->safe_psql("postgres", q{
 	) AS t(has_instrument);
 });
 is($use_scan_instrument_parity, "t\nt\nt\nt");
+
+my $use_scan_instrument_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_use_scan_instrument_flag(has_instrument) =
+		   rust_hnsw_should_use_scan_instrument_flag(has_instrument)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_instrument);
+});
+is($use_scan_instrument_flag_parity, "t\nt\nt\nt");
 
 my $have_scan_instrument_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_scan_instrument(has_instrument) =
