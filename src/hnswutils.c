@@ -4437,7 +4437,7 @@ CompareCandidateDistancesOffset(const ListCell *a, const ListCell *b)
 }
 
 static bool
-HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
+HnswShouldHaveRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_closer_neighbor_kernel(distance, candidateDistance);
@@ -4446,7 +4446,13 @@ HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool u
 }
 
 static bool
-HnswShouldSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
+HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
+{
+	return HnswShouldHaveRejectCloserNeighbor(distance, candidateDistance, useRust);
+}
+
+static bool
+HnswShouldHaveSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_select_neighbors_early_return_kernel(candidateCount, maxNeighbors);
@@ -4455,7 +4461,13 @@ HnswShouldSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool 
 }
 
 static bool
-HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust)
+HnswShouldSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
+{
+	return HnswShouldHaveSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, useRust);
+}
+
+static bool
+HnswShouldHaveAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_add_search_candidate_kernel(candidateDistance, frontierDistance, alwaysAdd);
@@ -4464,7 +4476,13 @@ HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, 
 }
 
 static bool
-HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
+HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust)
+{
+	return HnswShouldHaveAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd, useRust);
+}
+
+static bool
+HnswShouldHaveStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_stop_search_layer_kernel(candidateDistance, frontierDistance);
@@ -4473,12 +4491,24 @@ HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, boo
 }
 
 static bool
-HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
+HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
+{
+	return HnswShouldHaveStopSearchLayer(candidateDistance, frontierDistance, useRust);
+}
+
+static bool
+HnswShouldHaveAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_append_neighbor_without_prune_kernel(neighborsLength, maxNeighbors);
 
 	return neighborsLength < maxNeighbors;
+}
+
+static bool
+HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
+{
+	return HnswShouldHaveAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, useRust);
 }
 
 static bool
@@ -4597,6 +4627,26 @@ vector_rust_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldRejectCloserNeighbor(distance, candidateDistance, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_closer_neighbor);
+Datum
+vector_hnsw_should_have_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectCloserNeighbor(distance, candidateDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_closer_neighbor);
+Datum
+vector_rust_hnsw_should_have_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectCloserNeighbor(distance, candidateDistance, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_select_neighbors_early_return);
 Datum
 vector_hnsw_should_select_neighbors_early_return(PG_FUNCTION_ARGS)
@@ -4615,6 +4665,26 @@ vector_rust_hnsw_should_select_neighbors_early_return(PG_FUNCTION_ARGS)
 	int32		maxNeighbors = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_select_neighbors_early_return);
+Datum
+vector_hnsw_should_have_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_select_neighbors_early_return);
+Datum
+vector_rust_hnsw_should_have_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_add_search_candidate);
@@ -4639,6 +4709,28 @@ vector_rust_hnsw_should_add_search_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_add_search_candidate);
+Datum
+vector_hnsw_should_have_add_search_candidate(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+	int32		alwaysAdd = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldHaveAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_add_search_candidate);
+Datum
+vector_rust_hnsw_should_have_add_search_candidate(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+	int32		alwaysAdd = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldHaveAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_search_layer);
 Datum
 vector_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
@@ -4659,6 +4751,26 @@ vector_rust_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldStopSearchLayer(candidateDistance, frontierDistance, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_stop_search_layer);
+Datum
+vector_hnsw_should_have_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveStopSearchLayer(candidateDistance, frontierDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_stop_search_layer);
+Datum
+vector_rust_hnsw_should_have_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveStopSearchLayer(candidateDistance, frontierDistance, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_neighbor_without_prune);
 Datum
 vector_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
@@ -4677,6 +4789,26 @@ vector_rust_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
 	int32		maxNeighbors = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_append_neighbor_without_prune);
+Datum
+vector_hnsw_should_have_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_append_neighbor_without_prune);
+Datum
+vector_rust_hnsw_should_have_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_lower_level_candidate);
