@@ -577,12 +577,18 @@ vector_rust_hnsw_should_finish_vacuum_page_update(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipInvalidVacuumNeighborTid(bool neighborTidValid, bool useRust)
+HnswShouldHaveInvalidVacuumNeighborTid(bool neighborTidValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
 
 	return !neighborTidValid;
+}
+
+static bool
+HnswShouldSkipInvalidVacuumNeighborTid(bool neighborTidValid, bool useRust)
+{
+	return HnswShouldHaveInvalidVacuumNeighborTid(neighborTidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_invalid_vacuum_neighbor_tid);
@@ -601,6 +607,24 @@ vector_rust_hnsw_should_skip_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
 	int32		neighborTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipInvalidVacuumNeighborTid(neighborTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_vacuum_neighbor_tid);
+Datum
+vector_hnsw_should_have_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidVacuumNeighborTid(neighborTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_vacuum_neighbor_tid);
+Datum
+vector_rust_hnsw_should_have_invalid_vacuum_neighbor_tid(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidVacuumNeighborTid(neighborTidValid != 0, true));
 }
 
 static bool
