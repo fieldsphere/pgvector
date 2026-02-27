@@ -1440,6 +1440,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_next_neighbor_offset(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_next_neighbor_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_next_neighbor_offset(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_next_neighbor_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_free_ondisk_offsets(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_free_ondisk_offsets'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5880,6 +5890,18 @@ my $use_next_neighbor_offset_parity = $node->safe_psql("postgres", q{
 	) AS t(same_buffer);
 });
 is($use_next_neighbor_offset_parity, "t\nt\nt\nt");
+
+my $have_next_neighbor_offset_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_next_neighbor_offset(same_buffer) =
+		   rust_hnsw_should_have_next_neighbor_offset(same_buffer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(same_buffer);
+});
+is($have_next_neighbor_offset_parity, "t\nt\nt\nt");
 
 my $use_free_ondisk_offsets_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_free_ondisk_offsets(free_offset_valid) =
