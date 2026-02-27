@@ -2940,6 +2940,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_underfilled_layer0(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_underfilled_layer0'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_underfilled_layer0(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_underfilled_layer0'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_skip_vacuum_entrypoint_element(integer, integer, integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_skip_vacuum_entrypoint_element'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7447,6 +7457,18 @@ my $check_vacuum_underfilled_layer0_parity = $node->safe_psql("postgres", q{
 	) AS t(needs_updated);
 });
 is($check_vacuum_underfilled_layer0_parity, "t\nt\nt\nt");
+
+my $have_vacuum_underfilled_layer0_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_underfilled_layer0(needs_updated) =
+		   rust_hnsw_should_have_vacuum_underfilled_layer0(needs_updated)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(needs_updated);
+});
+is($have_vacuum_underfilled_layer0_parity, "t\nt\nt\nt");
 
 my $skip_vacuum_entrypoint_element_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_vacuum_entrypoint_element(has_entry_point, element_blkno, element_offno, entry_blkno, entry_offno) =
