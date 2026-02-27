@@ -16,19 +16,15 @@
 static bool
 IvfflatVacuumPageIsValid(BlockNumber page, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
-
-	return BlockNumberIsValid(page);
+	(void) useRust;
+	return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
 }
 
 static bool
 IvfflatShouldSetInsertPage(int ndeletable, BlockNumber insertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_set_insert_page_kernel(ndeletable, IvfflatVacuumPageIsValid(insertPage, true));
-
-	return !IvfflatVacuumPageIsValid(insertPage, false) && ndeletable > 0;
+	(void) useRust;
+	return vector_rust_ivfflat_should_set_insert_page_kernel(ndeletable, IvfflatVacuumPageIsValid(insertPage, true));
 }
 
 static bool
