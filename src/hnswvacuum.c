@@ -1474,6 +1474,28 @@ vector_rust_hnsw_should_have_vacuum_highest_point_pointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_pointer_value);
+Datum
+vector_hnsw_should_have_vacuum_highest_point_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+	const char *mockHighestPoint = "highestpoint";
+	HnswElement	highestPoint = hasHighestPoint != 0 ? (HnswElement) mockHighestPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointer(highestPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_highest_point_pointer_value);
+Datum
+vector_rust_hnsw_should_have_vacuum_highest_point_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+	const char *mockHighestPoint = "highestpoint";
+	HnswElement	highestPoint = hasHighestPoint != 0 ? (HnswElement) mockHighestPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointer(highestPoint, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_pointer);
 Datum
 vector_hnsw_should_have_vacuum_pointer(PG_FUNCTION_ARGS)
@@ -1490,6 +1512,28 @@ vector_rust_hnsw_should_have_vacuum_pointer(PG_FUNCTION_ARGS)
 	int32		hasPointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_pointer_value);
+Datum
+vector_hnsw_should_have_vacuum_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+	const char *mockPointer = "pointer";
+	const void *pointer = hasPointer != 0 ? (const void *) mockPointer : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumPointer(pointer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_pointer_value);
+Datum
+vector_rust_hnsw_should_have_vacuum_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+	const char *mockPointer = "pointer";
+	const void *pointer = hasPointer != 0 ? (const void *) mockPointer : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumPointer(pointer, true));
 }
 
 static bool
@@ -1747,6 +1791,28 @@ vector_rust_hnsw_should_have_vacuum_entrypoint(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypointFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_entrypoint_pointer);
+Datum
+vector_hnsw_should_have_vacuum_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypoint(entryPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_entrypoint_pointer);
+Datum
+vector_rust_hnsw_should_have_vacuum_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypoint(entryPoint, true));
 }
 
 static bool
