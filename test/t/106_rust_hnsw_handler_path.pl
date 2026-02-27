@@ -480,6 +480,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_leader_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_leader_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_leader_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_leader_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_build_leader_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_build_leader_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -517,6 +527,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_build_heap(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_heap'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_heap_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_heap_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_heap_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_heap_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -1100,6 +1120,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_parallel_dsm_segment_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_parallel_dsm_segment_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_parallel_dsm_segment_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_parallel_dsm_segment_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reserve_graph_memory(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reserve_graph_memory'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1640,6 +1670,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_entrypoint_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_entrypoint_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_entrypoint_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_entrypoint_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_build_entrypoint_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_build_entrypoint_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1667,6 +1707,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_build_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_pointer_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5817,6 +5867,18 @@ my $have_build_leader_parity = $node->safe_psql("postgres", q{
 });
 is($have_build_leader_parity, "t\nt\nt\nt");
 
+my $have_build_leader_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_leader_flag(has_leader) =
+		   rust_hnsw_should_have_build_leader_flag(has_leader)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_leader);
+});
+is($have_build_leader_flag_parity, "t\nt\nt\nt");
+
 my $have_build_leader_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_build_leader_pointer(has_leader) =
 		   rust_hnsw_should_have_build_leader_pointer(has_leader)
@@ -5864,6 +5926,18 @@ my $have_build_heap_parity = $node->safe_psql("postgres", q{
 	) AS t(has_heap);
 });
 is($have_build_heap_parity, "t\nt\nt\nt");
+
+my $have_build_heap_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_heap_flag(has_heap) =
+		   rust_hnsw_should_have_build_heap_flag(has_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_heap);
+});
+is($have_build_heap_flag_parity, "t\nt\nt\nt");
 
 my $have_build_heap_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_build_heap_pointer(has_heap) =
@@ -6489,6 +6563,18 @@ my $have_build_pointer_parity = $node->safe_psql("postgres", q{
 });
 is($have_build_pointer_parity, "t\nt\nt\nt");
 
+my $have_build_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_pointer_flag(has_pointer) =
+		   rust_hnsw_should_have_build_pointer_flag(has_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pointer);
+});
+is($have_build_pointer_flag_parity, "t\nt\nt\nt");
+
 my $use_non_concurrent_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_non_concurrent_snapshot(is_concurrent) =
 		   rust_hnsw_should_use_non_concurrent_snapshot(is_concurrent)
@@ -6572,6 +6658,18 @@ my $have_parallel_dsm_segment_parity = $node->safe_psql("postgres", q{
 	) AS t(has_dsm_segment);
 });
 is($have_parallel_dsm_segment_parity, "t\nt\nt\nt");
+
+my $have_parallel_dsm_segment_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_parallel_dsm_segment_flag(has_dsm_segment) =
+		   rust_hnsw_should_have_parallel_dsm_segment_flag(has_dsm_segment)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_dsm_segment);
+});
+is($have_parallel_dsm_segment_flag_parity, "t\nt\nt\nt");
 
 my $reserve_graph_memory_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reserve_graph_memory(est_hnsw_area, est_other) =
@@ -7224,6 +7322,18 @@ my $have_build_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(has_entrypoint);
 });
 is($have_build_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_build_entrypoint_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_entrypoint_flag(has_entrypoint) =
+		   rust_hnsw_should_have_build_entrypoint_flag(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_build_entrypoint_flag_parity, "t\nt\nt\nt");
 
 my $have_build_entrypoint_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_build_entrypoint_pointer(has_entrypoint) =
