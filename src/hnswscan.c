@@ -1262,12 +1262,18 @@ vector_rust_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldInitializeScanState(bool isFirstScan, bool useRust)
+HnswShouldHaveInitialScanState(bool isFirstScan, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_initialize_scan_state_kernel(isFirstScan);
 
 	return isFirstScan;
+}
+
+static bool
+HnswShouldInitializeScanState(bool isFirstScan, bool useRust)
+{
+	return HnswShouldHaveInitialScanState(isFirstScan, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_scan_state);
@@ -1286,6 +1292,24 @@ vector_rust_hnsw_should_initialize_scan_state(PG_FUNCTION_ARGS)
 	int32		isFirstScan = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitializeScanState(isFirstScan != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_initial_scan_state);
+Datum
+vector_hnsw_should_have_initial_scan_state(PG_FUNCTION_ARGS)
+{
+	int32		isFirstScan = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInitialScanState(isFirstScan != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_initial_scan_state);
+Datum
+vector_rust_hnsw_should_have_initial_scan_state(PG_FUNCTION_ARGS)
+{
+	int32		isFirstScan = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInitialScanState(isFirstScan != 0, true));
 }
 
 static bool
