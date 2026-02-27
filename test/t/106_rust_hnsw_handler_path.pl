@@ -1230,6 +1230,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_unexpected_item_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_unexpected_item_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_unexpected_item_offset(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_unexpected_item_offset'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_neighbor_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_neighbor_overwrite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1237,6 +1247,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_reject_neighbor_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_neighbor_overwrite(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_neighbor_overwrite(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_neighbor_overwrite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -6383,6 +6403,18 @@ my $reject_unexpected_item_offset_parity = $node->safe_psql("postgres", q{
 });
 is($reject_unexpected_item_offset_parity, "t\nt\nt\nt");
 
+my $have_reject_unexpected_item_offset_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_unexpected_item_offset(inserted_offset, expected_offset) =
+		   rust_hnsw_should_have_reject_unexpected_item_offset(inserted_offset, expected_offset)
+	FROM (VALUES
+		(1, 1),
+		(2, 1),
+		(8, 8),
+		(0, 1)
+	) AS t(inserted_offset, expected_offset);
+});
+is($have_reject_unexpected_item_offset_parity, "t\nt\nt\nt");
+
 my $reject_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_neighbor_overwrite(overwrite_succeeded) =
 		   rust_hnsw_should_reject_neighbor_overwrite(overwrite_succeeded)
@@ -6394,6 +6426,18 @@ my $reject_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
 	) AS t(overwrite_succeeded);
 });
 is($reject_neighbor_overwrite_parity, "t\nt\nt\nt");
+
+my $have_reject_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_neighbor_overwrite(overwrite_succeeded) =
+		   rust_hnsw_should_have_reject_neighbor_overwrite(overwrite_succeeded)
+	FROM (VALUES
+		(1),
+		(0),
+		(1),
+		(0)
+	) AS t(overwrite_succeeded);
+});
+is($have_reject_neighbor_overwrite_parity, "t\nt\nt\nt");
 
 my $skip_invalid_index_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_invalid_index_value(index_value_formed) =
