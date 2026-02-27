@@ -571,12 +571,18 @@ vector_rust_hnsw_should_remove_vacuum_heaptid(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldCompactVacuumHeapTids(bool itemUpdated, bool useRust)
+HnswShouldHaveCompactedVacuumHeapTids(bool itemUpdated, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemUpdated);
 
 	return itemUpdated;
+}
+
+static bool
+HnswShouldCompactVacuumHeapTids(bool itemUpdated, bool useRust)
+{
+	return HnswShouldHaveCompactedVacuumHeapTids(itemUpdated, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_compact_vacuum_heaptids);
@@ -595,6 +601,24 @@ vector_rust_hnsw_should_compact_vacuum_heaptids(PG_FUNCTION_ARGS)
 	int32		itemUpdated = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldCompactVacuumHeapTids(itemUpdated != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_compacted_vacuum_heaptids);
+Datum
+vector_hnsw_should_have_compacted_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		itemUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCompactedVacuumHeapTids(itemUpdated != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_compacted_vacuum_heaptids);
+Datum
+vector_rust_hnsw_should_have_compacted_vacuum_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		itemUpdated = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCompactedVacuumHeapTids(itemUpdated != 0, true));
 }
 
 static bool
