@@ -224,4 +224,34 @@ unlike($hnsw_build_c, qr/HnswShouldHaveSkipNullBuildTuple\(bool isNull, bool use
 unlike($hnsw_build_c, qr/HnswShouldHaveUpdateProgressAfterInsert\(bool tupleInserted, bool useRust\)\s*\{[^}]*return tupleInserted;/s,
 	"legacy C update-progress-after-insert fallback removed");
 
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_oversized_element_tuple_kernel\(/,
+	"hnswbuild.c uses rust reject-oversized-element-tuple kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_append_neighbor_page_kernel\(/,
+	"hnswbuild.c uses rust append-neighbor-page kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_append_element_page_kernel\(/,
+	"hnswbuild.c uses rust append-element-page kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_unexpected_item_offset_kernel\(/,
+	"hnswbuild.c uses rust reject-unexpected-item-offset kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_reject_neighbor_overwrite_kernel\(/,
+	"hnswbuild.c uses rust reject-neighbor-overwrite kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_store_neighbors_on_same_page_kernel\(/,
+	"hnswbuild.c uses rust store-neighbors-on-same-page kernel");
+
+unlike($hnsw_build_c, qr/HnswShouldHaveUpdateEntryPoint\(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust\)\s*\{[^}]*return entryPointIsNull \|\| HnswShouldHaveHigherBuildEntrypointLevel\(elementLevel, entryLevel, false\);/s,
+	"legacy C update-entrypoint fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectInMemoryDuplicateHeapTid\(int32 heaptidsLength, int32 maxHeaptids, bool useRust\)\s*\{[^}]*return heaptidsLength >= maxHeaptids;/s,
+	"legacy C reject-inmemory-duplicate-heaptid fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectOversizedElementTuple\(int64 tupleSize, int64 allocSize, bool useRust\)\s*\{[^}]*return tupleSize > allocSize;/s,
+	"legacy C reject-oversized-element-tuple fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveAppendNeighborPage\(int64 freeSpace, int64 neighborTupleSize, bool useRust\)\s*\{[^}]*return freeSpace < neighborTupleSize;/s,
+	"legacy C append-neighbor-page fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveAppendElementPage\(int64 freeSpace, int64 elementTupleSize, int64 combinedSize, int64 maxSize, bool useRust\)\s*\{[^}]*return freeSpace < elementTupleSize \|\| \(combinedSize <= maxSize && freeSpace < combinedSize\);/s,
+	"legacy C append-element-page fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectUnexpectedItemOffset\(int32 insertedOffset, int32 expectedOffset, bool useRust\)\s*\{[^}]*return insertedOffset != expectedOffset;/s,
+	"legacy C reject-unexpected-item-offset fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveRejectNeighborOverwrite\(bool overwriteSucceeded, bool useRust\)\s*\{[^}]*return !overwriteSucceeded;/s,
+	"legacy C reject-neighbor-overwrite fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveStoreNeighborsOnSamePage\(int64 combinedSize, int64 maxSize, bool useRust\)\s*\{[^}]*return combinedSize <= maxSize;/s,
+	"legacy C store-neighbors-on-same-page fallback removed");
+
 done_testing();
