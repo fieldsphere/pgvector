@@ -6129,6 +6129,186 @@ $node->safe_psql("postgres", q{
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_finish_parallel_heap_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_custom_allocator_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_custom_allocator_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_custom_allocator_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_custom_allocator_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_disk_neighbor_index_tid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_disk_neighbor_index_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_disk_neighbor_index_tid(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_disk_neighbor_index_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_disk_neighbor_index_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_disk_neighbor_index_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_disk_neighbor_index_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_disk_neighbor_index_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_expected_meta_magic_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_expected_meta_magic_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_expected_meta_magic_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_expected_meta_magic_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_index_options_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_index_options_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_index_options_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_index_options_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_entrypoint_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_entrypoint_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_entrypoint_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_entrypoint_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_m_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_m_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_m_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_m_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_meta_update_entrypoint_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_meta_update_entrypoint_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_meta_update_entrypoint_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_meta_update_entrypoint_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_new_candidate_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_new_candidate_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_new_candidate_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_new_candidate_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_norm_proc_info_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_norm_proc_info_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_norm_proc_info_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_norm_proc_info_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_pruned_candidate_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_pruned_candidate_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_pruned_candidate_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_pruned_candidate_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_pruned_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_pruned_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_pruned_output_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_pruned_output_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_type_check_function_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_type_check_function_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_type_check_function_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_type_check_function_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_type_info_proc_info(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_type_info_proc_info'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_type_info_proc_info(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_type_info_proc_info'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_type_info_proc_info_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_type_info_proc_info_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_type_info_proc_info_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_type_info_proc_info_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_update_index_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_update_index_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_update_index_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_update_index_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
 
 my $parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_handler_probe() = rust_hnsw_handler_probe(),
@@ -13477,5 +13657,131 @@ my $have_finish_parallel_heap_scan_parity = $node->safe_psql("postgres", q{
 	) AS t(participants_done, participant_count);
 });
 is($have_finish_parallel_heap_scan_parity, "t\nt\nt\nt");
+
+my $have_custom_allocator_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_custom_allocator_flag(has_allocator) =
+		   rust_hnsw_should_have_custom_allocator_flag(has_allocator)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_allocator);
+});
+is($have_custom_allocator_flag_parity, "t\nt\nt\nt");
+
+my $have_disk_neighbor_index_tid_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_disk_neighbor_index_tid(is_valid_indextid) =
+		   rust_hnsw_should_have_disk_neighbor_index_tid(is_valid_indextid)
+	FROM (VALUES (0), (1), (1), (0)) AS t(is_valid_indextid);
+});
+is($have_disk_neighbor_index_tid_parity, "t\nt\nt\nt");
+
+my $have_disk_neighbor_index_tid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_disk_neighbor_index_tid_flag(is_valid_indextid) =
+		   rust_hnsw_should_have_disk_neighbor_index_tid_flag(is_valid_indextid)
+	FROM (VALUES (0), (1), (1), (0)) AS t(is_valid_indextid);
+});
+is($have_disk_neighbor_index_tid_flag_parity, "t\nt\nt\nt");
+
+my $have_expected_meta_magic_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_expected_meta_magic_flag(has_expected_magic) =
+		   rust_hnsw_should_have_expected_meta_magic_flag(has_expected_magic)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_expected_magic);
+});
+is($have_expected_meta_magic_flag_parity, "t\nt\nt\nt");
+
+my $have_index_options_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_index_options_flag(has_options) =
+		   rust_hnsw_should_have_index_options_flag(has_options)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_options);
+});
+is($have_index_options_flag_parity, "t\nt\nt\nt");
+
+my $have_meta_block_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_block_flag(has_valid_block) =
+		   rust_hnsw_should_have_meta_block_flag(has_valid_block)
+	FROM (VALUES (0), (1), (0), (1)) AS t(has_valid_block);
+});
+is($have_meta_block_flag_parity, "t\nt\nt\nt");
+
+my $have_meta_entrypoint_output_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_entrypoint_output_pointer_flag(has_entrypoint_pointer) =
+		   rust_hnsw_should_have_meta_entrypoint_output_pointer_flag(has_entrypoint_pointer)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_entrypoint_pointer);
+});
+is($have_meta_entrypoint_output_pointer_flag_parity, "t\nt\nt\nt");
+
+my $have_meta_m_output_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_m_output_pointer_flag(has_m_pointer) =
+		   rust_hnsw_should_have_meta_m_output_pointer_flag(has_m_pointer)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_m_pointer);
+});
+is($have_meta_m_output_pointer_flag_parity, "t\nt\nt\nt");
+
+my $have_meta_output_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_output_pointer_flag(has_output_pointer) =
+		   rust_hnsw_should_have_meta_output_pointer_flag(has_output_pointer)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_output_pointer);
+});
+is($have_meta_output_pointer_flag_parity, "t\nt\nt\nt");
+
+my $have_meta_update_entrypoint_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_meta_update_entrypoint_flag(has_entrypoint) =
+		   rust_hnsw_should_have_meta_update_entrypoint_flag(has_entrypoint)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_entrypoint);
+});
+is($have_meta_update_entrypoint_flag_parity, "t\nt\nt\nt");
+
+my $have_new_candidate_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_new_candidate_pointer_flag(has_new_candidate_pointer) =
+		   rust_hnsw_should_have_new_candidate_pointer_flag(has_new_candidate_pointer)
+	FROM (VALUES (1), (0), (1), (0)) AS t(has_new_candidate_pointer);
+});
+is($have_new_candidate_pointer_flag_parity, "t\nt\nt\nt");
+
+my $have_norm_proc_info_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_norm_proc_info_flag(has_norm_procinfo) =
+		   rust_hnsw_should_have_norm_proc_info_flag(has_norm_procinfo)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_norm_procinfo);
+});
+is($have_norm_proc_info_flag_parity, "t\nt\nt\nt");
+
+my $have_pruned_candidate_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_pruned_candidate_pointer(has_pruned_candidate) =
+		   rust_hnsw_should_have_pruned_candidate_pointer(has_pruned_candidate)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_pruned_candidate);
+});
+is($have_pruned_candidate_pointer_parity, "t\nt\nt\nt");
+
+my $have_pruned_output_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_pruned_output_pointer_flag(has_pruned_output) =
+		   rust_hnsw_should_have_pruned_output_pointer_flag(has_pruned_output)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_pruned_output);
+});
+is($have_pruned_output_pointer_flag_parity, "t\nt\nt\nt");
+
+my $have_type_check_function_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_type_check_function_flag(has_check_value_fn) =
+		   rust_hnsw_should_have_type_check_function_flag(has_check_value_fn)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_check_value_fn);
+});
+is($have_type_check_function_flag_parity, "t\nt\nt\nt");
+
+my $have_type_info_proc_info_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_type_info_proc_info(has_procinfo) =
+		   rust_hnsw_should_have_type_info_proc_info(has_procinfo)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_procinfo);
+});
+is($have_type_info_proc_info_parity, "t\nt\nt\nt");
+
+my $have_type_info_proc_info_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_type_info_proc_info_flag(has_procinfo) =
+		   rust_hnsw_should_have_type_info_proc_info_flag(has_procinfo)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_procinfo);
+});
+is($have_type_info_proc_info_flag_parity, "t\nt\nt\nt");
+
+my $have_update_index_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_update_index_pointer_flag(has_update_idx) =
+		   rust_hnsw_should_have_update_index_pointer_flag(has_update_idx)
+	FROM (VALUES (0), (1), (1), (0)) AS t(has_update_idx);
+});
+is($have_update_index_pointer_flag_parity, "t\nt\nt\nt");
 
 done_testing();
