@@ -1920,6 +1920,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_tid_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_tid_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_tid_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_tid_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_offset_visited_hash(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_offset_visited_hash'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1930,6 +1940,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_offset_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_offset_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_offset_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_offset_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_pointer_visited_hash(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_pointer_visited_hash'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1937,6 +1957,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_use_pointer_visited_hash(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_use_pointer_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_pointer_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_pointer_visited_hash'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_pointer_visited_hash(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_pointer_visited_hash'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -6627,6 +6657,18 @@ my $use_tid_visited_hash_parity = $node->safe_psql("postgres", q{
 });
 is($use_tid_visited_hash_parity, "t\nt\nt\nt");
 
+my $have_tid_visited_hash_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_tid_visited_hash(in_memory) =
+		   rust_hnsw_should_have_tid_visited_hash(in_memory)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(in_memory);
+});
+is($have_tid_visited_hash_parity, "t\nt\nt\nt");
+
 my $use_offset_visited_hash_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_offset_visited_hash(has_base_pointer) =
 		   rust_hnsw_should_use_offset_visited_hash(has_base_pointer)
@@ -6639,6 +6681,18 @@ my $use_offset_visited_hash_parity = $node->safe_psql("postgres", q{
 });
 is($use_offset_visited_hash_parity, "t\nt\nt\nt");
 
+my $have_offset_visited_hash_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_offset_visited_hash(has_base_pointer) =
+		   rust_hnsw_should_have_offset_visited_hash(has_base_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_base_pointer);
+});
+is($have_offset_visited_hash_parity, "t\nt\nt\nt");
+
 my $use_pointer_visited_hash_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_pointer_visited_hash(has_base_pointer) =
 		   rust_hnsw_should_use_pointer_visited_hash(has_base_pointer)
@@ -6650,6 +6704,18 @@ my $use_pointer_visited_hash_parity = $node->safe_psql("postgres", q{
 	) AS t(has_base_pointer);
 });
 is($use_pointer_visited_hash_parity, "t\nt\nt\nt");
+
+my $have_pointer_visited_hash_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_pointer_visited_hash(has_base_pointer) =
+		   rust_hnsw_should_have_pointer_visited_hash(has_base_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_base_pointer);
+});
+is($have_pointer_visited_hash_parity, "t\nt\nt\nt");
 
 my $have_visited_base_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_visited_base_pointer(has_base_pointer) =
