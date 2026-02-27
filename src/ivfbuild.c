@@ -154,19 +154,15 @@ SampleRows(IvfflatBuildState * buildstate)
 static bool
 IvfflatChooseBuildCenterCandidate(float8 distance, float8 minDistance, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_choose_build_center_candidate_kernel(distance, minDistance);
-
-	return distance < minDistance;
+	(void) useRust;
+	return vector_rust_ivfflat_choose_build_center_candidate_kernel(distance, minDistance);
 }
 
 static bool
 IvfflatBuildShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
-
-	return freeSpace < itemSize;
+	(void) useRust;
+	return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_build_center_candidate);
