@@ -100,4 +100,34 @@ unlike($hnsw_build_c, qr/return !hasEntryPoint;/,
 unlike($hnsw_build_c, qr/return hasPointer;/,
 	"legacy C build-pointer fallback removed");
 
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_begin_parallel_build_kernel\(/,
+	"hnswbuild.c uses rust begin-parallel-build kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_skip_parallel_workers_kernel\(/,
+	"hnswbuild.c uses rust skip-parallel-workers kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_use_relation_parallel_workers_kernel\(/,
+	"hnswbuild.c uses rust relation-parallel-workers kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_fallback_without_workers_kernel\(/,
+	"hnswbuild.c uses rust fallback-without-workers kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_fallback_without_dsm_segment_kernel\(/,
+	"hnswbuild.c uses rust fallback-without-dsm kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_use_non_concurrent_lock_modes_kernel\(/,
+	"hnswbuild.c uses rust non-concurrent-lock-mode kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_use_non_concurrent_snapshot_kernel\(/,
+	"hnswbuild.c uses rust non-concurrent-snapshot kernel");
+
+unlike($hnsw_build_c, qr/return parallelWorkers > 0;/,
+	"legacy C begin-parallel-build fallback removed");
+unlike($hnsw_build_c, qr/return parallelWorkers == 0;/,
+	"legacy C skip-parallel-workers fallback removed");
+unlike($hnsw_build_c, qr/return parallelWorkers != -1;/,
+	"legacy C relation-parallel-workers fallback removed");
+unlike($hnsw_build_c, qr/return workersLaunched == 0;/,
+	"legacy C fallback-without-workers branch removed");
+unlike($hnsw_build_c, qr/return !hasDsmSegment;/,
+	"legacy C fallback-without-dsm branch removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveNonConcurrentLockModes\(bool isConcurrent, bool useRust\)\s*\{[^}]*return !isConcurrent;/s,
+	"legacy C non-concurrent-lock-mode fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveNonConcurrentSnapshot\(bool isConcurrent, bool useRust\)\s*\{[^}]*return !isConcurrent;/s,
+	"legacy C non-concurrent-snapshot fallback removed");
+
 done_testing();
