@@ -460,6 +460,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_missing_orderby(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_missing_orderby'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_missing_orderby(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_missing_orderby'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_non_mvcc_snapshot(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_non_mvcc_snapshot'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4262,6 +4272,18 @@ my $reject_missing_orderby_parity = $node->safe_psql("postgres", q{
 	) AS t(orderby_is_null);
 });
 is($reject_missing_orderby_parity, "t\nt\nt\nt");
+
+my $have_missing_orderby_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_missing_orderby(orderby_is_null) =
+		   rust_hnsw_should_have_missing_orderby(orderby_is_null)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(orderby_is_null);
+});
+is($have_missing_orderby_parity, "t\nt\nt\nt");
 
 my $reject_non_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_non_mvcc_snapshot(snapshot_is_mvcc) =
