@@ -4256,10 +4256,8 @@ CompareCandidateDistancesOffset(const ListCell *a, const ListCell *b)
 static bool
 HnswShouldHaveRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_closer_neighbor_kernel(distance, candidateDistance);
-
-	return distance <= candidateDistance;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_closer_neighbor_kernel(distance, candidateDistance);
 }
 
 static bool
@@ -4271,10 +4269,8 @@ HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool u
 static bool
 HnswShouldHaveSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_select_neighbors_early_return_kernel(candidateCount, maxNeighbors);
-
-	return candidateCount <= maxNeighbors;
+	(void) useRust;
+	return vector_rust_hnsw_should_select_neighbors_early_return_kernel(candidateCount, maxNeighbors);
 }
 
 static bool
@@ -4286,10 +4282,8 @@ HnswShouldSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool 
 static bool
 HnswShouldHaveAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_add_search_candidate_kernel(candidateDistance, frontierDistance, alwaysAdd);
-
-	return candidateDistance < frontierDistance || alwaysAdd;
+	(void) useRust;
+	return vector_rust_hnsw_should_add_search_candidate_kernel(candidateDistance, frontierDistance, alwaysAdd);
 }
 
 static bool
@@ -4301,10 +4295,8 @@ HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, 
 static bool
 HnswShouldHaveStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_stop_search_layer_kernel(candidateDistance, frontierDistance);
-
-	return candidateDistance > frontierDistance;
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_search_layer_kernel(candidateDistance, frontierDistance);
 }
 
 static bool
@@ -4316,10 +4308,8 @@ HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, boo
 static bool
 HnswShouldHaveAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_neighbor_without_prune_kernel(neighborsLength, maxNeighbors);
-
-	return neighborsLength < maxNeighbors;
+	(void) useRust;
+	return vector_rust_hnsw_should_append_neighbor_without_prune_kernel(neighborsLength, maxNeighbors);
 }
 
 static bool
@@ -4331,10 +4321,8 @@ HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool
 static bool
 HnswShouldHaveSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_lower_level_candidate_kernel(candidateLevel, searchLevel);
-
-	return candidateLevel < searchLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_lower_level_candidate_kernel(candidateLevel, searchLevel);
 }
 
 static bool
@@ -4346,10 +4334,8 @@ HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useR
 static bool
 HnswShouldHaveKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_keep_pruned_connection_kernel(wdoff, wdlen, resultLength, maxNeighbors);
-
-	return wdoff < wdlen && resultLength < maxNeighbors;
+	(void) useRust;
+	return vector_rust_hnsw_should_keep_pruned_connection_kernel(wdoff, wdlen, resultLength, maxNeighbors);
 }
 
 static bool
@@ -4361,10 +4347,8 @@ HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNe
 static bool
 HnswShouldHaveSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_set_pruned_from_array_kernel(wdoff, wdlen);
-
-	return wdoff < wdlen;
+	(void) useRust;
+	return vector_rust_hnsw_should_set_pruned_from_array_kernel(wdoff, wdlen);
 }
 
 static bool
@@ -4376,10 +4360,8 @@ HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
 static bool
 HnswShouldHaveTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_track_discarded_candidates_kernel(hasDiscardedHeap);
-
-	return hasDiscardedHeap;
+	(void) useRust;
+	return vector_rust_hnsw_should_track_discarded_candidates_kernel(hasDiscardedHeap);
 }
 
 static bool
@@ -4391,19 +4373,15 @@ HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
 static bool
 HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(alwaysAdd || trackDiscarded);
-
-	return !alwaysAdd && !trackDiscarded;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(alwaysAdd || trackDiscarded);
 }
 
 static bool
 HnswShouldHaveUpdateIndexPointerFlag(bool hasUpdateIndexPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasUpdateIndexPointer);
-
-	return hasUpdateIndexPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasUpdateIndexPointer);
 }
 
 static bool
@@ -4415,10 +4393,8 @@ HnswShouldHaveUpdateIndexPointer(int *updateIdx, bool useRust)
 static bool
 HnswShouldHaveTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_track_update_index_kernel(hasUpdateIndexPointer);
-
-	return hasUpdateIndexPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_track_update_index_kernel(hasUpdateIndexPointer);
 }
 
 static bool
@@ -4430,10 +4406,8 @@ HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
 static bool
 HnswShouldHaveProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_process_pruned_candidate_kernel(hasPrunedCandidate);
-
-	return hasPrunedCandidate;
+	(void) useRust;
+	return vector_rust_hnsw_should_process_pruned_candidate_kernel(hasPrunedCandidate);
 }
 
 static bool
@@ -4445,10 +4419,8 @@ HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 static bool
 HnswShouldHaveTrimCandidateList(int candidateCount, int ef, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_trim_candidate_list_kernel(candidateCount, ef);
-
-	return candidateCount > ef;
+	(void) useRust;
+	return vector_rust_hnsw_should_trim_candidate_list_kernel(candidateCount, ef);
 }
 
 static bool
@@ -4460,10 +4432,8 @@ HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
 static bool
 HnswShouldHaveAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_always_add_candidate_kernel(candidateCount, ef);
-
-	return candidateCount < ef;
+	(void) useRust;
+	return vector_rust_hnsw_should_always_add_candidate_kernel(candidateCount, ef);
 }
 
 static bool
