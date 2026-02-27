@@ -790,6 +790,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_skip_parallel_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_skip_parallel_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_skip_parallel_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_skip_parallel_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_relation_parallel_workers(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_relation_parallel_workers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -820,6 +830,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_fallback_without_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_fallback_without_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_fallback_without_workers(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_fallback_without_workers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_leader_participate(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_leader_participate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -827,6 +847,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_leader_participate(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_leader_participate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_leader_participate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_leader_participate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_leader_participate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_leader_participate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -900,6 +930,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_fallback_without_dsm_segment(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_fallback_without_dsm_segment'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_fallback_without_dsm_segment(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_fallback_without_dsm_segment'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_parallel_dsm_segment(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_parallel_dsm_segment'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -927,6 +967,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_log_leader_progress(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_log_leader_progress'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_log_leader_progress(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_log_leader_progress'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_log_leader_progress(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_log_leader_progress'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5649,6 +5699,18 @@ my $skip_parallel_workers_parity = $node->safe_psql("postgres", q{
 });
 is($skip_parallel_workers_parity, "t\nt\nt\nt");
 
+my $have_skip_parallel_workers_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_skip_parallel_workers(parallel_workers) =
+		   rust_hnsw_should_have_skip_parallel_workers(parallel_workers)
+	FROM (VALUES
+		(0),
+		(1),
+		(-1),
+		(8)
+	) AS t(parallel_workers);
+});
+is($have_skip_parallel_workers_parity, "t\nt\nt\nt");
+
 my $use_relation_parallel_workers_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_relation_parallel_workers(parallel_workers) =
 		   rust_hnsw_should_use_relation_parallel_workers(parallel_workers)
@@ -5685,6 +5747,18 @@ my $fallback_without_workers_parity = $node->safe_psql("postgres", q{
 });
 is($fallback_without_workers_parity, "t\nt\nt\nt");
 
+my $have_fallback_without_workers_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_fallback_without_workers(workers_launched) =
+		   rust_hnsw_should_have_fallback_without_workers(workers_launched)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(0)
+	) AS t(workers_launched);
+});
+is($have_fallback_without_workers_parity, "t\nt\nt\nt");
+
 my $leader_participate_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_leader_participate(leader_participates) =
 		   rust_hnsw_should_leader_participate(leader_participates)
@@ -5696,6 +5770,18 @@ my $leader_participate_parity = $node->safe_psql("postgres", q{
 	) AS t(leader_participates);
 });
 is($leader_participate_parity, "t\nt\nt\nt");
+
+my $have_leader_participate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_leader_participate(leader_participates) =
+		   rust_hnsw_should_have_leader_participate(leader_participates)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(leader_participates);
+});
+is($have_leader_participate_parity, "t\nt\nt\nt");
 
 my $use_debug_query_string_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_debug_query_string(has_debug_query_string) =
@@ -5793,6 +5879,18 @@ my $fallback_without_dsm_segment_parity = $node->safe_psql("postgres", q{
 });
 is($fallback_without_dsm_segment_parity, "t\nt\nt\nt");
 
+my $have_fallback_without_dsm_segment_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_fallback_without_dsm_segment(has_dsm_segment) =
+		   rust_hnsw_should_have_fallback_without_dsm_segment(has_dsm_segment)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_dsm_segment);
+});
+is($have_fallback_without_dsm_segment_parity, "t\nt\nt\nt");
+
 my $have_parallel_dsm_segment_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_parallel_dsm_segment(has_dsm_segment) =
 		   rust_hnsw_should_have_parallel_dsm_segment(has_dsm_segment)
@@ -5828,6 +5926,18 @@ my $log_leader_progress_parity = $node->safe_psql("postgres", q{
 	) AS t(progress_is_leader);
 });
 is($log_leader_progress_parity, "t\nt\nt\nt");
+
+my $have_log_leader_progress_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_log_leader_progress(progress_is_leader) =
+		   rust_hnsw_should_have_log_leader_progress(progress_is_leader)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(progress_is_leader);
+});
+is($have_log_leader_progress_parity, "t\nt\nt\nt");
 
 my $reject_varbit_type_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_varbit_type(type_oid) =
