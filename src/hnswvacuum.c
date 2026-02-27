@@ -412,12 +412,18 @@ vector_rust_hnsw_should_have_vacuum_tuple_heaptid_pointer(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldMarkVacuumTupleDeleted(bool firstHeaptidValid, bool useRust)
+HnswShouldHaveDeletedVacuumTuple(bool firstHeaptidValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(firstHeaptidValid);
 
 	return !firstHeaptidValid;
+}
+
+static bool
+HnswShouldMarkVacuumTupleDeleted(bool firstHeaptidValid, bool useRust)
+{
+	return HnswShouldHaveDeletedVacuumTuple(firstHeaptidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_mark_vacuum_tuple_deleted);
@@ -436,6 +442,24 @@ vector_rust_hnsw_should_mark_vacuum_tuple_deleted(PG_FUNCTION_ARGS)
 	int32		firstHeaptidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldMarkVacuumTupleDeleted(firstHeaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_deleted_vacuum_tuple);
+Datum
+vector_hnsw_should_have_deleted_vacuum_tuple(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedVacuumTuple(firstHeaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_deleted_vacuum_tuple);
+Datum
+vector_rust_hnsw_should_have_deleted_vacuum_tuple(PG_FUNCTION_ARGS)
+{
+	int32		firstHeaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedVacuumTuple(firstHeaptidValid != 0, true));
 }
 
 static bool
