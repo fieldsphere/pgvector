@@ -957,12 +957,18 @@ HnswShouldUseScanInstrument(void *instrument, bool useRust)
 #endif
 
 static bool
-HnswShouldDiscardedHeapMissingFlag(bool hasDiscardedHeap, bool useRust)
+HnswShouldHaveMissingDiscardedHeap(bool hasDiscardedHeap, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDiscardedHeap);
 
 	return !hasDiscardedHeap;
+}
+
+static bool
+HnswShouldDiscardedHeapMissingFlag(bool hasDiscardedHeap, bool useRust)
+{
+	return HnswShouldHaveMissingDiscardedHeap(hasDiscardedHeap, useRust);
 }
 
 static bool
@@ -1115,6 +1121,24 @@ vector_rust_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
 	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_discarded_heap);
+Datum
+vector_hnsw_should_have_missing_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingDiscardedHeap(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_discarded_heap);
+Datum
+vector_rust_hnsw_should_have_missing_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingDiscardedHeap(hasDiscardedHeap != 0, true));
 }
 
 static bool
