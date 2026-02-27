@@ -1474,6 +1474,24 @@ vector_rust_hnsw_should_have_vacuum_highest_point_pointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_pointer_flag);
+Datum
+vector_hnsw_should_have_vacuum_highest_point_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_highest_point_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_vacuum_highest_point_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasHighestPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHighestPointPointerFlag(hasHighestPoint != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_highest_point_pointer_value);
 Datum
 vector_hnsw_should_have_vacuum_highest_point_pointer_value(PG_FUNCTION_ARGS)
@@ -1508,6 +1526,24 @@ vector_hnsw_should_have_vacuum_pointer(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_pointer);
 Datum
 vector_rust_hnsw_should_have_vacuum_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_pointer_flag);
+Datum
+vector_hnsw_should_have_vacuum_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_vacuum_pointer_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasPointer = PG_GETARG_INT32(0);
 
@@ -1787,6 +1823,24 @@ vector_hnsw_should_have_vacuum_entrypoint(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_entrypoint);
 Datum
 vector_rust_hnsw_should_have_vacuum_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypointFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_entrypoint_flag);
+Datum
+vector_hnsw_should_have_vacuum_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumEntrypointFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_entrypoint_flag);
+Datum
+vector_rust_hnsw_should_have_vacuum_entrypoint_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
