@@ -486,6 +486,8 @@ ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_
 	"hnswvacuum.c uses rust mark-ondisk-neighbor-buffer-dirty kernel");
 ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_assign_new_lock_tranche_kernel\(/,
 	"hnswvacuum.c uses rust assign-new-lock-tranche kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_reject_neighbor_overwrite_kernel\(/,
+	"hnswvacuum.c uses rust reject-neighbor-overwrite kernel");
 
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedTidPointerFlag\(bool hasDeletedTid, bool useRust\)\s*\{[^}]*return hasDeletedTid;/s,
 	"legacy C deleted-tid-pointer-flag fallback removed");
@@ -569,5 +571,23 @@ unlike($hnsw_vacuum_c, qr/HnswShouldHaveDistinctMarkDeletedBuffersFlag\(bool buf
 	"legacy C distinct-markdeleted-buffers-flag fallback removed");
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveMarkDeletedVersionBeyondMaxFlag\(bool versionWithinRange, bool useRust\)\s*\{[^}]*return !versionWithinRange;/s,
 	"legacy C markdeleted-version-beyond-max-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveHigherVacuumElementLevelFlag\(bool isHigherLevel, bool useRust\)\s*\{[^}]*return isHigherLevel;/s,
+	"legacy C higher-vacuum-element-level-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumNonEntrypointFlag\(bool isEntryPoint, bool useRust\)\s*\{[^}]*return !isEntryPoint;/s,
+	"legacy C vacuum-non-entrypoint-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingVacuumEntrypointTidFlag\(bool hasMatchingTid, bool useRust\)\s*\{[^}]*return hasMatchingTid;/s,
+	"legacy C matching-vacuum-entrypoint-tid-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingVacuumEntrypointTid\(int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust\)\s*\{[^}]*return HnswShouldHaveMatchingVacuumEntrypointTidFlag\(blkno == entryBlkno && offno == entryOffno, false\);/s,
+	"legacy C matching-vacuum-entrypoint-tid fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldMatchVacuumEntrypointTuple\(bool hasEntryPoint, int32 blkno, int32 offno, int32 entryBlkno, int32 entryOffno, bool useRust\)\s*\{[^}]*return hasEntryPoint && HnswShouldHaveMatchingVacuumEntrypointTid\(blkno, offno, entryBlkno, entryOffno, false\);/s,
+	"legacy C match-vacuum-entrypoint-tuple fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveFailedVacuumNeighborOverwriteFlag\(bool overwriteSucceeded, bool useRust\)\s*\{[^}]*return !overwriteSucceeded;/s,
+	"legacy C failed-vacuum-neighbor-overwrite-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMissingVacuumStatsFlag\(bool hasStats, bool useRust\)\s*\{[^}]*return !hasStats;/s,
+	"legacy C missing-vacuum-stats-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumCleanupAnalyzeOnly\(bool analyzeOnly, bool useRust\)\s*\{[^}]*return analyzeOnly;/s,
+	"legacy C vacuum-cleanup-analyze-only fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedMarkDeletedTuple\(bool isDeletedTuple, bool useRust\)\s*\{[^}]*return isDeletedTuple;/s,
+	"legacy C deleted-markdeleted-tuple fallback removed");
 
 done_testing();
