@@ -60,6 +60,7 @@ static bool HnswShouldUpdateAddElementInsertPage(bool hasNewInsertPage, bool pag
 static bool HnswShouldHaveDistinctOnDiskNeighborBufferFlag(bool hasDistinctBuffer, bool useRust);
 static bool HnswShouldHaveDistinctOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
 static bool HnswShouldReleaseOnDiskNeighborBuffer(bool sameBuffer, bool useRust);
+static bool HnswShouldHaveNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust);
 static bool HnswShouldHaveNextNeighborOffset(bool sameBuffer, bool useRust);
 static bool HnswShouldUseNextNeighborOffset(bool sameBuffer, bool useRust);
@@ -1895,12 +1896,18 @@ vector_rust_hnsw_should_have_changed_ondisk_insert_page(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust)
+HnswShouldHaveNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust)
 {
 	if (useRust)
 		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasNewInsertPage);
 
 	return !hasNewInsertPage;
+}
+
+static bool
+HnswShouldUseNeighborPageAsInsertPage(bool hasNewInsertPage, bool useRust)
+{
+	return HnswShouldHaveNeighborPageAsInsertPage(hasNewInsertPage, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_neighbor_page_as_insert_page);
@@ -1919,6 +1926,24 @@ vector_rust_hnsw_should_use_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
 	int32		hasNewInsertPage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseNeighborPageAsInsertPage(hasNewInsertPage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_neighbor_page_as_insert_page);
+Datum
+vector_hnsw_should_have_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNewInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNeighborPageAsInsertPage(hasNewInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_neighbor_page_as_insert_page);
+Datum
+vector_rust_hnsw_should_have_neighbor_page_as_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasNewInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNeighborPageAsInsertPage(hasNewInsertPage != 0, true));
 }
 
 static bool
