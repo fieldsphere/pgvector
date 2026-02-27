@@ -120,6 +120,7 @@ static bool HnswShouldHaveMatchingOnDiskBufferFlag(bool hasMatchingBuffer, bool 
 static bool HnswShouldHaveMatchingOnDiskBuffer(int32 leftBuffer, int32 rightBuffer, bool useRust);
 static bool HnswShouldMatchOnDiskBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust);
 static bool HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust);
+static bool HnswShouldHaveDistinctNeighborPageSpace(bool samePage, bool useRust);
 static bool HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust);
 static bool HnswShouldHavePageSpaceForTuple(int64 pageFree, int64 tupleSize, bool useRust);
 static bool HnswShouldReuseDeletedTupleSpace(int64 pageFree, int64 neighborPageFree, int64 elementTupleSize, int64 neighborTupleSize, bool useRust);
@@ -3255,12 +3256,18 @@ vector_rust_hnsw_should_release_reused_neighbor_buffer(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust)
+HnswShouldHaveDistinctNeighborPageSpace(bool samePage, bool useRust)
 {
 	if (useRust)
 		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
 
 	return !samePage;
+}
+
+static bool
+HnswShouldUseDistinctNeighborPageSpace(bool samePage, bool useRust)
+{
+	return HnswShouldHaveDistinctNeighborPageSpace(samePage, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_distinct_neighbor_page_space);
@@ -3279,6 +3286,24 @@ vector_rust_hnsw_should_use_distinct_neighbor_page_space(PG_FUNCTION_ARGS)
 	int32		samePage = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDistinctNeighborPageSpace(samePage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_distinct_neighbor_page_space);
+Datum
+vector_hnsw_should_have_distinct_neighbor_page_space(PG_FUNCTION_ARGS)
+{
+	int32		samePage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctNeighborPageSpace(samePage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_distinct_neighbor_page_space);
+Datum
+vector_rust_hnsw_should_have_distinct_neighbor_page_space(PG_FUNCTION_ARGS)
+{
+	int32		samePage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctNeighborPageSpace(samePage != 0, true));
 }
 
 static bool
