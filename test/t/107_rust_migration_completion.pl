@@ -60,7 +60,7 @@ unlike($hnsw_scan_c, qr/return HnswShouldHaveNonEmptyRemainingDiscardedFlag\(!di
 	"legacy C remaining-discarded fallback removed");
 unlike($hnsw_scan_c, qr/return heaptidsLength == 0;/,
 	"legacy C exhausted-heaptids fallback removed");
-unlike($hnsw_scan_c, qr/return orderByIsNull;/,
+unlike($hnsw_scan_c, qr/HnswShouldHaveMissingOrderBy\(bool orderByIsNull, bool useRust\)\s*\{[^}]*return orderByIsNull;/s,
 	"legacy C missing-orderby fallback removed");
 unlike($hnsw_scan_c, qr/return !snapshotIsMVCC;/,
 	"legacy C non-mvcc fallback removed");

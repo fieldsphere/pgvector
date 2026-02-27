@@ -28,10 +28,8 @@ static bool HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool 
 static bool
 HnswShouldReturnEmptyWithoutEntryPoint(bool entryPointIsNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(entryPointIsNull);
-
-	return entryPointIsNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(entryPointIsNull);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_empty_without_entrypoint);
@@ -55,19 +53,15 @@ vector_rust_hnsw_should_return_empty_without_entrypoint(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonEmptyResumeDiscardedFlag(bool hasNonEmptyDiscarded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNonEmptyDiscarded);
-
-	return hasNonEmptyDiscarded;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNonEmptyDiscarded);
 }
 
 static bool
 HnswShouldHaveNonEmptyResumeDiscarded(bool discardedIsEmpty, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_resume_from_discarded_kernel(discardedIsEmpty);
-
-	return HnswShouldHaveNonEmptyResumeDiscardedFlag(!discardedIsEmpty, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_resume_from_discarded_kernel(discardedIsEmpty);
 }
 
 static bool
@@ -79,10 +73,8 @@ HnswShouldResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
 static bool
 HnswShouldHaveEmptyResumeDiscardedFlag(bool discardedIsEmpty, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
-
-	return discardedIsEmpty;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
 }
 
 static bool
@@ -208,19 +200,15 @@ vector_rust_hnsw_should_have_empty_resume_discarded_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonEmptyRemainingDiscardedFlag(bool hasNonEmptyDiscarded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNonEmptyDiscarded);
-
-	return hasNonEmptyDiscarded;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNonEmptyDiscarded);
 }
 
 static bool
 HnswShouldHaveNonEmptyRemainingDiscarded(bool discardedIsEmpty, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_return_remaining_discarded_kernel(discardedIsEmpty);
-
-	return HnswShouldHaveNonEmptyRemainingDiscardedFlag(!discardedIsEmpty, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_return_remaining_discarded_kernel(discardedIsEmpty);
 }
 
 static bool
@@ -232,10 +220,8 @@ HnswShouldReturnRemainingDiscarded(bool discardedIsEmpty, bool useRust)
 static bool
 HnswShouldStopReturningRemainingDiscarded(bool discardedIsEmpty, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
-
-	return discardedIsEmpty;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_remaining_discarded);
@@ -839,10 +825,8 @@ vector_rust_hnsw_should_have_empty_work_list(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveEmptyScanHeapTids(int heaptidsLength, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
-
-	return heaptidsLength == 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
 }
 
 static bool
@@ -890,10 +874,8 @@ vector_rust_hnsw_should_have_empty_scan_heaptids(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveMissingOrderBy(bool orderByIsNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_missing_orderby_kernel(orderByIsNull);
-
-	return orderByIsNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_missing_orderby_kernel(orderByIsNull);
 }
 
 static bool
@@ -941,10 +923,8 @@ vector_rust_hnsw_should_have_missing_orderby(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel(snapshotIsMVCC);
-
-	return !snapshotIsMVCC;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel(snapshotIsMVCC);
 }
 
 static bool
@@ -992,10 +972,8 @@ vector_rust_hnsw_should_have_non_mvcc_snapshot(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveScanPointerFlag(bool hasPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
-
-	return hasPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 }
 
 static bool
