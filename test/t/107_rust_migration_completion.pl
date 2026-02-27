@@ -446,5 +446,23 @@ unlike($hnsw_insert_c, qr/HnswShouldHaveCandidateUpdateIndexFlag\(bool hasCandid
 	"legacy C candidate-update-index-flag fallback removed");
 unlike($hnsw_insert_c, qr/HnswShouldHaveCandidateUpdateIndex\(int32 updateIndex, bool useRust\)\s*\{[^}]*return HnswShouldHaveCandidateUpdateIndexFlag\(updateIndex == -1, false\);/s,
 	"legacy C candidate-update-index fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldRejectOnDiskElementOverwrite\(bool overwriteSucceeded, bool useRust\)\s*\{[^}]*return !overwriteSucceeded;/s,
+	"legacy C reject-ondisk-element-overwrite fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveExpectedOnDiskOffsetFlag\(bool hasExpectedOffset, bool useRust\)\s*\{[^}]*return hasExpectedOffset;/s,
+	"legacy C expected-ondisk-offset-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldRejectOnDiskUnexpectedOffset\(bool hasExpectedOffset, bool useRust\)\s*\{[^}]*return !hasExpectedOffset;/s,
+	"legacy C reject-ondisk-unexpected-offset fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldFollowOnDiskNextPage\(bool nextPageValid, bool useRust\)\s*\{[^}]*return nextPageValid;/s,
+	"legacy C follow-ondisk-next-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskInsertSpaceFlag\(bool hasSpace, bool useRust\)\s*\{[^}]*return hasSpace;/s,
+	"legacy C ondisk-insert-space-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveDistinctOnDiskNeighborBufferFlag\(bool hasDistinctBuffer, bool useRust\)\s*\{[^}]*return hasDistinctBuffer;/s,
+	"legacy C distinct-ondisk-neighbor-buffer-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveDistinctOnDiskNeighborBuffer\(bool sameBuffer, bool useRust\)\s*\{[^}]*return HnswShouldHaveDistinctOnDiskNeighborBufferFlag\(!sameBuffer, false\);/s,
+	"legacy C distinct-ondisk-neighbor-buffer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldSkipUnselectedOnDiskNeighbor\(int32 updateIndex, bool useRust\)\s*\{[^}]*return updateIndex == -1;/s,
+	"legacy C skip-unselected-ondisk-neighbor fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldSkipNullInsertTuple\(bool isNull, bool useRust\)\s*\{[^}]*return isNull;/s,
+	"legacy C skip-null-insert-tuple fallback removed");
 
 done_testing();
