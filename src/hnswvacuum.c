@@ -2662,6 +2662,28 @@ vector_rust_hnsw_should_have_missing_vacuum_stats(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumStatsFlag(hasStats != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_vacuum_stats_value);
+Datum
+vector_hnsw_should_have_missing_vacuum_stats_value(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+	const char *mockStats = "stats";
+	IndexBulkDeleteResult *stats = hasStats != 0 ? (IndexBulkDeleteResult *) mockStats : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumStatsFlag(HnswShouldHaveVacuumStats(stats, false), false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_vacuum_stats_value);
+Datum
+vector_rust_hnsw_should_have_missing_vacuum_stats_value(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+	const char *mockStats = "stats";
+	IndexBulkDeleteResult *stats = hasStats != 0 ? (IndexBulkDeleteResult *) mockStats : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumStatsFlag(HnswShouldHaveVacuumStats(stats, true), true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_stats);
 Datum
 vector_hnsw_should_have_vacuum_stats(PG_FUNCTION_ARGS)
@@ -2678,6 +2700,28 @@ vector_rust_hnsw_should_have_vacuum_stats(PG_FUNCTION_ARGS)
 	int32		hasStats = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveVacuumStatsFlag(hasStats != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_stats_value);
+Datum
+vector_hnsw_should_have_vacuum_stats_value(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+	const char *mockStats = "stats";
+	IndexBulkDeleteResult *stats = hasStats != 0 ? (IndexBulkDeleteResult *) mockStats : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumStats(stats, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_stats_value);
+Datum
+vector_rust_hnsw_should_have_vacuum_stats_value(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+	const char *mockStats = "stats";
+	IndexBulkDeleteResult *stats = hasStats != 0 ? (IndexBulkDeleteResult *) mockStats : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumStats(stats, true));
 }
 
 static bool
