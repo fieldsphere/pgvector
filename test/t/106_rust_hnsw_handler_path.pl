@@ -4300,6 +4300,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_process_vacuum_heaptids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_process_vacuum_heaptids'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4347,6 +4357,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_itempointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_itempointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_itempointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_itempointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_itempointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_itempointer_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4407,6 +4427,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_heaptid_scan_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_heaptid_scan_tid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_heaptid_scan_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_heaptid_scan_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_heaptid_scan_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_heaptid_scan_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5320,6 +5350,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_markdeleted_neighbor_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_markdeleted_neighbor_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_markdeleted_neighbor_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_markdeleted_neighbor_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_match_markdeleted_buffers(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_match_markdeleted_buffers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5340,6 +5380,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_markdeleted_buffers_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_markdeleted_buffers_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_markdeleted_buffers_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_markdeleted_buffers_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_distinct_markdeleted_buffers(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_distinct_markdeleted_buffers'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5347,6 +5397,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_distinct_markdeleted_buffers(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_distinct_markdeleted_buffers'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_distinct_markdeleted_buffers_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_distinct_markdeleted_buffers_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_distinct_markdeleted_buffers_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_distinct_markdeleted_buffers_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5377,6 +5437,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_markdeleted_version_beyond_max(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_markdeleted_version_beyond_max'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_markdeleted_version_beyond_max_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_markdeleted_version_beyond_max_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_markdeleted_version_beyond_max_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_markdeleted_version_beyond_max_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -11062,6 +11132,18 @@ my $have_vacuum_block_number_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_block_number_parity, "t\nt\nt\nt");
 
+my $have_vacuum_block_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_block_flag(block_valid) =
+		   rust_hnsw_should_have_vacuum_block_flag(block_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(block_valid);
+});
+is($have_vacuum_block_flag_parity, "t\nt\nt\nt");
+
 my $process_vacuum_heaptids_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_process_vacuum_heaptids(first_heaptid_valid) =
 		   rust_hnsw_should_process_vacuum_heaptids(first_heaptid_valid)
@@ -11121,6 +11203,18 @@ my $have_vacuum_itempointer_parity = $node->safe_psql("postgres", q{
 	) AS t(itempointer_valid);
 });
 is($have_vacuum_itempointer_parity, "t\nt\nt\nt");
+
+my $have_vacuum_itempointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_itempointer_flag(itempointer_valid) =
+		   rust_hnsw_should_have_vacuum_itempointer_flag(itempointer_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(itempointer_valid);
+});
+is($have_vacuum_itempointer_flag_parity, "t\nt\nt\nt");
 
 my $have_vacuum_tuple_heaptid_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_tuple_heaptid_pointer(first_heaptid_valid) =
@@ -11193,6 +11287,18 @@ my $have_vacuum_heaptid_scan_tid_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptid_valid);
 });
 is($have_vacuum_heaptid_scan_tid_parity, "t\nt\nt\nt");
+
+my $have_vacuum_heaptid_scan_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_heaptid_scan_flag(heaptid_valid) =
+		   rust_hnsw_should_have_vacuum_heaptid_scan_flag(heaptid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(heaptid_valid);
+});
+is($have_vacuum_heaptid_scan_flag_parity, "t\nt\nt\nt");
 
 my $remove_vacuum_heaptid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_remove_vacuum_heaptid(callback_remove) =
@@ -12286,6 +12392,18 @@ my $have_matching_markdeleted_neighbor_page_parity = $node->safe_psql("postgres"
 });
 is($have_matching_markdeleted_neighbor_page_parity, "t\nt\nt\nt");
 
+my $have_matching_markdeleted_neighbor_page_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_markdeleted_neighbor_page_flag(pages_match) =
+		   rust_hnsw_should_have_matching_markdeleted_neighbor_page_flag(pages_match)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(pages_match);
+});
+is($have_matching_markdeleted_neighbor_page_flag_parity, "t\nt\nt\nt");
+
 my $match_markdeleted_buffers_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_match_markdeleted_buffers(left_buffer, right_buffer) =
 		   rust_hnsw_should_match_markdeleted_buffers(left_buffer, right_buffer)
@@ -12310,6 +12428,18 @@ my $have_matching_markdeleted_buffers_parity = $node->safe_psql("postgres", q{
 });
 is($have_matching_markdeleted_buffers_parity, "t\nt\nt\nt");
 
+my $have_matching_markdeleted_buffers_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_markdeleted_buffers_flag(buffers_match) =
+		   rust_hnsw_should_have_matching_markdeleted_buffers_flag(buffers_match)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(buffers_match);
+});
+is($have_matching_markdeleted_buffers_flag_parity, "t\nt\nt\nt");
+
 my $have_distinct_markdeleted_buffers_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_distinct_markdeleted_buffers(left_buffer, right_buffer) =
 		   rust_hnsw_should_have_distinct_markdeleted_buffers(left_buffer, right_buffer)
@@ -12321,6 +12451,18 @@ my $have_distinct_markdeleted_buffers_parity = $node->safe_psql("postgres", q{
 	) AS t(left_buffer, right_buffer);
 });
 is($have_distinct_markdeleted_buffers_parity, "t\nt\nt\nt");
+
+my $have_distinct_markdeleted_buffers_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_distinct_markdeleted_buffers_flag(buffers_match) =
+		   rust_hnsw_should_have_distinct_markdeleted_buffers_flag(buffers_match)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(buffers_match);
+});
+is($have_distinct_markdeleted_buffers_flag_parity, "t\nt\nt\nt");
 
 my $release_markdeleted_neighbor_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_release_markdeleted_neighbor_buffer(same_buffer) =
@@ -12357,6 +12499,18 @@ my $have_markdeleted_version_beyond_max_parity = $node->safe_psql("postgres", q{
 	) AS t(version, max_version);
 });
 is($have_markdeleted_version_beyond_max_parity, "t\nt\nt\nt");
+
+my $have_markdeleted_version_beyond_max_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_markdeleted_version_beyond_max_flag(version_within_range) =
+		   rust_hnsw_should_have_markdeleted_version_beyond_max_flag(version_within_range)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(version_within_range);
+});
+is($have_markdeleted_version_beyond_max_flag_parity, "t\nt\nt\nt");
 
 my $reuse_deleted_ondisk_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reuse_deleted_ondisk_tuple(is_deleted) =
