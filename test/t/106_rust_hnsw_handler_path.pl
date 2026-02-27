@@ -3090,6 +3090,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_failed_vacuum_neighbor_overwrite(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_failed_vacuum_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_failed_vacuum_neighbor_overwrite(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_init_vacuum_stats_when_missing(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_init_vacuum_stats_when_missing'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7307,6 +7317,18 @@ my $reject_vacuum_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
 	) AS t(overwrite_succeeded);
 });
 is($reject_vacuum_neighbor_overwrite_parity, "t\nt\nt\nt");
+
+my $have_failed_vacuum_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_failed_vacuum_neighbor_overwrite(overwrite_succeeded) =
+		   rust_hnsw_should_have_failed_vacuum_neighbor_overwrite(overwrite_succeeded)
+	FROM (VALUES
+		(1),
+		(0),
+		(1),
+		(0)
+	) AS t(overwrite_succeeded);
+});
+is($have_failed_vacuum_neighbor_overwrite_parity, "t\nt\nt\nt");
 
 my $init_vacuum_stats_when_missing_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_init_vacuum_stats_when_missing(has_stats) =
