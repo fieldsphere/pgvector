@@ -8,6 +8,7 @@ my $repo_root = abs_path(dirname(__FILE__) . "/../..");
 my $hnsw_path = "$repo_root/src/hnsw.c";
 my $hnsw_scan_path = "$repo_root/src/hnswscan.c";
 my $hnsw_build_path = "$repo_root/src/hnswbuild.c";
+my $hnsw_insert_path = "$repo_root/src/hnswinsert.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -21,6 +22,10 @@ close($scan_fh);
 open(my $build_fh, '<', $hnsw_build_path) or die "could not open $hnsw_build_path: $!";
 my $hnsw_build_c = <$build_fh>;
 close($build_fh);
+
+open(my $insert_fh, '<', $hnsw_insert_path) or die "could not open $hnsw_insert_path: $!";
+my $hnsw_insert_c = <$insert_fh>;
+close($insert_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -253,5 +258,41 @@ unlike($hnsw_build_c, qr/HnswShouldHaveRejectNeighborOverwrite\(bool overwriteSu
 	"legacy C reject-neighbor-overwrite fallback removed");
 unlike($hnsw_build_c, qr/HnswShouldHaveStoreNeighborsOnSamePage\(int64 combinedSize, int64 maxSize, bool useRust\)\s*\{[^}]*return combinedSize <= maxSize;/s,
 	"legacy C store-neighbors-on-same-page fallback removed");
+
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_entry_point_kernel\(/,
+	"hnswinsert.c uses rust update-entrypoint kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_skip_invalid_index_value_kernel\(/,
+	"hnswinsert.c uses rust skip-invalid-index-value kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswinsert.c uses rust update-progress-after-insert kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel\(/,
+	"hnswinsert.c uses rust duplicate-search-stop kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_return_after_duplicate_insert_kernel\(/,
+	"hnswinsert.c uses rust duplicate-insert-return kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel\(/,
+	"hnswinsert.c uses rust duplicate-update-skip kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(/,
+	"hnswinsert.c uses rust update-ondisk-insert-page kernel");
+
+unlike($hnsw_insert_c, qr/HnswShouldHaveHigherOnDiskEntrypointLevel\(int32 elementLevel, int32 entryLevel, bool useRust\)\s*\{[^}]*return elementLevel > entryLevel;/s,
+	"legacy C higher-ondisk-entrypoint-level fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldUpdateEntryPointOnDisk\(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust\)\s*\{[^}]*return entryPointIsNull \|\| HnswShouldHaveHigherOnDiskEntrypointLevel\(elementLevel, entryLevel, false\);/s,
+	"legacy C update-entrypoint-ondisk fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveDefaultOnDiskEntryLevel\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return !hasEntryPoint;/s,
+	"legacy C default-ondisk-entrylevel fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskPointerFlag\(bool hasPointer, bool useRust\)\s*\{[^}]*return hasPointer;/s,
+	"legacy C ondisk-pointer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveValidInsertIndexValueFlag\(bool hasValidIndexValue, bool useRust\)\s*\{[^}]*return hasValidIndexValue;/s,
+	"legacy C valid-insert-index-value fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskValueMismatchFlag\(bool valuesMismatch, bool useRust\)\s*\{[^}]*return valuesMismatch;/s,
+	"legacy C ondisk-value-mismatch-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskValueMismatch\(bool valuesEqual, bool useRust\)\s*\{[^}]*return HnswShouldHaveOnDiskValueMismatchFlag\(!valuesEqual, false\);/s,
+	"legacy C ondisk-value-mismatch fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldReturnAfterOnDiskDuplicateInsert\(bool duplicateInserted, bool useRust\)\s*\{[^}]*return duplicateInserted;/s,
+	"legacy C return-after-ondisk-duplicate fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldSkipOnDiskGraphUpdateForDuplicate\(bool duplicateFound, bool useRust\)\s*\{[^}]*return duplicateFound;/s,
+	"legacy C skip-ondisk-graph-update fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldUpdateOnDiskInsertPage\(bool hasNewInsertPage, bool useRust\)\s*\{[^}]*return hasNewInsertPage;/s,
+	"legacy C update-ondisk-insert-page fallback removed");
 
 done_testing();
