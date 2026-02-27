@@ -4100,6 +4100,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_invalid_vacuum_last_item_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_invalid_vacuum_last_item_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_invalid_vacuum_last_item_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_invalid_vacuum_last_item_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_contain_deleted_tid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_contain_deleted_tid'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4137,6 +4147,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_deleted_tid_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_deleted_tid_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_deleted_tid_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_deleted_tid_pointer_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_deleted_tid_pointer_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_deleted_tid_pointer_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4910,6 +4930,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_higher_vacuum_element_level_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_higher_vacuum_element_level_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_higher_vacuum_element_level_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_higher_vacuum_element_level_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_match_vacuum_entrypoint_tuple(integer, integer, integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_match_vacuum_entrypoint_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4930,6 +4960,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_matching_vacuum_entrypoint_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_matching_vacuum_entrypoint_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_matching_vacuum_entrypoint_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_matching_vacuum_entrypoint_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_vacuum_neighbor_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_vacuum_neighbor_overwrite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4947,6 +4987,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_failed_vacuum_neighbor_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -10512,6 +10562,18 @@ my $have_invalid_vacuum_last_item_parity = $node->safe_psql("postgres", q{
 });
 is($have_invalid_vacuum_last_item_parity, "t\nt\nt\nt");
 
+my $have_invalid_vacuum_last_item_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_invalid_vacuum_last_item_flag(last_item_valid) =
+		   rust_hnsw_should_have_invalid_vacuum_last_item_flag(last_item_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(last_item_valid);
+});
+is($have_invalid_vacuum_last_item_flag_parity, "t\nt\nt\nt");
+
 my $contain_deleted_tid_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_contain_deleted_tid(has_deleted_tid) =
 		   rust_hnsw_should_contain_deleted_tid(has_deleted_tid)
@@ -10559,6 +10621,18 @@ my $have_deleted_tid_pointer_parity = $node->safe_psql("postgres", q{
 	) AS t(has_deleted_tid);
 });
 is($have_deleted_tid_pointer_parity, "t\nt\nt\nt");
+
+my $have_deleted_tid_pointer_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_deleted_tid_pointer_flag(has_deleted_tid) =
+		   rust_hnsw_should_have_deleted_tid_pointer_flag(has_deleted_tid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_deleted_tid);
+});
+is($have_deleted_tid_pointer_flag_parity, "t\nt\nt\nt");
 
 my $continue_vacuum_block_scan_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_continue_vacuum_block_scan(has_valid_block) =
@@ -11484,6 +11558,18 @@ my $have_higher_vacuum_element_level_parity = $node->safe_psql("postgres", q{
 });
 is($have_higher_vacuum_element_level_parity, "t\nt\nt\nt");
 
+my $have_higher_vacuum_element_level_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_higher_vacuum_element_level_flag(has_higher_level) =
+		   rust_hnsw_should_have_higher_vacuum_element_level_flag(has_higher_level)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_higher_level);
+});
+is($have_higher_vacuum_element_level_flag_parity, "t\nt\nt\nt");
+
 my $match_vacuum_entrypoint_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_match_vacuum_entrypoint_tuple(has_entrypoint, blkno, offno, entry_blkno, entry_offno) =
 		   rust_hnsw_should_match_vacuum_entrypoint_tuple(has_entrypoint, blkno, offno, entry_blkno, entry_offno)
@@ -11508,6 +11594,18 @@ my $have_matching_vacuum_entrypoint_tid_parity = $node->safe_psql("postgres", q{
 });
 is($have_matching_vacuum_entrypoint_tid_parity, "t\nt\nt\nt");
 
+my $have_matching_vacuum_entrypoint_tid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_matching_vacuum_entrypoint_tid_flag(has_matching_tid) =
+		   rust_hnsw_should_have_matching_vacuum_entrypoint_tid_flag(has_matching_tid)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_matching_tid);
+});
+is($have_matching_vacuum_entrypoint_tid_flag_parity, "t\nt\nt\nt");
+
 my $reject_vacuum_neighbor_overwrite_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_vacuum_neighbor_overwrite(overwrite_succeeded) =
 		   rust_hnsw_should_reject_vacuum_neighbor_overwrite(overwrite_succeeded)
@@ -11531,6 +11629,18 @@ my $have_failed_vacuum_neighbor_overwrite_parity = $node->safe_psql("postgres", 
 	) AS t(overwrite_succeeded);
 });
 is($have_failed_vacuum_neighbor_overwrite_parity, "t\nt\nt\nt");
+
+my $have_failed_vacuum_neighbor_overwrite_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(overwrite_succeeded) =
+		   rust_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(overwrite_succeeded)
+	FROM (VALUES
+		(1),
+		(0),
+		(1),
+		(0)
+	) AS t(overwrite_succeeded);
+});
+is($have_failed_vacuum_neighbor_overwrite_flag_parity, "t\nt\nt\nt");
 
 my $init_vacuum_stats_when_missing_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_init_vacuum_stats_when_missing(has_stats) =
