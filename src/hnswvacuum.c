@@ -2202,12 +2202,18 @@ vector_rust_hnsw_should_have_vacuum_stats(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipVacuumCleanupAnalyzeOnly(bool analyzeOnly, bool useRust)
+HnswShouldHaveVacuumCleanupAnalyzeOnly(bool analyzeOnly, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(analyzeOnly);
 
 	return analyzeOnly;
+}
+
+static bool
+HnswShouldSkipVacuumCleanupAnalyzeOnly(bool analyzeOnly, bool useRust)
+{
+	return HnswShouldHaveVacuumCleanupAnalyzeOnly(analyzeOnly, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_vacuum_cleanup_analyze_only);
@@ -2226,6 +2232,24 @@ vector_rust_hnsw_should_skip_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
 	int32		analyzeOnly = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipVacuumCleanupAnalyzeOnly(analyzeOnly != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_cleanup_analyze_only);
+Datum
+vector_hnsw_should_have_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
+{
+	int32		analyzeOnly = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumCleanupAnalyzeOnly(analyzeOnly != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_cleanup_analyze_only);
+Datum
+vector_rust_hnsw_should_have_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
+{
+	int32		analyzeOnly = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumCleanupAnalyzeOnly(analyzeOnly != 0, true));
 }
 
 static bool
