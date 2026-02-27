@@ -1752,10 +1752,8 @@ vector_rust_hnsw_should_have_vacuum_highest_point_block_number(PG_FUNCTION_ARGS)
 static bool
 HnswShouldRepairVacuumHighestPoint(bool needsUpdated, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(needsUpdated);
-
-	return needsUpdated;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(needsUpdated);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_vacuum_highest_point);
@@ -1779,10 +1777,8 @@ vector_rust_hnsw_should_repair_vacuum_highest_point(PG_FUNCTION_ARGS)
 static bool
 HnswShouldRepairVacuumEntryPoint(bool needsUpdated, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(needsUpdated);
-
-	return needsUpdated;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(needsUpdated);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_vacuum_entrypoint);
@@ -1806,10 +1802,8 @@ vector_rust_hnsw_should_repair_vacuum_entrypoint(PG_FUNCTION_ARGS)
 static bool
 HnswShouldResetVacuumEntryPointNeighbors(bool hasHighestPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasHighestPoint);
-
-	return hasHighestPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasHighestPoint);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_vacuum_entrypoint_neighbors);
@@ -1833,10 +1827,8 @@ vector_rust_hnsw_should_reset_vacuum_entrypoint_neighbors(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReplaceDeletedVacuumEntryPoint(bool isDeletedEntrypoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedEntrypoint);
-
-	return isDeletedEntrypoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedEntrypoint);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_replace_deleted_vacuum_entrypoint);
@@ -1860,10 +1852,8 @@ vector_rust_hnsw_should_replace_deleted_vacuum_entrypoint(PG_FUNCTION_ARGS)
 static bool
 HnswShouldRepairNonnullVacuumHighestPoint(bool hasHighestPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasHighestPoint);
-
-	return hasHighestPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasHighestPoint);
 }
 
 static bool
@@ -1935,10 +1925,8 @@ vector_rust_hnsw_should_have_vacuum_highest_point_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldProcessNonnullVacuumEntrypoint(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint);
-
-	return hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_nonnull_vacuum_entrypoint);
@@ -2020,10 +2008,8 @@ vector_rust_hnsw_should_have_vacuum_entrypoint_pointer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonElementMarkDeletedTuple(bool isElementTuple, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
-
-	return !isElementTuple;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
 }
 
 static bool
@@ -2071,10 +2057,8 @@ vector_rust_hnsw_should_have_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveLiveMarkDeletedTuple(bool isLiveTuple, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isLiveTuple);
-
-	return isLiveTuple;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isLiveTuple);
 }
 
 static bool
@@ -2122,10 +2106,8 @@ vector_rust_hnsw_should_have_live_markdeleted_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldSetVacuumInsertPageWhenMissing(bool hasInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasInsertPage);
-
-	return !hasInsertPage;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasInsertPage);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_vacuum_insert_page_when_missing);
