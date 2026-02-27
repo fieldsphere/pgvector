@@ -1090,6 +1090,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_skip_null_build_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_skip_null_build_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_skip_null_build_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_skip_null_build_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_update_progress_after_insert(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_update_progress_after_insert'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1097,6 +1107,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_update_progress_after_insert(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_update_progress_after_insert'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_update_progress_after_insert(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_update_progress_after_insert'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_update_progress_after_insert(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_update_progress_after_insert'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -1110,6 +1130,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_store_neighbors_on_same_page(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_store_neighbors_on_same_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_store_neighbors_on_same_page(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_store_neighbors_on_same_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_oversized_element_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_oversized_element_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1117,6 +1147,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_reject_oversized_element_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_reject_oversized_element_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_reject_oversized_element_tuple(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_reject_oversized_element_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_reject_oversized_element_tuple(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_reject_oversized_element_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -1130,6 +1170,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_append_neighbor_page(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_append_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_append_neighbor_page(bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_append_neighbor_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_append_element_page(bigint, bigint, bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_append_element_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -1137,6 +1187,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_append_element_page(bigint, bigint, bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_append_element_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_append_element_page(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_append_element_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_append_element_page(bigint, bigint, bigint, bigint) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_append_element_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -6115,6 +6175,18 @@ my $skip_null_build_tuple_parity = $node->safe_psql("postgres", q{
 });
 is($skip_null_build_tuple_parity, "t\nt\nt\nt");
 
+my $have_skip_null_build_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_skip_null_build_tuple(is_null) =
+		   rust_hnsw_should_have_skip_null_build_tuple(is_null)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_null);
+});
+is($have_skip_null_build_tuple_parity, "t\nt\nt\nt");
+
 my $update_progress_after_insert_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_update_progress_after_insert(tuple_inserted) =
 		   rust_hnsw_should_update_progress_after_insert(tuple_inserted)
@@ -6126,6 +6198,18 @@ my $update_progress_after_insert_parity = $node->safe_psql("postgres", q{
 	) AS t(tuple_inserted);
 });
 is($update_progress_after_insert_parity, "t\nt\nt\nt");
+
+my $have_update_progress_after_insert_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_update_progress_after_insert(tuple_inserted) =
+		   rust_hnsw_should_have_update_progress_after_insert(tuple_inserted)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(tuple_inserted);
+});
+is($have_update_progress_after_insert_parity, "t\nt\nt\nt");
 
 my $store_neighbors_on_same_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_store_neighbors_on_same_page(combined_size, max_size) =
@@ -6139,6 +6223,18 @@ my $store_neighbors_on_same_page_parity = $node->safe_psql("postgres", q{
 });
 is($store_neighbors_on_same_page_parity, "t\nt\nt\nt");
 
+my $have_store_neighbors_on_same_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_store_neighbors_on_same_page(combined_size, max_size) =
+		   rust_hnsw_should_have_store_neighbors_on_same_page(combined_size, max_size)
+	FROM (VALUES
+		(10::bigint, 12::bigint),
+		(12::bigint, 12::bigint),
+		(13::bigint, 12::bigint),
+		(1024::bigint, 2048::bigint)
+	) AS t(combined_size, max_size);
+});
+is($have_store_neighbors_on_same_page_parity, "t\nt\nt\nt");
+
 my $reject_oversized_element_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_oversized_element_tuple(tuple_size, alloc_size) =
 		   rust_hnsw_should_reject_oversized_element_tuple(tuple_size, alloc_size)
@@ -6150,6 +6246,18 @@ my $reject_oversized_element_tuple_parity = $node->safe_psql("postgres", q{
 	) AS t(tuple_size, alloc_size);
 });
 is($reject_oversized_element_tuple_parity, "t\nt\nt\nt");
+
+my $have_reject_oversized_element_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_reject_oversized_element_tuple(tuple_size, alloc_size) =
+		   rust_hnsw_should_have_reject_oversized_element_tuple(tuple_size, alloc_size)
+	FROM (VALUES
+		(32::bigint, 64::bigint),
+		(64::bigint, 64::bigint),
+		(65::bigint, 64::bigint),
+		(2048::bigint, 1024::bigint)
+	) AS t(tuple_size, alloc_size);
+});
+is($have_reject_oversized_element_tuple_parity, "t\nt\nt\nt");
 
 my $append_neighbor_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_append_neighbor_page(free_space, neighbor_tuple_size) =
@@ -6163,6 +6271,18 @@ my $append_neighbor_page_parity = $node->safe_psql("postgres", q{
 });
 is($append_neighbor_page_parity, "t\nt\nt\nt");
 
+my $have_append_neighbor_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_append_neighbor_page(free_space, neighbor_tuple_size) =
+		   rust_hnsw_should_have_append_neighbor_page(free_space, neighbor_tuple_size)
+	FROM (VALUES
+		(8::bigint, 16::bigint),
+		(16::bigint, 16::bigint),
+		(32::bigint, 16::bigint),
+		(0::bigint, 1::bigint)
+	) AS t(free_space, neighbor_tuple_size);
+});
+is($have_append_neighbor_page_parity, "t\nt\nt\nt");
+
 my $append_element_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_append_element_page(free_space, element_tuple_size, combined_size, max_size) =
 		   rust_hnsw_should_append_element_page(free_space, element_tuple_size, combined_size, max_size)
@@ -6174,6 +6294,18 @@ my $append_element_page_parity = $node->safe_psql("postgres", q{
 	) AS t(free_space, element_tuple_size, combined_size, max_size);
 });
 is($append_element_page_parity, "t\nt\nt\nt");
+
+my $have_append_element_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_append_element_page(free_space, element_tuple_size, combined_size, max_size) =
+		   rust_hnsw_should_have_append_element_page(free_space, element_tuple_size, combined_size, max_size)
+	FROM (VALUES
+		(4::bigint, 8::bigint, 16::bigint, 32::bigint),
+		(12::bigint, 8::bigint, 16::bigint, 32::bigint),
+		(20::bigint, 8::bigint, 16::bigint, 32::bigint),
+		(20::bigint, 8::bigint, 48::bigint, 32::bigint)
+	) AS t(free_space, element_tuple_size, combined_size, max_size);
+});
+is($have_append_element_page_parity, "t\nt\nt\nt");
 
 my $reject_unexpected_item_offset_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_unexpected_item_offset(inserted_offset, expected_offset) =
