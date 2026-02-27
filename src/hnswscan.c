@@ -19,6 +19,10 @@
 #include "varatt.h"
 #endif
 
+static bool HnswShouldHaveProvidedRescanKeyPointer(ScanKey keys, bool useRust);
+static bool HnswShouldHaveProvidedOrderByPointer(ScanKey orderByData, bool useRust);
+static bool HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool useRust);
+
 static bool
 HnswShouldReturnEmptyWithoutEntryPoint(bool entryPointIsNull, bool useRust)
 {
@@ -939,6 +943,12 @@ HnswShouldUseProvidedRescanKeyArrayFlag(bool hasKeyArray, bool useRust)
 static bool
 HnswShouldUseProvidedRescanKeyArray(ScanKey keys, bool useRust)
 {
+	return HnswShouldHaveProvidedRescanKeyPointer(keys, useRust);
+}
+
+static bool
+HnswShouldHaveProvidedRescanKeyPointer(ScanKey keys, bool useRust)
+{
 	return HnswShouldHaveScanPointer((const void *) keys, useRust);
 }
 
@@ -956,6 +966,12 @@ HnswShouldUseProvidedOrderByDataFlag(bool hasOrderByData, bool useRust)
 
 static bool
 HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
+{
+	return HnswShouldHaveProvidedOrderByPointer(orderByData, useRust);
+}
+
+static bool
+HnswShouldHaveProvidedOrderByPointer(ScanKey orderByData, bool useRust)
 {
 	return HnswShouldHaveScanPointer((const void *) orderByData, useRust);
 }
@@ -998,6 +1014,12 @@ HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
 
 static bool
 HnswShouldUseEntrypointForScan(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveEntrypointForScanPointer(entryPoint, useRust);
+}
+
+static bool
+HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool useRust)
 {
 	return HnswShouldHaveScanPointer((const void *) entryPoint, useRust);
 }
@@ -1155,6 +1177,28 @@ vector_rust_hnsw_should_have_provided_rescan_key_array(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyArray(hasKeyArray != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_rescan_key_pointer);
+Datum
+vector_hnsw_should_have_provided_rescan_key_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+	const char *mockKey = "key";
+	ScanKey		keys = hasKeyArray != 0 ? (ScanKey) mockKey : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyPointer(keys, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_rescan_key_pointer);
+Datum
+vector_rust_hnsw_should_have_provided_rescan_key_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+	const char *mockKey = "key";
+	ScanKey		keys = hasKeyArray != 0 ? (ScanKey) mockKey : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyPointer(keys, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_pointer);
 Datum
 vector_hnsw_should_have_scan_pointer(PG_FUNCTION_ARGS)
@@ -1209,6 +1253,28 @@ vector_rust_hnsw_should_have_provided_orderby_data(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByData(hasOrderByData != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_orderby_pointer);
+Datum
+vector_hnsw_should_have_provided_orderby_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+	const char *mockOrderByData = "orderby";
+	ScanKey		orderByData = hasOrderByData != 0 ? (ScanKey) mockOrderByData : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByPointer(orderByData, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_orderby_pointer);
+Datum
+vector_rust_hnsw_should_have_provided_orderby_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+	const char *mockOrderByData = "orderby";
+	ScanKey		orderByData = hasOrderByData != 0 ? (ScanKey) mockOrderByData : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByPointer(orderByData, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_entrypoint_for_scan);
 Datum
 vector_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
@@ -1243,6 +1309,28 @@ vector_rust_hnsw_should_have_entrypoint_for_scan(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScan(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_entrypoint_for_scan_pointer);
+Datum
+vector_hnsw_should_have_entrypoint_for_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScanPointer(entryPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_entrypoint_for_scan_pointer);
+Datum
+vector_rust_hnsw_should_have_entrypoint_for_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScanPointer(entryPoint, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_entrypoint);
