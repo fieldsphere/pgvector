@@ -1224,12 +1224,18 @@ HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust)
 }
 
 static bool
-HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust)
+HnswShouldHaveDefaultTypeInfo(bool hasProcInfo, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcInfo);
 
 	return !hasProcInfo;
+}
+
+static bool
+HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust)
+{
+	return HnswShouldHaveDefaultTypeInfo(hasProcInfo, useRust);
 }
 
 static bool
@@ -2672,6 +2678,24 @@ vector_rust_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
 	int32		hasProcInfo = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_type_info);
+Datum
+vector_hnsw_should_have_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultTypeInfo(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_type_info);
+Datum
+vector_rust_hnsw_should_have_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultTypeInfo(hasProcInfo != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_typeinfo_procinfo_pointer);
