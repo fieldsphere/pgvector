@@ -11,6 +11,7 @@ my $hnsw_build_path = "$repo_root/src/hnswbuild.c";
 my $hnsw_insert_path = "$repo_root/src/hnswinsert.c";
 my $hnsw_vacuum_path = "$repo_root/src/hnswvacuum.c";
 my $hnsw_utils_path = "$repo_root/src/hnswutils.c";
+my $ivf_vacuum_path = "$repo_root/src/ivfvacuum.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -36,6 +37,10 @@ close($vacuum_fh);
 open(my $utils_fh, '<', $hnsw_utils_path) or die "could not open $hnsw_utils_path: $!";
 my $hnsw_utils_c = <$utils_fh>;
 close($utils_fh);
+
+open(my $ivf_vacuum_fh, '<', $ivf_vacuum_path) or die "could not open $ivf_vacuum_path: $!";
+my $ivf_vacuum_c = <$ivf_vacuum_fh>;
+close($ivf_vacuum_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -868,5 +873,15 @@ unlike($hnsw_utils_c, qr/HnswShouldHaveTrimCandidateList\(int candidateCount, in
 	"legacy C trim-candidate-list fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldHaveAlwaysAddCandidate\(int candidateCount, int ef, bool useRust\)\s*\{[^}]*return candidateCount < ef;/s,
 	"legacy C always-add-candidate fallback removed");
+
+ok($ivf_vacuum_c =~ /vector_rust_ivfflat_should_follow_insert_page_link_kernel\(/,
+	"ivfvacuum.c uses rust follow-insert-page-link kernel");
+ok($ivf_vacuum_c =~ /vector_rust_ivfflat_should_set_insert_page_kernel\(/,
+	"ivfvacuum.c uses rust set-insert-page kernel");
+
+unlike($ivf_vacuum_c, qr/IvfflatVacuumPageIsValid\(BlockNumber page, bool useRust\)\s*\{[^}]*return BlockNumberIsValid\(page\);/s,
+	"legacy C ivfvacuum-page-valid fallback removed");
+unlike($ivf_vacuum_c, qr/IvfflatShouldSetInsertPage\(int ndeletable, BlockNumber insertPage, bool useRust\)\s*\{[^}]*return !IvfflatVacuumPageIsValid\(insertPage, false\) && ndeletable > 0;/s,
+	"legacy C ivfvacuum-set-insert-page fallback removed");
 
 done_testing();
