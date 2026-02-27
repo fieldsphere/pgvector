@@ -1043,10 +1043,8 @@ vector_rust_hnsw_should_have_deleted_vacuum_neighbor(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumUnderfilledLayer0(bool needsUpdated, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
-
-	return !needsUpdated;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
 }
 
 static bool
@@ -1094,19 +1092,15 @@ vector_rust_hnsw_should_have_vacuum_underfilled_layer0(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumSkipEntrypoint(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint);
-
-	return hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasEntryPoint);
 }
 
 static bool
 HnswShouldHaveMatchingVacuumEntrypointElement(int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, entryBlkno, entryOffno);
-
-	return elementBlkno == entryBlkno && elementOffno == entryOffno;
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, entryBlkno, entryOffno);
 }
 
 static bool
@@ -1119,10 +1113,8 @@ HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, in
 static bool
 HnswShouldHaveVacuumPointerFlag(bool hasPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
-
-	return hasPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 }
 
 static bool
@@ -1146,10 +1138,8 @@ HnswShouldHaveVacuumEntrypoint(HnswElement entryPoint, bool useRust)
 static bool
 HnswShouldHaveMissingVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
-
-	return !hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 }
 
 static bool
@@ -1307,10 +1297,8 @@ vector_rust_hnsw_should_have_missing_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumElementWithoutUpdatesFlag(bool needsUpdated, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
-
-	return !needsUpdated;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(needsUpdated);
 }
 
 static bool
@@ -1376,19 +1364,15 @@ vector_rust_hnsw_should_have_vacuum_element_without_updates_flag(PG_FUNCTION_ARG
 static bool
 HnswShouldHaveHigherVacuumEntrypointLevel(int32 elementLevel, int32 entryPointLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryPointLevel);
-
-	return elementLevel > entryPointLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryPointLevel);
 }
 
 static bool
 HnswShouldHaveVacuumMissingEntrypoint(bool entryPointIsNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull);
-
-	return entryPointIsNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull);
 }
 
 static bool
@@ -1401,10 +1385,8 @@ HnswShouldPromoteVacuumEntryPoint(bool entryPointIsNull, int32 elementLevel, int
 static bool
 HnswShouldHaveDefaultVacuumEntryLevel(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
-
-	return !hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 }
 
 static bool
@@ -1545,10 +1527,8 @@ vector_rust_hnsw_should_need_vacuum_entrypoint_replacement(PG_FUNCTION_ARGS)
 static bool
 HnswShouldResetVacuumHighestPoint(bool highestPointValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(highestPointValid);
-
-	return !highestPointValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(highestPointValid);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_vacuum_highest_point);
@@ -1572,10 +1552,8 @@ vector_rust_hnsw_should_reset_vacuum_highest_point(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumHighestPointBlockFlag(bool highestPointValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(highestPointValid);
-
-	return highestPointValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(highestPointValid);
 }
 
 static bool
