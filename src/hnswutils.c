@@ -998,10 +998,8 @@ HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
 static bool
 HnswShouldHaveSearchIndexPointerFlag(bool hasIndexPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasIndexPointer);
-
-	return hasIndexPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasIndexPointer);
 }
 
 static bool
@@ -1013,10 +1011,8 @@ HnswShouldHaveSearchIndexPointer(Relation index, bool useRust)
 static bool
 HnswShouldHaveMemoryEntryDistance(bool inMemory, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
-
-	return inMemory;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
 }
 
 static bool
@@ -1028,10 +1024,8 @@ HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust)
 static bool
 HnswShouldHaveInMemorySearchPath(bool inMemory, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
-
-	return inMemory;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
 }
 
 static bool
@@ -1043,10 +1037,8 @@ HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust)
 static bool
 HnswShouldHaveSearchEntrypointPointerFlag(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
-
-	return hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
 }
 
 static bool
@@ -1058,55 +1050,43 @@ HnswShouldHaveSearchEntrypointPointer(HnswElement entryPoint, bool useRust)
 static bool
 HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
-
-	return !hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 }
 
 static bool
 HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
-
-	return inMemory;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
 }
 
 static bool
 HnswShouldIncrementEfForExistingElement(bool existing, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
-
-	return existing;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
 }
 
 static bool
 HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
-
-	return !inMemory;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
 }
 
 static bool
 HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(false, level, entryLevel);
-
-	return level > entryLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_entry_point_kernel(false, level, entryLevel);
 }
 
 static bool
 HnswShouldHavePointerHashForBase(bool hasBasePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
-
-	return !hasBasePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
 }
 
 static bool
@@ -1118,19 +1098,15 @@ HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust)
 static bool
 HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
-
-	return heaptidsLength != 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
 }
 
 static bool
 HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
-
-	return heaptidsLength != 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
 }
 
 static bool
@@ -1150,10 +1126,8 @@ HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int ele
 static bool
 HnswShouldHaveSkipElementForExisting(bool existing, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
-
-	return existing;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
 }
 
 static bool
@@ -1165,10 +1139,8 @@ HnswShouldUseSkipElementForExisting(bool existing, bool useRust)
 static bool
 HnswShouldHaveSkipElementPointerFlag(bool hasSkipElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
-
-	return hasSkipElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
 }
 
 static bool
@@ -1180,10 +1152,8 @@ HnswShouldHaveSkipElementPointer(HnswElement skipElement, bool useRust)
 static bool
 HnswShouldHaveDefaultSkipElementTid(bool hasSkipElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
-
-	return !hasSkipElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
 }
 
 static bool
