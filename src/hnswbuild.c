@@ -346,10 +346,8 @@ FlushPages(HnswBuildState * buildstate)
 static bool
 HnswCanAddDuplicateHeapTid(int heaptidsLength, int maxHeaptids, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
-
-	return heaptidsLength < maxHeaptids;
+	(void) useRust;
+	return vector_rust_hnsw_can_add_duplicate_heap_tid_kernel(heaptidsLength, maxHeaptids);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_can_add_duplicate_heap_tid);
@@ -375,10 +373,8 @@ vector_rust_hnsw_can_add_duplicate_heap_tid(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveStopDuplicateSearchOnValueMismatch(bool valuesEqual, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
-
-	return !valuesEqual;
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
 }
 
 static bool
@@ -504,10 +500,8 @@ vector_rust_hnsw_should_skip_update_graph_for_duplicate(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_flush_graph_kernel((int64) memoryUsed, (int64) memoryTotal);
-
-	return memoryUsed >= memoryTotal;
+	(void) useRust;
+	return vector_rust_hnsw_should_flush_graph_kernel((int64) memoryUsed, (int64) memoryTotal);
 }
 
 static bool
@@ -610,10 +604,8 @@ vector_rust_hnsw_should_have_ondisk_phase(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveSkipInvalidIndexValue(bool indexValueFormed, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(indexValueFormed);
-
-	return !indexValueFormed;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(indexValueFormed);
 }
 
 static bool
@@ -661,10 +653,8 @@ vector_rust_hnsw_should_have_skip_invalid_index_value(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveHigherBuildEntrypointLevel(int elementLevel, int entryLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryLevel);
-
-	return elementLevel > entryLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryLevel);
 }
 
 static bool
@@ -686,10 +676,8 @@ HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLev
 static bool
 HnswShouldHaveDefaultEntryLevel(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
-
-	return !hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 }
 
 static bool
@@ -701,10 +689,8 @@ HnswShouldUseDefaultEntryLevel(bool hasEntryPoint, bool useRust)
 static bool
 HnswShouldHaveBuildPointerFlag(bool hasPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
-
-	return hasPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 }
 
 static bool
