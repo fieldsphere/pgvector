@@ -79,6 +79,7 @@ static bool HnswShouldSetInitialOnDiskInsertPage(bool hasInsertPage, bool hasSpa
 static bool HnswShouldUseBuildPathForOnDiskAppendPage(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust);
+static bool HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust);
 static bool HnswShouldHaveOnDiskInsertSpaceFlag(bool hasSpace, bool useRust);
 static bool HnswShouldHaveOnDiskItemPointerFlag(bool itemPointerValid, bool useRust);
@@ -2256,12 +2257,18 @@ vector_rust_hnsw_should_use_build_path_for_ondisk_duplicate_page(PG_FUNCTION_ARG
 }
 
 static bool
-HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust)
+HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject(bool building, bool useRust)
 {
 	if (useRust)
 		return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 
 	return !building;
+}
+
+static bool
+HnswShouldAbortOnDiskDuplicateSlotReject(bool building, bool useRust)
+{
+	return HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject(building, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_ondisk_duplicate_slot_reject);
@@ -2280,6 +2287,24 @@ vector_rust_hnsw_should_abort_ondisk_duplicate_slot_reject(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAbortOnDiskDuplicateSlotReject(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject);
+Datum
+vector_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject);
+Datum
+vector_rust_hnsw_should_have_nonbuilding_ondisk_duplicate_slot_reject(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject(building != 0, true));
 }
 
 static bool
