@@ -130,4 +130,38 @@ unlike($hnsw_build_c, qr/HnswShouldHaveNonConcurrentLockModes\(bool isConcurrent
 unlike($hnsw_build_c, qr/HnswShouldHaveNonConcurrentSnapshot\(bool isConcurrent, bool useRust\)\s*\{[^}]*return !isConcurrent;/s,
 	"legacy C non-concurrent-snapshot fallback removed");
 
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_return_after_duplicate_insert_kernel\(/,
+	"hnswbuild.c uses rust duplicate-insert-return kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel\(/,
+	"hnswbuild.c uses rust duplicate-update-skip kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_use_ondisk_phase_kernel\(/,
+	"hnswbuild.c uses rust ondisk-phase kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_flush_pages_in_build_kernel\(/,
+	"hnswbuild.c uses rust flush-pages-in-build kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_flush_graph_pages_at_end_kernel\(/,
+	"hnswbuild.c uses rust flush-graph-pages-at-end kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_end_parallel_build_kernel\(/,
+	"hnswbuild.c uses rust end-parallel-build kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_scan_heap_for_build_kernel\(/,
+	"hnswbuild.c uses rust scan-heap-for-build kernel");
+ok($hnsw_build_c =~ /vector_rust_hnsw_should_use_parallel_heap_scan_kernel\(/,
+	"hnswbuild.c uses rust parallel-heap-scan kernel");
+
+unlike($hnsw_build_c, qr/return duplicateInserted;/,
+	"legacy C duplicate-insert-return fallback removed");
+unlike($hnsw_build_c, qr/return duplicateFound;/,
+	"legacy C duplicate-update-skip fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveOnDiskPhase\(bool graphFlushed, bool useRust\)\s*\{[^}]*return graphFlushed;/s,
+	"legacy C ondisk-phase fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveFlushPagesInBuild\(bool graphFlushed, bool useRust\)\s*\{[^}]*return !graphFlushed;/s,
+	"legacy C flush-pages-in-build fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveFlushGraphPagesAtEnd\(bool graphFlushed, bool useRust\)\s*\{[^}]*return !graphFlushed;/s,
+	"legacy C flush-graph-pages-at-end fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveEndParallelBuild\(bool hasLeader, bool useRust\)\s*\{[^}]*return hasLeader;/s,
+	"legacy C end-parallel-build fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveScanHeapForBuild\(bool hasHeap, bool useRust\)\s*\{[^}]*return hasHeap;/s,
+	"legacy C scan-heap-for-build fallback removed");
+unlike($hnsw_build_c, qr/HnswShouldHaveParallelHeapScan\(bool hasLeader, bool useRust\)\s*\{[^}]*return hasLeader;/s,
+	"legacy C parallel-heap-scan fallback removed");
+
 done_testing();
