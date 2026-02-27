@@ -2780,6 +2780,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_deleted_vacuum_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_deleted_vacuum_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_deleted_vacuum_tuple(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_deleted_vacuum_tuple'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_stop_vacuum_heaptid_scan(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_stop_vacuum_heaptid_scan'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7185,6 +7195,18 @@ my $mark_vacuum_tuple_deleted_parity = $node->safe_psql("postgres", q{
 	) AS t(first_heaptid_valid);
 });
 is($mark_vacuum_tuple_deleted_parity, "t\nt\nt\nt");
+
+my $have_deleted_vacuum_tuple_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_deleted_vacuum_tuple(first_heaptid_valid) =
+		   rust_hnsw_should_have_deleted_vacuum_tuple(first_heaptid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(first_heaptid_valid);
+});
+is($have_deleted_vacuum_tuple_parity, "t\nt\nt\nt");
 
 my $stop_vacuum_heaptid_scan_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_stop_vacuum_heaptid_scan(heaptid_valid) =
