@@ -729,12 +729,18 @@ vector_rust_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRejectNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+HnswShouldHaveNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel(snapshotIsMVCC);
 
 	return !snapshotIsMVCC;
+}
+
+static bool
+HnswShouldRejectNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+{
+	return HnswShouldHaveNonMVCCSnapshot(snapshotIsMVCC, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_non_mvcc_snapshot);
@@ -753,6 +759,24 @@ vector_rust_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
 	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRejectNonMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_mvcc_snapshot);
+Datum
+vector_hnsw_should_have_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonMVCCSnapshot(snapshotIsMVCC != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_mvcc_snapshot);
+Datum
+vector_rust_hnsw_should_have_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonMVCCSnapshot(snapshotIsMVCC != 0, true));
 }
 
 static bool
