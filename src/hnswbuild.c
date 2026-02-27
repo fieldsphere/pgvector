@@ -81,6 +81,7 @@
 static bool HnswShouldFallbackWithoutWorkers(int workersLaunched, bool useRust);
 static bool HnswShouldLeaderParticipate(bool leaderParticipates, bool useRust);
 static bool HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust);
+static bool HnswShouldHaveDebugQueryStringFlag(bool hasDebugQueryString, bool useRust);
 static bool HnswShouldHaveBuildPointerFlag(bool hasPointer, bool useRust);
 static bool HnswShouldHaveBuildPointer(const void *pointer, bool useRust);
 static bool HnswShouldHaveDebugQueryString(const char *debugQueryString, bool useRust);
@@ -2191,6 +2192,12 @@ vector_rust_hnsw_should_have_leader_participate(PG_FUNCTION_ARGS)
 static bool
 HnswShouldUseDebugQueryString(bool hasDebugQueryString, bool useRust)
 {
+	return HnswShouldHaveDebugQueryStringFlag(hasDebugQueryString, useRust);
+}
+
+static bool
+HnswShouldHaveDebugQueryStringFlag(bool hasDebugQueryString, bool useRust)
+{
 	if (useRust)
 		return vector_rust_hnsw_should_use_debug_query_string_kernel(hasDebugQueryString);
 
@@ -2239,6 +2246,24 @@ vector_rust_hnsw_should_have_debug_query_string(PG_FUNCTION_ARGS)
 	const char *debugQueryString = hasDebugQueryString != 0 ? "debug" : NULL;
 
 	PG_RETURN_BOOL(HnswShouldHaveDebugQueryString(debugQueryString, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_debug_query_string_flag);
+Datum
+vector_hnsw_should_have_debug_query_string_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDebugQueryString = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDebugQueryStringFlag(hasDebugQueryString != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_debug_query_string_flag);
+Datum
+vector_rust_hnsw_should_have_debug_query_string_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDebugQueryString = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDebugQueryStringFlag(hasDebugQueryString != 0, true));
 }
 
 static bool
