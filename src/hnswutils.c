@@ -1319,37 +1319,29 @@ HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust)
 static bool
 HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(matchesPrunedNeighbor);
-
-	return matchesPrunedNeighbor;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(matchesPrunedNeighbor);
 }
 
 static bool
 HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasPrunedCandidate);
-
-	return !hasPrunedCandidate;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasPrunedCandidate);
 }
 
 static bool
 HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(countedCandidate);
-
-	return countedCandidate;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(countedCandidate);
 }
 
 static bool
 HnswShouldHaveSearchElementPointerFlag(bool hasSearchElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSearchElement);
-
-	return hasSearchElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSearchElement);
 }
 
 static bool
@@ -1361,46 +1353,36 @@ HnswShouldHaveSearchElementPointer(HnswElement searchElement, bool useRust)
 static bool
 HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSearchElement);
-
-	return !hasSearchElement;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSearchElement);
 }
 
 static bool
 HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(slotIndex < slotLimit);
-
-	return slotIndex < slotLimit;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(slotIndex < slotLimit);
 }
 
 static bool
 HnswShouldCapElementLevel(int level, int maxLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(level, maxLevel);
-
-	return level > maxLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_excess_dimensions_kernel(level, maxLevel);
 }
 
 static bool
 HnswShouldUseIndexOptions(bool hasOptions, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
-
-	return hasOptions;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
 }
 
 static bool
 HnswShouldHaveIndexOptionsFlag(bool hasOptions, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
-
-	return hasOptions;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
 }
 
 static bool
@@ -1412,28 +1394,22 @@ HnswShouldHaveIndexOptions(HnswOptions *opts, bool useRust)
 static bool
 HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcOid);
-
-	return !hasProcOid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcOid);
 }
 
 static bool
 HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
-
-	return hasAllocator;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
 }
 
 static bool
 HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
-
-	return hasAllocator;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
 }
 
 static bool
@@ -1445,19 +1421,15 @@ HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust)
 static bool
 HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
-
-	return hasMOutputPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
 }
 
 static bool
 HnswShouldHaveMetaOutputPointerFlag(bool hasOutputPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOutputPointer);
-
-	return hasOutputPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOutputPointer);
 }
 
 static bool
@@ -1481,10 +1453,8 @@ HnswShouldHaveMetaMOutputPointer(int *m, bool useRust)
 static bool
 HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
-
-	return hasEntrypointOutputPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
 }
 
 static bool
