@@ -1072,6 +1072,24 @@ vector_rust_hnsw_should_have_ondisk_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_flag);
+Datum
+vector_hnsw_should_have_ondisk_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_entrypoint_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_value);
 Datum
 vector_hnsw_should_have_ondisk_entrypoint_value(PG_FUNCTION_ARGS)
@@ -1112,6 +1130,24 @@ vector_rust_hnsw_should_have_ondisk_entrypoint_pointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointPointerFlag(hasEntryPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_pointer_flag);
+Datum
+vector_hnsw_should_have_ondisk_entrypoint_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointPointerFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_entrypoint_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_entrypoint_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointPointerFlag(hasEntryPoint != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_pointer_value);
 Datum
 vector_hnsw_should_have_ondisk_entrypoint_pointer_value(PG_FUNCTION_ARGS)
@@ -1146,6 +1182,24 @@ vector_hnsw_should_have_ondisk_pointer(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_pointer);
 Datum
 vector_rust_hnsw_should_have_ondisk_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_pointer_flag);
+Datum
+vector_hnsw_should_have_ondisk_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_pointer_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasPointer = PG_GETARG_INT32(0);
 
