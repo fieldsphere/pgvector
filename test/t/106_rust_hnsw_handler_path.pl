@@ -120,6 +120,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_entrypoint_for_scan_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_entrypoint_for_scan_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_entrypoint_for_scan_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_entrypoint_for_scan_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_scan_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_scan_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -680,6 +690,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_provided_rescan_key_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_provided_rescan_key_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_provided_rescan_key_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_provided_rescan_key_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_scan_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_scan_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -707,6 +727,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_provided_orderby_data(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_provided_orderby_data'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_provided_orderby_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_provided_orderby_pointer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_provided_orderby_pointer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_provided_orderby_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5145,6 +5175,18 @@ my $have_entrypoint_for_scan_parity = $node->safe_psql("postgres", q{
 });
 is($have_entrypoint_for_scan_parity, "t\nt\nt\nt");
 
+my $have_entrypoint_for_scan_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_entrypoint_for_scan_pointer(has_entrypoint) =
+		   rust_hnsw_should_have_entrypoint_for_scan_pointer(has_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_entrypoint);
+});
+is($have_entrypoint_for_scan_pointer_parity, "t\nt\nt\nt");
+
 my $have_scan_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_scan_entrypoint(has_entrypoint) =
 		   rust_hnsw_should_have_scan_entrypoint(has_entrypoint)
@@ -5817,6 +5859,18 @@ my $have_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
 });
 is($have_provided_rescan_key_array_parity, "t\nt\nt\nt");
 
+my $have_provided_rescan_key_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_provided_rescan_key_pointer(has_key_array) =
+		   rust_hnsw_should_have_provided_rescan_key_pointer(has_key_array)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_key_array);
+});
+is($have_provided_rescan_key_pointer_parity, "t\nt\nt\nt");
+
 my $have_scan_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_scan_pointer(has_pointer) =
 		   rust_hnsw_should_have_scan_pointer(has_pointer)
@@ -5852,6 +5906,18 @@ my $have_provided_orderby_data_parity = $node->safe_psql("postgres", q{
 	) AS t(has_orderby_data);
 });
 is($have_provided_orderby_data_parity, "t\nt\nt\nt");
+
+my $have_provided_orderby_pointer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_provided_orderby_pointer(has_orderby_data) =
+		   rust_hnsw_should_have_provided_orderby_pointer(has_orderby_data)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_orderby_data);
+});
+is($have_provided_orderby_pointer_parity, "t\nt\nt\nt");
 
 my $use_null_scan_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_null_scan_value(orderby_is_null) =
