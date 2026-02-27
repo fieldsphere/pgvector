@@ -453,12 +453,18 @@ vector_rust_hnsw_should_skip_update_graph_for_duplicate(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
+HnswShouldHaveFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_flush_graph_kernel((int64) memoryUsed, (int64) memoryTotal);
 
 	return memoryUsed >= memoryTotal;
+}
+
+static bool
+HnswShouldFlushGraph(Size memoryUsed, Size memoryTotal, bool useRust)
+{
+	return HnswShouldHaveFlushGraph(memoryUsed, memoryTotal, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flush_graph);
@@ -479,6 +485,26 @@ vector_rust_hnsw_should_flush_graph(PG_FUNCTION_ARGS)
 	int64		memoryTotal = PG_GETARG_INT64(1);
 
 	PG_RETURN_BOOL(HnswShouldFlushGraph((Size) memoryUsed, (Size) memoryTotal, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_flush_graph);
+Datum
+vector_hnsw_should_have_flush_graph(PG_FUNCTION_ARGS)
+{
+	int64		memoryUsed = PG_GETARG_INT64(0);
+	int64		memoryTotal = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveFlushGraph((Size) memoryUsed, (Size) memoryTotal, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_flush_graph);
+Datum
+vector_rust_hnsw_should_have_flush_graph(PG_FUNCTION_ARGS)
+{
+	int64		memoryUsed = PG_GETARG_INT64(0);
+	int64		memoryTotal = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveFlushGraph((Size) memoryUsed, (Size) memoryTotal, true));
 }
 
 static bool
