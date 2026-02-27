@@ -2914,10 +2914,8 @@ vector_rust_hnsw_should_have_ondisk_neighbor_tid_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveInvalidOnDiskNeighborSlotFlag(bool slotTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(slotTidValid);
-
-	return !slotTidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(slotTidValid);
 }
 
 static bool
@@ -3007,10 +3005,8 @@ vector_rust_hnsw_should_have_invalid_ondisk_neighbor_slot_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveInvalidOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
-
-	return !neighborTidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
 }
 
 static bool
@@ -3076,10 +3072,8 @@ vector_rust_hnsw_should_have_invalid_ondisk_neighbor_tid_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveMatchingNeighborBlockFlag(bool hasMatchingBlock, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingBlock);
-
-	return hasMatchingBlock;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingBlock);
 }
 
 static bool
@@ -3091,10 +3085,8 @@ HnswShouldHaveMatchingNeighborBlock(int32 indextidBlkno, int32 elementBlkno, boo
 static bool
 HnswShouldHaveMatchingNeighborOffsetFlag(bool hasMatchingOffset, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingOffset);
-
-	return hasMatchingOffset;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingOffset);
 }
 
 static bool
@@ -3213,10 +3205,8 @@ vector_rust_hnsw_should_have_matching_neighbor_offset_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldSkipNonElementTuple(bool isElementTuple, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
-
-	return !isElementTuple;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_tuple);
@@ -3240,10 +3230,8 @@ vector_rust_hnsw_should_skip_non_element_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReuseDeletedOnDiskTuple(bool isDeleted, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(isDeleted);
-
-	return isDeleted;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(isDeleted);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_deleted_ondisk_tuple);
@@ -3267,10 +3255,8 @@ vector_rust_hnsw_should_reuse_deleted_ondisk_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveOnDiskBlockFlag(bool blockValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(blockValid);
-
-	return blockValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(blockValid);
 }
 
 static bool
@@ -3420,10 +3406,8 @@ HnswShouldSetInsertPageWhenMissing(bool hasInsertPage, bool useRust)
 static bool
 HnswShouldHaveMissingOnDiskInsertPage(bool hasInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasInsertPage);
-
-	return !hasInsertPage;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasInsertPage);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_insert_page_when_missing);
@@ -3465,28 +3449,22 @@ vector_rust_hnsw_should_have_missing_ondisk_insert_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReuseElementBufferForNeighborPage(bool samePage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
-
-	return samePage;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
 }
 
 static bool
 HnswShouldHaveMatchingNeighborPageFlag(bool hasMatchingPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingPage);
-
-	return hasMatchingPage;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingPage);
 }
 
 static bool
 HnswShouldHaveMatchingNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
-
-	return HnswShouldHaveMatchingNeighborPageFlag(neighborPage == elementPage, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
 }
 
 static bool
@@ -3498,19 +3476,15 @@ HnswShouldMatchNeighborPages(int32 neighborPage, int32 elementPage, bool useRust
 static bool
 HnswShouldHaveMatchingOnDiskBufferFlag(bool hasMatchingBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingBuffer);
-
-	return hasMatchingBuffer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMatchingBuffer);
 }
 
 static bool
 HnswShouldHaveMatchingOnDiskBuffer(int32 leftBuffer, int32 rightBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
-
-	return HnswShouldHaveMatchingOnDiskBufferFlag(leftBuffer == rightBuffer, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
 }
 
 static bool
