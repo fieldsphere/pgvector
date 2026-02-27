@@ -2500,6 +2500,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_path_for_ondisk_add_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_path_for_ondisk_add_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_path_for_ondisk_add_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_path_for_ondisk_add_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_commit_ondisk_page_append_with_buffer_dirty(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_commit_ondisk_page_append_with_buffer_dirty'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7059,6 +7069,18 @@ my $use_build_path_for_ondisk_add_element_parity = $node->safe_psql("postgres", 
 	) AS t(building);
 });
 is($use_build_path_for_ondisk_add_element_parity, "t\nt\nt\nt");
+
+my $have_build_path_for_ondisk_add_element_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_path_for_ondisk_add_element(building) =
+		   rust_hnsw_should_have_build_path_for_ondisk_add_element(building)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(building);
+});
+is($have_build_path_for_ondisk_add_element_parity, "t\nt\nt\nt");
 
 my $commit_ondisk_page_append_with_buffer_dirty_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_commit_ondisk_page_append_with_buffer_dirty(building) =
