@@ -25,10 +25,8 @@
 static bool
 HnswShouldHaveDeletedTidPointerFlag(bool hasDeletedTid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDeletedTid);
-
-	return hasDeletedTid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDeletedTid);
 }
 
 static bool
@@ -150,10 +148,8 @@ vector_rust_hnsw_should_have_deleted_tid_pointer_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveContinuableVacuumBlockScan(bool hasValidBlock, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
-
-	return hasValidBlock;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
 }
 
 static bool
@@ -201,10 +197,8 @@ vector_rust_hnsw_should_have_continuable_vacuum_block_scan(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumBlockFlag(bool blockValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(blockValid);
-
-	return blockValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(blockValid);
 }
 
 static bool
@@ -306,10 +300,8 @@ DeletedContains(tidhash_hash * deleted, ItemPointer indextid)
 static bool
 HnswShouldHaveInvalidVacuumLastItemFlag(bool lastItemValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_repair_underfilled_layer0_kernel(lastItemValid);
-
-	return !lastItemValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_repair_underfilled_layer0_kernel(lastItemValid);
 }
 
 static bool
@@ -399,10 +391,8 @@ vector_rust_hnsw_should_have_invalid_vacuum_last_item_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonElementVacuumTuple(bool isElementTuple, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
-
-	return !isElementTuple;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
 }
 
 static bool
@@ -450,10 +440,8 @@ vector_rust_hnsw_should_have_non_element_vacuum_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveProcessableVacuumHeapTids(bool firstHeaptidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(firstHeaptidValid);
-
-	return firstHeaptidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(firstHeaptidValid);
 }
 
 static bool
@@ -501,10 +489,8 @@ vector_rust_hnsw_should_have_processable_vacuum_heaptids(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumItemPointerFlag(bool itemPointerValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemPointerValid);
-
-	return itemPointerValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemPointerValid);
 }
 
 static bool
@@ -618,10 +604,8 @@ vector_rust_hnsw_should_have_vacuum_tuple_heaptid_pointer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDeletedVacuumTuple(bool firstHeaptidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(firstHeaptidValid);
-
-	return !firstHeaptidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(firstHeaptidValid);
 }
 
 static bool
@@ -669,10 +653,8 @@ vector_rust_hnsw_should_have_deleted_vacuum_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveInvalidVacuumHeapTid(bool heapTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
-
-	return !heapTidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
 }
 
 static bool
@@ -768,10 +750,8 @@ vector_rust_hnsw_should_have_vacuum_heaptid_scan_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveVacuumHeapTidRemoval(bool callbackRemove, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(callbackRemove);
-
-	return callbackRemove;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(callbackRemove);
 }
 
 static bool
@@ -819,10 +799,8 @@ vector_rust_hnsw_should_have_vacuum_heaptid_removal(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveCompactedVacuumHeapTids(bool itemUpdated, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemUpdated);
-
-	return itemUpdated;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(itemUpdated);
 }
 
 static bool
@@ -870,10 +848,8 @@ vector_rust_hnsw_should_have_compacted_vacuum_heaptids(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFinishedVacuumPageUpdate(bool pageUpdated, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(pageUpdated);
-
-	return pageUpdated;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(pageUpdated);
 }
 
 static bool
@@ -921,10 +897,8 @@ vector_rust_hnsw_should_have_finished_vacuum_page_update(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveInvalidVacuumNeighborTid(bool neighborTidValid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
-
-	return !neighborTidValid;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidValid);
 }
 
 static bool
@@ -1020,10 +994,8 @@ vector_rust_hnsw_should_have_vacuum_neighbor_tid_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDeletedVacuumNeighbor(bool isDeletedNeighbor, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedNeighbor);
-
-	return isDeletedNeighbor;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedNeighbor);
 }
 
 static bool
