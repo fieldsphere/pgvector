@@ -350,6 +350,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_strict_scan_mode(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_strict_scan_mode'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_strict_scan_mode(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_strict_scan_mode'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_flush_graph_pages_at_end(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_flush_graph_pages_at_end'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4530,6 +4540,18 @@ my $use_strict_scan_mode_parity = $node->safe_psql("postgres", q{
 	) AS t(iterative_scan_mode);
 });
 is($use_strict_scan_mode_parity, "t\nt\nt\nt");
+
+my $have_strict_scan_mode_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_strict_scan_mode(iterative_scan_mode) =
+		   rust_hnsw_should_have_strict_scan_mode(iterative_scan_mode)
+	FROM (VALUES
+		(0),
+		(1),
+		(2),
+		(2)
+	) AS t(iterative_scan_mode);
+});
+is($have_strict_scan_mode_parity, "t\nt\nt\nt");
 
 my $flush_graph_pages_at_end_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_flush_graph_pages_at_end(graph_flushed) =
