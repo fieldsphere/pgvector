@@ -4610,6 +4610,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_missing_vacuum_stats_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_missing_vacuum_stats_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_missing_vacuum_stats_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_missing_vacuum_stats_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_vacuum_stats(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_stats'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4617,6 +4627,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_stats(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_stats'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_stats_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_stats_value'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_stats_value(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_stats_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -10684,6 +10704,18 @@ my $have_missing_vacuum_stats_parity = $node->safe_psql("postgres", q{
 });
 is($have_missing_vacuum_stats_parity, "t\nt\nt\nt");
 
+my $have_missing_vacuum_stats_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_missing_vacuum_stats_value(has_stats) =
+		   rust_hnsw_should_have_missing_vacuum_stats_value(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_stats);
+});
+is($have_missing_vacuum_stats_value_parity, "t\nt\nt\nt");
+
 my $have_vacuum_stats_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_stats(has_stats) =
 		   rust_hnsw_should_have_vacuum_stats(has_stats)
@@ -10695,6 +10727,18 @@ my $have_vacuum_stats_parity = $node->safe_psql("postgres", q{
 	) AS t(has_stats);
 });
 is($have_vacuum_stats_parity, "t\nt\nt\nt");
+
+my $have_vacuum_stats_value_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_stats_value(has_stats) =
+		   rust_hnsw_should_have_vacuum_stats_value(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_stats);
+});
+is($have_vacuum_stats_value_parity, "t\nt\nt\nt");
 
 my $skip_vacuum_cleanup_analyze_only_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_vacuum_cleanup_analyze_only(analyze_only) =
