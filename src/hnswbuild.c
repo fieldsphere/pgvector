@@ -2640,10 +2640,8 @@ vector_rust_hnsw_should_have_log_leader_progress(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectVarbitType(Oid typeOid, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_varbit_type_kernel((int32) typeOid, (int32) VARBITOID);
-
-	return typeOid == VARBITOID;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_varbit_type_kernel((int32) typeOid, (int32) VARBITOID);
 }
 
 static bool
@@ -2691,10 +2689,8 @@ vector_rust_hnsw_should_have_reject_varbit_type(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectMissingDimensions(int32 dimensions, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_missing_dimensions_kernel(dimensions);
-
-	return dimensions < 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_missing_dimensions_kernel(dimensions);
 }
 
 static bool
@@ -2742,10 +2738,8 @@ vector_rust_hnsw_should_have_reject_missing_dimensions(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectExcessDimensions(int32 dimensions, int32 maxDimensions, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(dimensions, maxDimensions);
-
-	return dimensions > maxDimensions;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_excess_dimensions_kernel(dimensions, maxDimensions);
 }
 
 static bool
@@ -2797,10 +2791,8 @@ vector_rust_hnsw_should_have_reject_excess_dimensions(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveRejectLowEfConstruction(int32 efConstruction, int32 m, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_low_ef_construction_kernel(efConstruction, m);
-
-	return efConstruction < 2 * m;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_low_ef_construction_kernel(efConstruction, m);
 }
 
 static bool
@@ -2852,10 +2844,8 @@ vector_rust_hnsw_should_have_reject_low_ef_construction(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveTreatForkAsInit(int32 forkNum, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(forkNum, 0, INIT_FORKNUM, 0);
-
-	return forkNum == INIT_FORKNUM;
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(forkNum, 0, INIT_FORKNUM, 0);
 }
 
 static bool
@@ -2903,10 +2893,8 @@ vector_rust_hnsw_should_have_treat_fork_as_init(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveWriteWalPage(bool needsWal, bool isInitFork, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_write_wal_page_kernel(needsWal, isInitFork);
-
-	return needsWal || isInitFork;
+	(void) useRust;
+	return vector_rust_hnsw_should_write_wal_page_kernel(needsWal, isInitFork);
 }
 
 static bool
@@ -2958,10 +2946,8 @@ vector_rust_hnsw_should_have_write_wal_page(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveSkipNullBuildTuple(bool isNull, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_null_build_tuple_kernel(isNull);
-
-	return isNull;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_null_build_tuple_kernel(isNull);
 }
 
 static bool
@@ -3009,10 +2995,8 @@ vector_rust_hnsw_should_have_skip_null_build_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveUpdateProgressAfterInsert(bool tupleInserted, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleInserted);
-
-	return tupleInserted;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleInserted);
 }
 
 static bool
