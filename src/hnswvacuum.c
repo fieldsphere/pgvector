@@ -1013,9 +1013,15 @@ HnswShouldHaveMissingVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
 }
 
 static bool
-HnswShouldUseDefaultVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
+HnswShouldHaveDefaultVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
 {
 	return HnswShouldHaveMissingVacuumEntrypointTid(hasEntryPoint, useRust);
+}
+
+static bool
+HnswShouldUseDefaultVacuumEntrypointTid(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveDefaultVacuumEntrypointTid(hasEntryPoint, useRust);
 }
 
 static int32
@@ -1120,6 +1126,24 @@ vector_rust_hnsw_should_use_default_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
 	int32		hasEntryPoint = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultVacuumEntrypointTid(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_vacuum_entrypoint_tid);
+Datum
+vector_hnsw_should_have_default_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultVacuumEntrypointTid(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_vacuum_entrypoint_tid);
+Datum
+vector_rust_hnsw_should_have_default_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultVacuumEntrypointTid(hasEntryPoint != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_vacuum_entrypoint_tid);
