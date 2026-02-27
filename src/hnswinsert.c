@@ -2925,6 +2925,24 @@ vector_rust_hnsw_should_have_ondisk_itempointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskItemPointerFlag(itemPointerValid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_itempointer_flag);
+Datum
+vector_hnsw_should_have_ondisk_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskItemPointerFlag(itemPointerValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_itempointer_flag);
+Datum
+vector_rust_hnsw_should_have_ondisk_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskItemPointerFlag(itemPointerValid != 0, true));
+}
+
 static bool
 HnswShouldHaveOnDiskNeighborTidFlag(bool neighborTidValid, bool useRust)
 {
@@ -4332,6 +4350,15 @@ vector_hnsw_should_have_nonnegative_update_index(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndex(updateIndex, false));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_negative_update_index);
+Datum
+vector_hnsw_should_have_non_negative_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndex(updateIndex, false));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonnegative_update_index);
 Datum
 vector_rust_hnsw_should_have_nonnegative_update_index(PG_FUNCTION_ARGS)
@@ -4339,6 +4366,33 @@ vector_rust_hnsw_should_have_nonnegative_update_index(PG_FUNCTION_ARGS)
 	int32		updateIndex = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndex(updateIndex, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_negative_update_index);
+Datum
+vector_rust_hnsw_should_have_non_negative_update_index(PG_FUNCTION_ARGS)
+{
+	int32		updateIndex = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndex(updateIndex, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_negative_update_index_flag);
+Datum
+vector_hnsw_should_have_non_negative_update_index_flag(PG_FUNCTION_ARGS)
+{
+	int32		isNonNegative = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndexFlag(isNonNegative != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_negative_update_index_flag);
+Datum
+vector_rust_hnsw_should_have_non_negative_update_index_flag(PG_FUNCTION_ARGS)
+{
+	int32		isNonNegative = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonNegativeUpdateIndexFlag(isNonNegative != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_connection_from_candidate_index);
