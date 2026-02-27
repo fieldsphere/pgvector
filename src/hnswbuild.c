@@ -921,12 +921,18 @@ vector_rust_hnsw_should_have_flush_pages_in_build(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFlushGraphPagesAtEnd(bool graphFlushed, bool useRust)
+HnswShouldHaveFlushGraphPagesAtEnd(bool graphFlushed, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_flush_graph_pages_at_end_kernel(graphFlushed);
 
 	return !graphFlushed;
+}
+
+static bool
+HnswShouldFlushGraphPagesAtEnd(bool graphFlushed, bool useRust)
+{
+	return HnswShouldHaveFlushGraphPagesAtEnd(graphFlushed, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flush_graph_pages_at_end);
@@ -947,13 +953,37 @@ vector_rust_hnsw_should_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldFlushGraphPagesAtEnd(graphFlushed != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_flush_graph_pages_at_end);
+Datum
+vector_hnsw_should_have_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFlushGraphPagesAtEnd(graphFlushed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_flush_graph_pages_at_end);
+Datum
+vector_rust_hnsw_should_have_flush_graph_pages_at_end(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFlushGraphPagesAtEnd(graphFlushed != 0, true));
+}
+
 static bool
-HnswShouldBeginParallelBuild(int parallelWorkers, bool useRust)
+HnswShouldHaveBeginParallelBuild(int parallelWorkers, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_begin_parallel_build_kernel(parallelWorkers);
 
 	return parallelWorkers > 0;
+}
+
+static bool
+HnswShouldBeginParallelBuild(int parallelWorkers, bool useRust)
+{
+	return HnswShouldHaveBeginParallelBuild(parallelWorkers, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_begin_parallel_build);
@@ -974,13 +1004,37 @@ vector_rust_hnsw_should_begin_parallel_build(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldBeginParallelBuild(parallelWorkers, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_begin_parallel_build);
+Datum
+vector_hnsw_should_have_begin_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBeginParallelBuild(parallelWorkers, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_begin_parallel_build);
+Datum
+vector_rust_hnsw_should_have_begin_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		parallelWorkers = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBeginParallelBuild(parallelWorkers, true));
+}
+
 static bool
-HnswShouldEndParallelBuild(bool hasLeader, bool useRust)
+HnswShouldHaveEndParallelBuild(bool hasLeader, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_end_parallel_build_kernel(hasLeader);
 
 	return hasLeader;
+}
+
+static bool
+HnswShouldEndParallelBuild(bool hasLeader, bool useRust)
+{
+	return HnswShouldHaveEndParallelBuild(hasLeader, useRust);
 }
 
 static bool
@@ -1013,6 +1067,24 @@ vector_rust_hnsw_should_end_parallel_build(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldEndParallelBuild(hasLeader != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_end_parallel_build);
+Datum
+vector_hnsw_should_have_end_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEndParallelBuild(hasLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_end_parallel_build);
+Datum
+vector_rust_hnsw_should_have_end_parallel_build(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEndParallelBuild(hasLeader != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_leader);
 Datum
 vector_hnsw_should_have_build_leader(PG_FUNCTION_ARGS)
@@ -1032,12 +1104,18 @@ vector_rust_hnsw_should_have_build_leader(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldScanHeapForBuild(bool hasHeap, bool useRust)
+HnswShouldHaveScanHeapForBuild(bool hasHeap, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_scan_heap_for_build_kernel(hasHeap);
 
 	return hasHeap;
+}
+
+static bool
+HnswShouldScanHeapForBuild(bool hasHeap, bool useRust)
+{
+	return HnswShouldHaveScanHeapForBuild(hasHeap, useRust);
 }
 
 static bool
@@ -1068,6 +1146,24 @@ vector_rust_hnsw_should_scan_heap_for_build(PG_FUNCTION_ARGS)
 	int32		hasHeap = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldScanHeapForBuild(hasHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_heap_for_build);
+Datum
+vector_hnsw_should_have_scan_heap_for_build(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanHeapForBuild(hasHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_heap_for_build);
+Datum
+vector_rust_hnsw_should_have_scan_heap_for_build(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanHeapForBuild(hasHeap != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_heap);
