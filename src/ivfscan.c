@@ -47,19 +47,15 @@ CompareLists(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 static bool
 IvfflatChooseScanListCandidate(float8 distance, int listCount, int maxProbes, float8 maxDistance, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_choose_scan_list_candidate_kernel(distance, listCount, maxProbes, maxDistance);
-
-	return listCount < maxProbes || distance < maxDistance;
+	(void) useRust;
+	return vector_rust_ivfflat_choose_scan_list_candidate_kernel(distance, listCount, maxProbes, maxDistance);
 }
 
 static bool
 IvfflatShouldReuseScanSlot(int listCount, int maxProbes, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_reuse_scan_slot_kernel(listCount, maxProbes);
-
-	return listCount >= maxProbes;
+	(void) useRust;
+	return vector_rust_ivfflat_should_reuse_scan_slot_kernel(listCount, maxProbes);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_scan_list_candidate);
@@ -109,74 +105,46 @@ vector_rust_ivfflat_should_reuse_scan_slot(PG_FUNCTION_ARGS)
 static bool
 IvfflatShouldScanNextList(int listIndex, int maxProbes, int batchProbes, int probes, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_scan_next_list_kernel(listIndex, maxProbes, batchProbes, probes);
-
-	return listIndex < maxProbes && (batchProbes + 1) <= probes;
+	(void) useRust;
+	return vector_rust_ivfflat_should_scan_next_list_kernel(listIndex, maxProbes, batchProbes, probes);
 }
 
 static bool
 IvfflatShouldLoadMoreScanItems(int listIndex, int maxProbes, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_load_more_scan_items_kernel(listIndex, maxProbes);
-
-	return listIndex < maxProbes;
+	(void) useRust;
+	return vector_rust_ivfflat_should_load_more_scan_items_kernel(listIndex, maxProbes);
 }
 
 static bool
 IvfflatShouldVisitScanPage(BlockNumber page, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
-
-	return BlockNumberIsValid(page);
+	(void) useRust;
+	return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
 }
 
 static void
 IvfflatScanProbeLimits(int probes, int maxProbes, int lists, bool useRust, int *adjustedProbes, int *adjustedMaxProbes)
 {
-	if (useRust)
-	{
-		int32		rustProbes;
-		int32		rustMaxProbes;
+	int32		rustProbes;
+	int32		rustMaxProbes;
 
-		vector_rust_ivfflat_scan_probe_limits_kernel(probes, maxProbes, lists, &rustProbes, &rustMaxProbes);
-		*adjustedProbes = rustProbes;
-		*adjustedMaxProbes = rustMaxProbes;
-		return;
-	}
-
-	*adjustedProbes = probes;
-	*adjustedMaxProbes = maxProbes;
-
-	if (*adjustedProbes > lists)
-		*adjustedProbes = lists;
-
-	if (*adjustedMaxProbes > lists)
-		*adjustedMaxProbes = lists;
+	(void) useRust;
+	vector_rust_ivfflat_scan_probe_limits_kernel(probes, maxProbes, lists, &rustProbes, &rustMaxProbes);
+	*adjustedProbes = rustProbes;
+	*adjustedMaxProbes = rustMaxProbes;
 }
 
 static void
 IvfflatComputeScanLimits(int probes, int maxProbes, int lists, int iterativeScanMode, bool useRust, int *adjustedProbes, int *adjustedMaxProbes)
 {
-	if (useRust)
-	{
-		int32		rustProbes;
-		int32		rustMaxProbes;
+	int32		rustProbes;
+	int32		rustMaxProbes;
 
-		vector_rust_ivfflat_compute_scan_limits_kernel(probes, maxProbes, lists, iterativeScanMode, &rustProbes, &rustMaxProbes);
-		*adjustedProbes = rustProbes;
-		*adjustedMaxProbes = rustMaxProbes;
-		return;
-	}
-
-	if (iterativeScanMode != IVFFLAT_ITERATIVE_SCAN_OFF)
-		maxProbes = Max(maxProbes, probes);
-	else
-		maxProbes = probes;
-
-	IvfflatScanProbeLimits(probes, maxProbes, lists, false, adjustedProbes, adjustedMaxProbes);
+	(void) useRust;
+	vector_rust_ivfflat_compute_scan_limits_kernel(probes, maxProbes, lists, iterativeScanMode, &rustProbes, &rustMaxProbes);
+	*adjustedProbes = rustProbes;
+	*adjustedMaxProbes = rustMaxProbes;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_scan_next_list);
