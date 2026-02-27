@@ -1337,12 +1337,18 @@ vector_rust_hnsw_should_have_vacuum_entrypoint(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipNonElementMarkDeletedTuple(bool isElementTuple, bool useRust)
+HnswShouldHaveNonElementMarkDeletedTuple(bool isElementTuple, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isElementTuple);
 
 	return !isElementTuple;
+}
+
+static bool
+HnswShouldSkipNonElementMarkDeletedTuple(bool isElementTuple, bool useRust)
+{
+	return HnswShouldHaveNonElementMarkDeletedTuple(isElementTuple, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_markdeleted_tuple);
@@ -1361,6 +1367,24 @@ vector_rust_hnsw_should_skip_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
 	int32		isElementTuple = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipNonElementMarkDeletedTuple(isElementTuple != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_element_markdeleted_tuple);
+Datum
+vector_hnsw_should_have_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonElementMarkDeletedTuple(isElementTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_element_markdeleted_tuple);
+Datum
+vector_rust_hnsw_should_have_non_element_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonElementMarkDeletedTuple(isElementTuple != 0, true));
 }
 
 static bool
