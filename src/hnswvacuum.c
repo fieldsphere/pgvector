@@ -259,9 +259,15 @@ HnswShouldHaveInvalidVacuumLastItemFlag(bool lastItemValid, bool useRust)
 }
 
 static bool
-HnswShouldRepairUnderfilledLayer0(bool lastItemValid, bool useRust)
+HnswShouldHaveRepairUnderfilledLayer0(bool lastItemValid, bool useRust)
 {
 	return HnswShouldHaveInvalidVacuumLastItemFlag(lastItemValid, useRust);
+}
+
+static bool
+HnswShouldRepairUnderfilledLayer0(bool lastItemValid, bool useRust)
+{
+	return HnswShouldHaveRepairUnderfilledLayer0(lastItemValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_repair_underfilled_layer0);
@@ -280,6 +286,24 @@ vector_rust_hnsw_should_repair_underfilled_layer0(PG_FUNCTION_ARGS)
 	int32		lastItemValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRepairUnderfilledLayer0(lastItemValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_repair_underfilled_layer0);
+Datum
+vector_hnsw_should_have_repair_underfilled_layer0(PG_FUNCTION_ARGS)
+{
+	int32		lastItemValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRepairUnderfilledLayer0(lastItemValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_repair_underfilled_layer0);
+Datum
+vector_rust_hnsw_should_have_repair_underfilled_layer0(PG_FUNCTION_ARGS)
+{
+	int32		lastItemValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRepairUnderfilledLayer0(lastItemValid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_vacuum_last_item);
