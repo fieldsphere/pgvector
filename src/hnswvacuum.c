@@ -1977,12 +1977,18 @@ vector_rust_hnsw_should_reject_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldInitVacuumStatsWhenMissing(bool hasStats, bool useRust)
+HnswShouldHaveMissingVacuumStatsFlag(bool hasStats, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasStats);
 
 	return !hasStats;
+}
+
+static bool
+HnswShouldInitVacuumStatsWhenMissing(bool hasStats, bool useRust)
+{
+	return HnswShouldHaveMissingVacuumStatsFlag(hasStats, useRust);
 }
 
 static bool
@@ -2013,6 +2019,24 @@ vector_rust_hnsw_should_init_vacuum_stats_when_missing(PG_FUNCTION_ARGS)
 	int32		hasStats = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldInitVacuumStatsWhenMissing(hasStats != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_vacuum_stats);
+Datum
+vector_hnsw_should_have_missing_vacuum_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumStatsFlag(hasStats != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_vacuum_stats);
+Datum
+vector_rust_hnsw_should_have_missing_vacuum_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingVacuumStatsFlag(hasStats != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_stats);
@@ -2063,10 +2087,7 @@ vector_rust_hnsw_should_skip_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReturnNullVacuumCleanupStats(bool hasStats, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasStats);
-
-	return !hasStats;
+	return HnswShouldHaveMissingVacuumStatsFlag(hasStats, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_null_vacuum_cleanup_stats);
