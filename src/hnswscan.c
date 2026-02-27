@@ -648,12 +648,18 @@ vector_rust_hnsw_should_use_strict_scan_mode(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldHandleEmptyWorkList(int workListLength, bool useRust)
+HnswShouldHaveEmptyWorkList(int workListLength, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_handle_empty_work_list_kernel(workListLength);
 
 	return workListLength == 0;
+}
+
+static bool
+HnswShouldHandleEmptyWorkList(int workListLength, bool useRust)
+{
+	return HnswShouldHaveEmptyWorkList(workListLength, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_handle_empty_work_list);
@@ -672,6 +678,24 @@ vector_rust_hnsw_should_handle_empty_work_list(PG_FUNCTION_ARGS)
 	int32		workListLength = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHandleEmptyWorkList(workListLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_work_list);
+Datum
+vector_hnsw_should_have_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyWorkList(workListLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_work_list);
+Datum
+vector_rust_hnsw_should_have_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyWorkList(workListLength, true));
 }
 
 static bool
