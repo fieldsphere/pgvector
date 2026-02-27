@@ -595,13 +595,19 @@ HnswShouldHaveHigherBuildEntrypointLevel(int elementLevel, int entryLevel, bool 
 }
 
 static bool
-HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust)
+HnswShouldHaveUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
 			HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, true);
 
 	return entryPointIsNull || HnswShouldHaveHigherBuildEntrypointLevel(elementLevel, entryLevel, false);
+}
+
+static bool
+HnswShouldUpdateEntryPoint(bool entryPointIsNull, int elementLevel, int entryLevel, bool useRust)
+{
+	return HnswShouldHaveUpdateEntryPoint(entryPointIsNull, elementLevel, entryLevel, useRust);
 }
 
 static bool
@@ -675,6 +681,28 @@ vector_rust_hnsw_should_update_entry_point(PG_FUNCTION_ARGS)
 	int32		entryLevel = PG_GETARG_INT32(2);
 
 	PG_RETURN_BOOL(HnswShouldUpdateEntryPoint(entryPointIsNull != 0, elementLevel, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_entry_point);
+Datum
+vector_hnsw_should_have_update_entry_point(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+	int32		elementLevel = PG_GETARG_INT32(1);
+	int32		entryLevel = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateEntryPoint(entryPointIsNull != 0, elementLevel, entryLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_entry_point);
+Datum
+vector_rust_hnsw_should_have_update_entry_point(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+	int32		elementLevel = PG_GETARG_INT32(1);
+	int32		entryLevel = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateEntryPoint(entryPointIsNull != 0, elementLevel, entryLevel, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_build_entrypoint_level);
@@ -770,12 +798,18 @@ vector_rust_hnsw_should_have_build_pointer(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldFlushPagesInBuild(bool graphFlushed, bool useRust)
+HnswShouldHaveFlushPagesInBuild(bool graphFlushed, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_flush_pages_in_build_kernel(graphFlushed);
 
 	return !graphFlushed;
+}
+
+static bool
+HnswShouldFlushPagesInBuild(bool graphFlushed, bool useRust)
+{
+	return HnswShouldHaveFlushPagesInBuild(graphFlushed, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_flush_pages_in_build);
@@ -794,6 +828,24 @@ vector_rust_hnsw_should_flush_pages_in_build(PG_FUNCTION_ARGS)
 	int32		graphFlushed = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldFlushPagesInBuild(graphFlushed != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_flush_pages_in_build);
+Datum
+vector_hnsw_should_have_flush_pages_in_build(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFlushPagesInBuild(graphFlushed != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_flush_pages_in_build);
+Datum
+vector_rust_hnsw_should_have_flush_pages_in_build(PG_FUNCTION_ARGS)
+{
+	int32		graphFlushed = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFlushPagesInBuild(graphFlushed != 0, true));
 }
 
 static bool
