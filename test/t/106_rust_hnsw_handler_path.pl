@@ -4190,6 +4190,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_scan_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_scan_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_scan_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_scan_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_vacuum_block_number(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_block_number'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4227,6 +4237,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_tuple_heaptid(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_tuple_heaptid'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_tuple_heaptid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_tuple_heaptid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_tuple_heaptid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_tuple_heaptid_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4390,6 +4410,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_neighbor_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_neighbor_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_neighbor_tid_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_neighbor_tid_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_flag_deleted_vacuum_neighbor(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_flag_deleted_vacuum_neighbor'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4520,6 +4550,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_element_without_updates_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_element_without_updates_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_element_without_updates_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_element_without_updates_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_promote_vacuum_entrypoint(integer, integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_promote_vacuum_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4597,6 +4637,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_highest_point_block(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_highest_point_block'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_highest_point_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_highest_point_block_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_highest_point_block_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_highest_point_block_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4730,6 +4780,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_highest_point_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_highest_point_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_highest_point_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_highest_point_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_process_nonnull_vacuum_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_process_nonnull_vacuum_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4850,6 +4910,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_insert_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_insert_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_insert_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_insert_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_missing_vacuum_insert_page(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_missing_vacuum_insert_page'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4857,6 +4927,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_missing_vacuum_insert_page(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_missing_vacuum_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_missing_vacuum_insert_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_missing_vacuum_insert_page_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_missing_vacuum_insert_page_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_missing_vacuum_insert_page_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -4917,6 +4997,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_non_entrypoint(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_non_entrypoint'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_non_entrypoint_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_non_entrypoint_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_non_entrypoint_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_non_entrypoint_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5020,6 +5110,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_missing_vacuum_stats_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_missing_vacuum_stats_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_missing_vacuum_stats_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_missing_vacuum_stats_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_missing_vacuum_stats_value(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_missing_vacuum_stats_value'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5037,6 +5137,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_vacuum_stats(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_stats'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_vacuum_stats_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_vacuum_stats_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_vacuum_stats_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_vacuum_stats_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -10670,6 +10780,18 @@ my $have_vacuum_scan_block_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_scan_block_parity, "t\nt\nt\nt");
 
+my $have_vacuum_scan_block_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_scan_block_flag(has_valid_block) =
+		   rust_hnsw_should_have_vacuum_scan_block_flag(has_valid_block)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_valid_block);
+});
+is($have_vacuum_scan_block_flag_parity, "t\nt\nt\nt");
+
 my $have_vacuum_block_number_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_block_number(block_number) =
 		   rust_hnsw_should_have_vacuum_block_number(block_number)
@@ -10717,6 +10839,18 @@ my $have_vacuum_tuple_heaptid_parity = $node->safe_psql("postgres", q{
 	) AS t(first_heaptid_valid);
 });
 is($have_vacuum_tuple_heaptid_parity, "t\nt\nt\nt");
+
+my $have_vacuum_tuple_heaptid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_tuple_heaptid_flag(first_heaptid_valid) =
+		   rust_hnsw_should_have_vacuum_tuple_heaptid_flag(first_heaptid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(first_heaptid_valid);
+});
+is($have_vacuum_tuple_heaptid_flag_parity, "t\nt\nt\nt");
 
 my $have_vacuum_itempointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_itempointer(itempointer_valid) =
@@ -10910,6 +11044,18 @@ my $have_vacuum_neighbor_tid_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_neighbor_tid_parity, "t\nt\nt\nt");
 
+my $have_vacuum_neighbor_tid_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_neighbor_tid_flag(neighbor_tid_valid) =
+		   rust_hnsw_should_have_vacuum_neighbor_tid_flag(neighbor_tid_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(neighbor_tid_valid);
+});
+is($have_vacuum_neighbor_tid_flag_parity, "t\nt\nt\nt");
+
 my $flag_deleted_vacuum_neighbor_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_flag_deleted_vacuum_neighbor(is_deleted_neighbor) =
 		   rust_hnsw_should_flag_deleted_vacuum_neighbor(is_deleted_neighbor)
@@ -11066,6 +11212,18 @@ my $have_vacuum_element_without_updates_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_element_without_updates_parity, "t\nt\nt\nt");
 
+my $have_vacuum_element_without_updates_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_element_without_updates_flag(needs_updated) =
+		   rust_hnsw_should_have_vacuum_element_without_updates_flag(needs_updated)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(needs_updated);
+});
+is($have_vacuum_element_without_updates_flag_parity, "t\nt\nt\nt");
+
 my $promote_vacuum_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_promote_vacuum_entrypoint(entry_point_is_null, element_level, entry_level) =
 		   rust_hnsw_should_promote_vacuum_entrypoint(entry_point_is_null, element_level, entry_level)
@@ -11161,6 +11319,18 @@ my $have_vacuum_highest_point_block_parity = $node->safe_psql("postgres", q{
 	) AS t(highest_point_valid);
 });
 is($have_vacuum_highest_point_block_parity, "t\nt\nt\nt");
+
+my $have_vacuum_highest_point_block_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_highest_point_block_flag(highest_point_valid) =
+		   rust_hnsw_should_have_vacuum_highest_point_block_flag(highest_point_valid)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(highest_point_valid);
+});
+is($have_vacuum_highest_point_block_flag_parity, "t\nt\nt\nt");
 
 my $have_vacuum_highest_point_block_number_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_highest_point_block_number(block_number) =
@@ -11318,6 +11488,18 @@ my $have_vacuum_highest_point_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_highest_point_parity, "t\nt\nt\nt");
 
+my $have_vacuum_highest_point_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_highest_point_flag(has_highest_point) =
+		   rust_hnsw_should_have_vacuum_highest_point_flag(has_highest_point)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_highest_point);
+});
+is($have_vacuum_highest_point_flag_parity, "t\nt\nt\nt");
+
 my $process_nonnull_vacuum_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_process_nonnull_vacuum_entrypoint(has_entrypoint) =
 		   rust_hnsw_should_process_nonnull_vacuum_entrypoint(has_entrypoint)
@@ -11462,6 +11644,18 @@ my $have_vacuum_insert_page_parity = $node->safe_psql("postgres", q{
 });
 is($have_vacuum_insert_page_parity, "t\nt\nt\nt");
 
+my $have_vacuum_insert_page_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_insert_page_flag(has_insert_page) =
+		   rust_hnsw_should_have_vacuum_insert_page_flag(has_insert_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_insert_page);
+});
+is($have_vacuum_insert_page_flag_parity, "t\nt\nt\nt");
+
 my $have_missing_vacuum_insert_page_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_missing_vacuum_insert_page(has_insert_page) =
 		   rust_hnsw_should_have_missing_vacuum_insert_page(has_insert_page)
@@ -11473,6 +11667,18 @@ my $have_missing_vacuum_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(has_insert_page);
 });
 is($have_missing_vacuum_insert_page_parity, "t\nt\nt\nt");
+
+my $have_missing_vacuum_insert_page_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_missing_vacuum_insert_page_flag(has_insert_page) =
+		   rust_hnsw_should_have_missing_vacuum_insert_page_flag(has_insert_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_insert_page);
+});
+is($have_missing_vacuum_insert_page_flag_parity, "t\nt\nt\nt");
 
 my $skip_non_element_repairgraph_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_skip_non_element_repairgraph_tuple(is_element_tuple) =
@@ -11545,6 +11751,18 @@ my $have_vacuum_non_entrypoint_parity = $node->safe_psql("postgres", q{
 	) AS t(is_entrypoint);
 });
 is($have_vacuum_non_entrypoint_parity, "t\nt\nt\nt");
+
+my $have_vacuum_non_entrypoint_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_non_entrypoint_flag(is_entrypoint) =
+		   rust_hnsw_should_have_vacuum_non_entrypoint_flag(is_entrypoint)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_entrypoint);
+});
+is($have_vacuum_non_entrypoint_flag_parity, "t\nt\nt\nt");
 
 my $have_higher_vacuum_element_level_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_higher_vacuum_element_level(element_level, highest_level) =
@@ -11666,6 +11884,18 @@ my $have_missing_vacuum_stats_parity = $node->safe_psql("postgres", q{
 });
 is($have_missing_vacuum_stats_parity, "t\nt\nt\nt");
 
+my $have_missing_vacuum_stats_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_missing_vacuum_stats_flag(has_stats) =
+		   rust_hnsw_should_have_missing_vacuum_stats_flag(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_stats);
+});
+is($have_missing_vacuum_stats_flag_parity, "t\nt\nt\nt");
+
 my $have_missing_vacuum_stats_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_missing_vacuum_stats_value(has_stats) =
 		   rust_hnsw_should_have_missing_vacuum_stats_value(has_stats)
@@ -11689,6 +11919,18 @@ my $have_vacuum_stats_parity = $node->safe_psql("postgres", q{
 	) AS t(has_stats);
 });
 is($have_vacuum_stats_parity, "t\nt\nt\nt");
+
+my $have_vacuum_stats_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_vacuum_stats_flag(has_stats) =
+		   rust_hnsw_should_have_vacuum_stats_flag(has_stats)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_stats);
+});
+is($have_vacuum_stats_flag_parity, "t\nt\nt\nt");
 
 my $have_vacuum_stats_value_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_vacuum_stats_value(has_stats) =
