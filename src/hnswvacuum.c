@@ -1801,9 +1801,15 @@ vector_rust_hnsw_should_have_markdeleted_version_beyond_max(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipNonElementRepairGraphTuple(bool isElementTuple, bool useRust)
+HnswShouldHaveNonElementRepairGraphTuple(bool isElementTuple, bool useRust)
 {
 	return HnswShouldSkipNonElementVacuumTuple(isElementTuple, useRust);
+}
+
+static bool
+HnswShouldSkipNonElementRepairGraphTuple(bool isElementTuple, bool useRust)
+{
+	return HnswShouldHaveNonElementRepairGraphTuple(isElementTuple, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_non_element_repairgraph_tuple);
@@ -1822,6 +1828,24 @@ vector_rust_hnsw_should_skip_non_element_repairgraph_tuple(PG_FUNCTION_ARGS)
 	int32		isElementTuple = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipNonElementRepairGraphTuple(isElementTuple != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_element_repairgraph_tuple);
+Datum
+vector_hnsw_should_have_non_element_repairgraph_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonElementRepairGraphTuple(isElementTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_element_repairgraph_tuple);
+Datum
+vector_rust_hnsw_should_have_non_element_repairgraph_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isElementTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonElementRepairGraphTuple(isElementTuple != 0, true));
 }
 
 static bool
