@@ -1072,6 +1072,28 @@ vector_rust_hnsw_should_have_ondisk_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointFlag(hasEntryPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_value);
+Datum
+vector_hnsw_should_have_ondisk_entrypoint_value(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypoint(entryPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_entrypoint_value);
+Datum
+vector_rust_hnsw_should_have_ondisk_entrypoint_value(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypoint(entryPoint, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_pointer);
 Datum
 vector_hnsw_should_have_ondisk_entrypoint_pointer(PG_FUNCTION_ARGS)
@@ -1090,6 +1112,28 @@ vector_rust_hnsw_should_have_ondisk_entrypoint_pointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointPointerFlag(hasEntryPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_entrypoint_pointer_value);
+Datum
+vector_hnsw_should_have_ondisk_entrypoint_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointPointer(entryPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_entrypoint_pointer_value);
+Datum
+vector_rust_hnsw_should_have_ondisk_entrypoint_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskEntrypointPointer(entryPoint, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_pointer);
 Datum
 vector_hnsw_should_have_ondisk_pointer(PG_FUNCTION_ARGS)
@@ -1106,6 +1150,28 @@ vector_rust_hnsw_should_have_ondisk_pointer(PG_FUNCTION_ARGS)
 	int32		hasPointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_ondisk_pointer_value);
+Datum
+vector_hnsw_should_have_ondisk_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+	const char *mockPointer = "pointer";
+	const void *pointer = hasPointer != 0 ? (const void *) mockPointer : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointer(pointer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_ondisk_pointer_value);
+Datum
+vector_rust_hnsw_should_have_ondisk_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+	const char *mockPointer = "pointer";
+	const void *pointer = hasPointer != 0 ? (const void *) mockPointer : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveOnDiskPointer(pointer, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_ondisk_entry_level);
