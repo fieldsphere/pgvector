@@ -2410,6 +2410,166 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_skip_lower_level_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_skip_lower_level_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_skip_lower_level_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_skip_lower_level_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_skip_lower_level_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_skip_lower_level_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_skip_lower_level_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_skip_lower_level_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_keep_pruned_connection(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_keep_pruned_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_keep_pruned_connection(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_keep_pruned_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_keep_pruned_connection(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_keep_pruned_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_keep_pruned_connection(integer, integer, integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_keep_pruned_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_set_pruned_from_array(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_set_pruned_from_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_set_pruned_from_array(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_set_pruned_from_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_set_pruned_from_array(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_set_pruned_from_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_set_pruned_from_array(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_set_pruned_from_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_track_discarded_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_track_discarded_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_track_discarded_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_track_discarded_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_track_discarded_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_track_discarded_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_track_discarded_candidates(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_track_discarded_candidates'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_track_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_track_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_track_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_track_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_track_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_track_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_track_update_index(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_track_update_index'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_process_pruned_candidate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_process_pruned_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_process_pruned_candidate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_process_pruned_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_process_pruned_candidate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_process_pruned_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_process_pruned_candidate(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_process_pruned_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_trim_candidate_list(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_trim_candidate_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_trim_candidate_list(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_trim_candidate_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_trim_candidate_list(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_trim_candidate_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_trim_candidate_list(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_trim_candidate_list'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_always_add_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_always_add_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_always_add_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_always_add_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_always_add_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_always_add_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_always_add_candidate(integer, integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_always_add_candidate'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_append_closer_candidate(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_append_closer_candidate'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7434,6 +7594,198 @@ my $have_append_neighbor_without_prune_parity = $node->safe_psql("postgres", q{
 	) AS t(neighbors_length, max_neighbors);
 });
 is($have_append_neighbor_without_prune_parity, "t\nt\nt\nt");
+
+my $skip_lower_level_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_skip_lower_level_candidate(candidate_level, search_level) =
+		   rust_hnsw_should_skip_lower_level_candidate(candidate_level, search_level)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(3, 5)
+	) AS t(candidate_level, search_level);
+});
+is($skip_lower_level_candidate_parity, "t\nt\nt\nt");
+
+my $have_skip_lower_level_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_skip_lower_level_candidate(candidate_level, search_level) =
+		   rust_hnsw_should_have_skip_lower_level_candidate(candidate_level, search_level)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(3, 5)
+	) AS t(candidate_level, search_level);
+});
+is($have_skip_lower_level_candidate_parity, "t\nt\nt\nt");
+
+my $keep_pruned_connection_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_keep_pruned_connection(wdoff, wdlen, result_length, max_neighbors) =
+		   rust_hnsw_should_keep_pruned_connection(wdoff, wdlen, result_length, max_neighbors)
+	FROM (VALUES
+		(0, 1, 0, 1),
+		(1, 1, 0, 1),
+		(0, 2, 1, 1),
+		(1, 3, 0, 2)
+	) AS t(wdoff, wdlen, result_length, max_neighbors);
+});
+is($keep_pruned_connection_parity, "t\nt\nt\nt");
+
+my $have_keep_pruned_connection_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_keep_pruned_connection(wdoff, wdlen, result_length, max_neighbors) =
+		   rust_hnsw_should_have_keep_pruned_connection(wdoff, wdlen, result_length, max_neighbors)
+	FROM (VALUES
+		(0, 1, 0, 1),
+		(1, 1, 0, 1),
+		(0, 2, 1, 1),
+		(1, 3, 0, 2)
+	) AS t(wdoff, wdlen, result_length, max_neighbors);
+});
+is($have_keep_pruned_connection_parity, "t\nt\nt\nt");
+
+my $set_pruned_from_array_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_set_pruned_from_array(wdoff, wdlen) =
+		   rust_hnsw_should_set_pruned_from_array(wdoff, wdlen)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(1, 3)
+	) AS t(wdoff, wdlen);
+});
+is($set_pruned_from_array_parity, "t\nt\nt\nt");
+
+my $have_set_pruned_from_array_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_set_pruned_from_array(wdoff, wdlen) =
+		   rust_hnsw_should_have_set_pruned_from_array(wdoff, wdlen)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(1, 3)
+	) AS t(wdoff, wdlen);
+});
+is($have_set_pruned_from_array_parity, "t\nt\nt\nt");
+
+my $track_discarded_candidates_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_track_discarded_candidates(has_discarded_heap) =
+		   rust_hnsw_should_track_discarded_candidates(has_discarded_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_discarded_heap);
+});
+is($track_discarded_candidates_parity, "t\nt\nt\nt");
+
+my $have_track_discarded_candidates_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_track_discarded_candidates(has_discarded_heap) =
+		   rust_hnsw_should_have_track_discarded_candidates(has_discarded_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_discarded_heap);
+});
+is($have_track_discarded_candidates_parity, "t\nt\nt\nt");
+
+my $track_update_index_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_track_update_index(has_update_index_pointer) =
+		   rust_hnsw_should_track_update_index(has_update_index_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_update_index_pointer);
+});
+is($track_update_index_parity, "t\nt\nt\nt");
+
+my $have_track_update_index_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_track_update_index(has_update_index_pointer) =
+		   rust_hnsw_should_have_track_update_index(has_update_index_pointer)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_update_index_pointer);
+});
+is($have_track_update_index_parity, "t\nt\nt\nt");
+
+my $process_pruned_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_process_pruned_candidate(has_pruned_candidate) =
+		   rust_hnsw_should_process_pruned_candidate(has_pruned_candidate)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pruned_candidate);
+});
+is($process_pruned_candidate_parity, "t\nt\nt\nt");
+
+my $have_process_pruned_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_process_pruned_candidate(has_pruned_candidate) =
+		   rust_hnsw_should_have_process_pruned_candidate(has_pruned_candidate)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_pruned_candidate);
+});
+is($have_process_pruned_candidate_parity, "t\nt\nt\nt");
+
+my $trim_candidate_list_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_trim_candidate_list(candidate_count, ef_value) =
+		   rust_hnsw_should_trim_candidate_list(candidate_count, ef_value)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(5, 3)
+	) AS t(candidate_count, ef_value);
+});
+is($trim_candidate_list_parity, "t\nt\nt\nt");
+
+my $have_trim_candidate_list_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_trim_candidate_list(candidate_count, ef_value) =
+		   rust_hnsw_should_have_trim_candidate_list(candidate_count, ef_value)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(5, 3)
+	) AS t(candidate_count, ef_value);
+});
+is($have_trim_candidate_list_parity, "t\nt\nt\nt");
+
+my $always_add_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_always_add_candidate(candidate_count, ef_value) =
+		   rust_hnsw_should_always_add_candidate(candidate_count, ef_value)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(5, 3)
+	) AS t(candidate_count, ef_value);
+});
+is($always_add_candidate_parity, "t\nt\nt\nt");
+
+my $have_always_add_candidate_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_always_add_candidate(candidate_count, ef_value) =
+		   rust_hnsw_should_have_always_add_candidate(candidate_count, ef_value)
+	FROM (VALUES
+		(0, 1),
+		(1, 1),
+		(2, 1),
+		(5, 3)
+	) AS t(candidate_count, ef_value);
+});
+is($have_always_add_candidate_parity, "t\nt\nt\nt");
 
 my $append_closer_candidate_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_append_closer_candidate(is_closer) =
