@@ -933,29 +933,23 @@ HnswInsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heaptid
 static bool
 HnswShouldHaveHigherOnDiskEntrypointLevel(int32 elementLevel, int32 entryLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryLevel);
-
-	return elementLevel > entryLevel;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_entry_point_kernel(false, elementLevel, entryLevel);
 }
 
 static bool
 HnswShouldUpdateEntryPointOnDisk(bool entryPointIsNull, int32 elementLevel, int32 entryLevel, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
-			HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, true);
-
-	return entryPointIsNull || HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(entryPointIsNull) ||
+		HnswShouldHaveHigherOnDiskEntrypointLevel(elementLevel, entryLevel, true);
 }
 
 static bool
 HnswShouldHaveDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
-
-	return !hasEntryPoint;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
 }
 
 static bool
@@ -967,10 +961,8 @@ HnswShouldUseDefaultOnDiskEntryLevel(bool hasEntryPoint, bool useRust)
 static bool
 HnswShouldHaveOnDiskPointerFlag(bool hasPointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
-
-	return hasPointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
 }
 
 static bool
@@ -1267,10 +1259,8 @@ vector_rust_hnsw_should_have_default_ondisk_entry_level(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveValidInsertIndexValueFlag(bool hasValidIndexValue, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidIndexValue);
-
-	return hasValidIndexValue;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidIndexValue);
 }
 
 static bool
@@ -1342,19 +1332,15 @@ vector_rust_hnsw_should_have_valid_insert_index_value_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveOnDiskValueMismatchFlag(bool valuesMismatch, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(valuesMismatch);
-
-	return valuesMismatch;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(valuesMismatch);
 }
 
 static bool
 HnswShouldHaveOnDiskValueMismatch(bool valuesEqual, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
-
-	return HnswShouldHaveOnDiskValueMismatchFlag(!valuesEqual, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_duplicate_search_on_value_mismatch_kernel(valuesEqual);
 }
 
 static bool
@@ -1420,10 +1406,8 @@ vector_rust_hnsw_should_have_ondisk_value_mismatch_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReturnAfterOnDiskDuplicateInsert(bool duplicateInserted, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_return_after_duplicate_insert_kernel(duplicateInserted);
-
-	return duplicateInserted;
+	(void) useRust;
+	return vector_rust_hnsw_should_return_after_duplicate_insert_kernel(duplicateInserted);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_after_ondisk_duplicate_insert);
@@ -1447,10 +1431,8 @@ vector_rust_hnsw_should_return_after_ondisk_duplicate_insert(PG_FUNCTION_ARGS)
 static bool
 HnswShouldSkipOnDiskGraphUpdateForDuplicate(bool duplicateFound, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(duplicateFound);
-
-	return duplicateFound;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(duplicateFound);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_ondisk_graph_update_for_duplicate);
@@ -1474,10 +1456,8 @@ vector_rust_hnsw_should_skip_ondisk_graph_update_for_duplicate(PG_FUNCTION_ARGS)
 static bool
 HnswShouldUpdateOnDiskInsertPage(bool hasNewInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasNewInsertPage);
-
-	return hasNewInsertPage;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasNewInsertPage);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_ondisk_insert_page);
