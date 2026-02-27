@@ -16,6 +16,7 @@ my $ivf_insert_path = "$repo_root/src/ivfinsert.c";
 my $ivf_scan_path = "$repo_root/src/ivfscan.c";
 my $ivf_core_path = "$repo_root/src/ivfflat.c";
 my $ivf_build_path = "$repo_root/src/ivfbuild.c";
+my $ivf_utils_path = "$repo_root/src/ivfutils.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -61,6 +62,10 @@ close($ivf_core_fh);
 open(my $ivf_build_fh, '<', $ivf_build_path) or die "could not open $ivf_build_path: $!";
 my $ivf_build_c = <$ivf_build_fh>;
 close($ivf_build_fh);
+
+open(my $ivf_utils_fh, '<', $ivf_utils_path) or die "could not open $ivf_utils_path: $!";
+my $ivf_utils_c = <$ivf_utils_fh>;
+close($ivf_utils_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -975,5 +980,45 @@ unlike($ivf_build_c, qr/IvfflatChooseBuildCenterCandidate\(float8 distance, floa
 	"legacy C ivfbuild-choose-build-center-candidate fallback removed");
 unlike($ivf_build_c, qr/IvfflatBuildShouldAppendPage\(int freeSpace, Size itemSize, bool useRust\)\s*\{[^}]*return freeSpace < itemSize;/s,
 	"legacy C ivfbuild-append-page fallback removed");
+
+ok($ivf_utils_c =~ /vector_rust_ivfflat_should_follow_insert_page_link_kernel\(/,
+	"ivfutils.c uses rust follow-insert-page-link kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_should_update_insert_page_kernel\(/,
+	"ivfutils.c uses rust update-insert-page kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_should_allow_insert_page_after_original_kernel\(/,
+	"ivfutils.c uses rust allow-insert-after-original kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_vector_sum_center_kernel\(/,
+	"ivfutils.c uses rust vector-sum-center kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_bit_sum_center_kernel\(/,
+	"ivfutils.c uses rust bit-sum-center kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_vector_update_center_kernel\(/,
+	"ivfutils.c uses rust vector-update-center kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_bit_update_center_kernel\(/,
+	"ivfutils.c uses rust bit-update-center kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_halfvec_update_center_kernel\(/,
+	"ivfutils.c uses rust halfvec-update-center kernel");
+ok($ivf_utils_c =~ /vector_rust_ivfflat_halfvec_sum_center_kernel\(/,
+	"ivfutils.c uses rust halfvec-sum-center kernel");
+
+unlike($ivf_utils_c, qr/IvfflatShouldWriteListInsertPage\(BlockNumber insertPage, BlockNumber currentInsertPage, bool useRust\)\s*\{.*?return BlockNumberIsValid\(insertPage\) && insertPage != currentInsertPage;/s,
+	"legacy C ivfutils-write-list-insert-page fallback removed");
+unlike($ivf_utils_c, qr/IvfflatShouldAllowInsertPageAfterOriginal\(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust\)\s*\{.*?return !BlockNumberIsValid\(originalInsertPage\) \|\| insertPage >= originalInsertPage;/s,
+	"legacy C ivfutils-allow-insert-after-original fallback removed");
+unlike($ivf_utils_c, qr/IvfflatShouldWriteListStartPage\(BlockNumber startPage, BlockNumber currentStartPage, bool useRust\)\s*\{.*?return BlockNumberIsValid\(startPage\) && startPage != currentStartPage;/s,
+	"legacy C ivfutils-write-list-start-page fallback removed");
+unlike($ivf_utils_c, qr/IvfflatVectorSumCenter\(ArrayType \*leftArray, ArrayType \*rightArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_vector_sum_center_kernel\([^;]*;.*?else.*?agg\[i\] \+= center\[i\];/s,
+	"legacy C ivfutils-vector-sum-center fallback removed");
+unlike($ivf_utils_c, qr/IvfflatBitSumCenter\(VarBit \*vec, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_bit_sum_center_kernel\([^;]*;.*?else.*?agg\[i\] \+= \(float\) \(\(\(VARBITS\(vec\)\[i \/ 8\]\) >> \(7 - \(i % 8\)\)\) & 0x01\);/s,
+	"legacy C ivfutils-bit-sum-center fallback removed");
+unlike($ivf_utils_c, qr/IvfflatVectorUpdateCenter\(ArrayType \*valuesArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_vector_update_center_kernel\([^;]*;.*?else.*?vec->x\[i\] = values\[i\];/s,
+	"legacy C ivfutils-vector-update-center fallback removed");
+unlike($ivf_utils_c, qr/IvfflatBitUpdateCenter\(ArrayType \*valuesArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_bit_update_center_kernel\([^;]*;.*?else.*?nx\[i \/ 8\] \|= \(values\[i\] > 0\.5 \? 1 : 0\) << \(7 - \(i % 8\)\);/s,
+	"legacy C ivfutils-bit-update-center fallback removed");
+unlike($ivf_utils_c, qr/IvfflatHalfvecUpdateCenter\(ArrayType \*valuesArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_halfvec_update_center_kernel\([^;]*;.*?else.*?vec->x\[i\] = Float4ToHalfUnchecked\(values\[i\]\);/s,
+	"legacy C ivfutils-halfvec-update-center fallback removed");
+unlike($ivf_utils_c, qr/IvfflatHalfvecSumCenter\(ArrayType \*leftArray, ArrayType \*rightArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_halfvec_update_center_kernel\([^;]*;.*?else.*?center->x\[i\] = Float4ToHalfUnchecked\(centerValues\[i\]\);/s,
+	"legacy C ivfutils-halfvec-sum-center-update fallback removed");
+unlike($ivf_utils_c, qr/IvfflatHalfvecSumCenter\(ArrayType \*leftArray, ArrayType \*rightArray, bool useRust\)\s*\{.*?if \(useRust\).*?vector_rust_ivfflat_halfvec_sum_center_kernel\([^;]*;.*?else.*?agg\[i\] \+= HalfToFloat4\(center->x\[i\]\);/s,
+	"legacy C ivfutils-halfvec-sum-center fallback removed");
 
 done_testing();
