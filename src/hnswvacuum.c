@@ -544,12 +544,18 @@ vector_rust_hnsw_should_have_vacuum_heaptid_scan_tid(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldRemoveVacuumHeapTid(bool callbackRemove, bool useRust)
+HnswShouldHaveVacuumHeapTidRemoval(bool callbackRemove, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(callbackRemove);
 
 	return callbackRemove;
+}
+
+static bool
+HnswShouldRemoveVacuumHeapTid(bool callbackRemove, bool useRust)
+{
+	return HnswShouldHaveVacuumHeapTidRemoval(callbackRemove, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_remove_vacuum_heaptid);
@@ -568,6 +574,24 @@ vector_rust_hnsw_should_remove_vacuum_heaptid(PG_FUNCTION_ARGS)
 	int32		callbackRemove = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldRemoveVacuumHeapTid(callbackRemove != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_heaptid_removal);
+Datum
+vector_hnsw_should_have_vacuum_heaptid_removal(PG_FUNCTION_ARGS)
+{
+	int32		callbackRemove = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHeapTidRemoval(callbackRemove != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_heaptid_removal);
+Datum
+vector_rust_hnsw_should_have_vacuum_heaptid_removal(PG_FUNCTION_ARGS)
+{
+	int32		callbackRemove = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHeapTidRemoval(callbackRemove != 0, true));
 }
 
 static bool
