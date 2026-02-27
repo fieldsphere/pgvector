@@ -3930,6 +3930,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_distinct_neighbor_page_space(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_distinct_neighbor_page_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_distinct_neighbor_page_space(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_distinct_neighbor_page_space'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_page_space_for_tuple(bigint, bigint) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_page_space_for_tuple'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -8905,6 +8915,18 @@ my $use_distinct_neighbor_page_space_parity = $node->safe_psql("postgres", q{
 	) AS t(same_page);
 });
 is($use_distinct_neighbor_page_space_parity, "t\nt\nt\nt");
+
+my $have_distinct_neighbor_page_space_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_distinct_neighbor_page_space(same_page) =
+		   rust_hnsw_should_have_distinct_neighbor_page_space(same_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(same_page);
+});
+is($have_distinct_neighbor_page_space_parity, "t\nt\nt\nt");
 
 my $have_page_space_for_tuple_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_page_space_for_tuple(page_free, tuple_size) =
