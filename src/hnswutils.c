@@ -5213,6 +5213,276 @@ vector_rust_hnsw_should_have_always_add_candidate(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_query_value_pointer_flag);
+Datum
+vector_hnsw_should_have_query_value_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_query_value_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_query_value_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_distance_pointer_flag);
+Datum
+vector_hnsw_should_have_element_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_distance_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_element_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_max_distance_pointer_flag);
+Datum
+vector_hnsw_should_have_element_max_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_max_distance_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_element_max_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_loaded_element_pointer_flag);
+Datum
+vector_hnsw_should_have_loaded_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLoadedElementPointerFlag(hasElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_loaded_element_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_loaded_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLoadedElementPointerFlag(hasElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_heaptid_itempointer_flag);
+Datum
+vector_hnsw_should_have_element_heaptid_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_heaptid_itempointer_flag);
+Datum
+vector_rust_hnsw_should_have_element_heaptid_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_consistent_neighbor_tuple_flag);
+Datum
+vector_hnsw_should_have_consistent_neighbor_tuple_flag(PG_FUNCTION_ARGS)
+{
+	int32		tupleConsistent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTupleFlag(tupleConsistent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_consistent_neighbor_tuple_flag);
+Datum
+vector_rust_hnsw_should_have_consistent_neighbor_tuple_flag(PG_FUNCTION_ARGS)
+{
+	int32		tupleConsistent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTupleFlag(tupleConsistent != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_discarded_heap_pointer_flag);
+Datum
+vector_hnsw_should_have_discarded_heap_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_discarded_heap_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_discarded_heap_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_tuple_counter_pointer_flag);
+Datum
+vector_hnsw_should_have_tuple_counter_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_tuple_counter_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_tuple_counter_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_hash_pointer_flag);
+Datum
+vector_hnsw_should_have_visited_hash_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_hash_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_visited_hash_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_base_pointer_flag);
+Datum
+vector_hnsw_should_have_visited_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_base_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_visited_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_index_pointer_flag);
+Datum
+vector_hnsw_should_have_search_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_index_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_search_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_entrypoint_pointer_flag);
+Datum
+vector_hnsw_should_have_search_entrypoint_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_entrypoint_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_search_entrypoint_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_element_pointer_flag);
+Datum
+vector_hnsw_should_have_skip_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementPointerFlag(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_element_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_skip_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementPointerFlag(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_sort_base_pointer_flag);
+Datum
+vector_hnsw_should_have_sort_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_sort_base_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_sort_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_element_pointer_flag);
+Datum
+vector_hnsw_should_have_search_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_element_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_search_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, true));
+}
+
 /*
  * Check if an element is closer to q than any element from R
  */
