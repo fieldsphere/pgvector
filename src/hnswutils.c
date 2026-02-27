@@ -740,7 +740,7 @@ HnswShouldUpdateElementMaxDistance(bool hasDistancePointer, bool hasMaxDistanceP
 }
 
 static bool
-HnswShouldUseDefaultDistanceValue(bool hasDistancePointer, bool useRust)
+HnswShouldHaveDefaultDistanceValue(bool hasDistancePointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDistancePointer);
@@ -749,12 +749,24 @@ HnswShouldUseDefaultDistanceValue(bool hasDistancePointer, bool useRust)
 }
 
 static bool
-HnswShouldUseDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
+HnswShouldUseDefaultDistanceValue(bool hasDistancePointer, bool useRust)
+{
+	return HnswShouldHaveDefaultDistanceValue(hasDistancePointer, useRust);
+}
+
+static bool
+HnswShouldHaveDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasMaxDistancePointer);
 
 	return !hasMaxDistancePointer;
+}
+
+static bool
+HnswShouldUseDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
+{
+	return HnswShouldHaveDefaultMaxDistanceValue(hasMaxDistancePointer, useRust);
 }
 
 static bool
@@ -1057,7 +1069,22 @@ HnswShouldHaveSearchIndexPointer(Relation index, bool useRust)
 }
 
 static bool
+HnswShouldHaveMemoryEntryDistance(bool inMemory, bool useRust)
+{
+	if (useRust)
+		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+
+	return inMemory;
+}
+
+static bool
 HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust)
+{
+	return HnswShouldHaveMemoryEntryDistance(inMemory, useRust);
+}
+
+static bool
+HnswShouldHaveInMemorySearchPath(bool inMemory, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
@@ -1068,10 +1095,7 @@ HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust)
 static bool
 HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
-
-	return inMemory;
+	return HnswShouldHaveInMemorySearchPath(inMemory, useRust);
 }
 
 static bool
@@ -1135,12 +1159,18 @@ HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust)
 }
 
 static bool
-HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust)
+HnswShouldHavePointerHashForBase(bool hasBasePointer, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
 
 	return !hasBasePointer;
+}
+
+static bool
+HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHavePointerHashForBase(hasBasePointer, useRust);
 }
 
 static bool
@@ -1176,12 +1206,18 @@ HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int ele
 }
 
 static bool
-HnswShouldUseSkipElementForExisting(bool existing, bool useRust)
+HnswShouldHaveSkipElementForExisting(bool existing, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
 
 	return existing;
+}
+
+static bool
+HnswShouldUseSkipElementForExisting(bool existing, bool useRust)
+{
+	return HnswShouldHaveSkipElementForExisting(existing, useRust);
 }
 
 static bool
@@ -1200,12 +1236,18 @@ HnswShouldHaveSkipElementPointer(HnswElement skipElement, bool useRust)
 }
 
 static bool
-HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust)
+HnswShouldHaveDefaultSkipElementTid(bool hasSkipElement, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
 
 	return !hasSkipElement;
+}
+
+static bool
+HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust)
+{
+	return HnswShouldHaveDefaultSkipElementTid(hasSkipElement, useRust);
 }
 
 static int
@@ -1593,9 +1635,15 @@ HnswShouldHaveMetaBlockNumber(BlockNumber blkno, bool useRust)
 }
 
 static bool
-HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+HnswShouldHaveMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
 {
 	return HnswShouldHaveMetaBlockFlag(hasValidEntryBlock, useRust);
+}
+
+static bool
+HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+{
+	return HnswShouldHaveMetaEntryBlock(hasValidEntryBlock, useRust);
 }
 
 static bool
@@ -1658,12 +1706,18 @@ HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust)
 }
 
 static bool
-HnswShouldUseBuildBufferPath(bool building, bool useRust)
+HnswShouldHaveBuildBufferPath(bool building, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(building);
 
 	return building;
+}
+
+static bool
+HnswShouldUseBuildBufferPath(bool building, bool useRust)
+{
+	return HnswShouldHaveBuildBufferPath(building, useRust);
 }
 
 static bool
@@ -1906,6 +1960,24 @@ vector_rust_hnsw_should_use_default_distance_value(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseDefaultDistanceValue(hasDistancePointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_distance_value);
+Datum
+vector_hnsw_should_have_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultDistanceValue(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_distance_value);
+Datum
+vector_rust_hnsw_should_have_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultDistanceValue(hasDistancePointer != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_max_distance_value);
 Datum
 vector_hnsw_should_use_default_max_distance_value(PG_FUNCTION_ARGS)
@@ -1922,6 +1994,24 @@ vector_rust_hnsw_should_use_default_max_distance_value(PG_FUNCTION_ARGS)
 	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_max_distance_value);
+Datum
+vector_hnsw_should_have_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultMaxDistanceValue(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_max_distance_value);
+Datum
+vector_rust_hnsw_should_have_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultMaxDistanceValue(hasMaxDistancePointer != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_loaded_element);
@@ -2454,6 +2544,24 @@ vector_rust_hnsw_should_use_memory_entry_distance(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseMemoryEntryDistance(inMemory != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_memory_entry_distance);
+Datum
+vector_hnsw_should_have_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMemoryEntryDistance(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_memory_entry_distance);
+Datum
+vector_rust_hnsw_should_have_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMemoryEntryDistance(inMemory != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_in_memory_search_path);
 Datum
 vector_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
@@ -2470,6 +2578,24 @@ vector_rust_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
 	int32		inMemory = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_in_memory_search_path);
+Datum
+vector_hnsw_should_have_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInMemorySearchPath(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_in_memory_search_path);
+Datum
+vector_rust_hnsw_should_have_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInMemorySearchPath(inMemory != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_index_pointer);
@@ -2618,6 +2744,24 @@ vector_rust_hnsw_should_use_pointer_hash_for_base(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUsePointerHashForBase(hasBasePointer != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pointer_hash_for_base);
+Datum
+vector_hnsw_should_have_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerHashForBase(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pointer_hash_for_base);
+Datum
+vector_rust_hnsw_should_have_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerHashForBase(hasBasePointer != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_keep_element_with_heaptids);
 Datum
 vector_hnsw_should_keep_element_with_heaptids(PG_FUNCTION_ARGS)
@@ -2698,6 +2842,24 @@ vector_rust_hnsw_should_use_skip_element_for_existing(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseSkipElementForExisting(existing != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_element_for_existing);
+Datum
+vector_hnsw_should_have_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementForExisting(existing != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_element_for_existing);
+Datum
+vector_rust_hnsw_should_have_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementForExisting(existing != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_skip_element_tid);
 Datum
 vector_hnsw_should_use_default_skip_element_tid(PG_FUNCTION_ARGS)
@@ -2714,6 +2876,24 @@ vector_rust_hnsw_should_use_default_skip_element_tid(PG_FUNCTION_ARGS)
 	int32		hasSkipElement = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseDefaultSkipElementTid(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_skip_element_tid);
+Datum
+vector_hnsw_should_have_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultSkipElementTid(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_skip_element_tid);
+Datum
+vector_rust_hnsw_should_have_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultSkipElementTid(hasSkipElement != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_element_pointer);
@@ -3352,6 +3532,24 @@ vector_rust_hnsw_should_use_meta_entry_block(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldUseMetaEntryBlock(hasValidEntryBlock != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_entry_block);
+Datum
+vector_hnsw_should_have_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntryBlock(hasValidEntryBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_entry_block);
+Datum
+vector_rust_hnsw_should_have_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntryBlock(hasValidEntryBlock != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_block_number);
 Datum
 vector_hnsw_should_have_meta_block_number(PG_FUNCTION_ARGS)
@@ -3482,6 +3680,24 @@ vector_rust_hnsw_should_use_build_buffer_path(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildBufferPath(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_buffer_path);
+Datum
+vector_hnsw_should_have_build_buffer_path(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildBufferPath(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_buffer_path);
+Datum
+vector_rust_hnsw_should_have_build_buffer_path(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildBufferPath(building != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_check_type_value);
