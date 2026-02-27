@@ -776,5 +776,35 @@ unlike($hnsw_utils_c, qr/HnswShouldHaveNewCandidatePointerFlag\(bool hasNewCandi
 	"legacy C new-candidate-pointer-flag fallback removed");
 unlike($hnsw_utils_c, qr/HnswShouldProcessNewCandidateBranch\(bool isNewCandidate, bool useRust\)\s*\{[^}]*return isNewCandidate;/s,
 	"legacy C process-new-candidate-branch fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldReplacePrunedNeighbor\(bool matchesPrunedNeighbor, bool useRust\)\s*\{[^}]*return matchesPrunedNeighbor;/s,
+	"legacy C replace-pruned-neighbor fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldAbortWithoutPrunedCandidate\(bool hasPrunedCandidate, bool useRust\)\s*\{[^}]*return !hasPrunedCandidate;/s,
+	"legacy C abort-without-pruned-candidate fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldEnqueueCountedCandidate\(bool countedCandidate, bool useRust\)\s*\{[^}]*return countedCandidate;/s,
+	"legacy C enqueue-counted-candidate fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveSearchElementPointerFlag\(bool hasSearchElement, bool useRust\)\s*\{[^}]*return hasSearchElement;/s,
+	"legacy C search-element-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldSkipMissingSearchElement\(bool hasSearchElement, bool useRust\)\s*\{[^}]*return !hasSearchElement;/s,
+	"legacy C skip-missing-search-element fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldCopyTupleSlotByIndex\(int slotIndex, int slotLimit, bool useRust\)\s*\{[^}]*return slotIndex < slotLimit;/s,
+	"legacy C copy-tuple-slot-by-index fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldCapElementLevel\(int level, int maxLevel, bool useRust\)\s*\{[^}]*return level > maxLevel;/s,
+	"legacy C cap-element-level fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldUseIndexOptions\(bool hasOptions, bool useRust\)\s*\{[^}]*return hasOptions;/s,
+	"legacy C use-index-options fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveIndexOptionsFlag\(bool hasOptions, bool useRust\)\s*\{[^}]*return hasOptions;/s,
+	"legacy C index-options-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldReturnMissingOptionalProc\(bool hasProcOid, bool useRust\)\s*\{[^}]*return !hasProcOid;/s,
+	"legacy C return-missing-optional-proc fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldUseCustomAllocator\(bool hasAllocator, bool useRust\)\s*\{[^}]*return hasAllocator;/s,
+	"legacy C use-custom-allocator fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveCustomAllocatorFlag\(bool hasAllocator, bool useRust\)\s*\{[^}]*return hasAllocator;/s,
+	"legacy C custom-allocator-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldLoadMetaM\(bool hasMOutputPointer, bool useRust\)\s*\{[^}]*return hasMOutputPointer;/s,
+	"legacy C load-meta-m fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveMetaOutputPointerFlag\(bool hasOutputPointer, bool useRust\)\s*\{[^}]*return hasOutputPointer;/s,
+	"legacy C meta-output-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldLoadMetaEntrypoint\(bool hasEntrypointOutputPointer, bool useRust\)\s*\{[^}]*return hasEntrypointOutputPointer;/s,
+	"legacy C load-meta-entrypoint fallback removed");
 
 done_testing();
