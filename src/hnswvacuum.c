@@ -769,14 +769,19 @@ HnswShouldHaveVacuumSkipEntrypoint(bool hasEntryPoint, bool useRust)
 }
 
 static bool
-HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust)
+HnswShouldHaveMatchingVacuumEntrypointElement(int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust)
 {
 	if (useRust)
-		return HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint, true) &&
-			vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, entryBlkno, entryOffno);
+		return vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, entryBlkno, entryOffno);
 
-	return HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint, false) &&
-		elementBlkno == entryBlkno && elementOffno == entryOffno;
+	return elementBlkno == entryBlkno && elementOffno == entryOffno;
+}
+
+static bool
+HnswShouldSkipVacuumEntryPointElement(bool hasEntryPoint, int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust)
+{
+	return HnswShouldHaveVacuumSkipEntrypoint(hasEntryPoint, useRust) &&
+		HnswShouldHaveMatchingVacuumEntrypointElement(elementBlkno, elementOffno, entryBlkno, entryOffno, useRust);
 }
 
 static bool
@@ -857,6 +862,30 @@ vector_rust_hnsw_should_skip_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
 	int32		entryOffno = PG_GETARG_INT32(4);
 
 	PG_RETURN_BOOL(HnswShouldSkipVacuumEntryPointElement(hasEntryPoint != 0, elementBlkno, elementOffno, entryBlkno, entryOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_vacuum_entrypoint_element);
+Datum
+vector_hnsw_should_have_matching_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
+{
+	int32		elementBlkno = PG_GETARG_INT32(0);
+	int32		elementOffno = PG_GETARG_INT32(1);
+	int32		entryBlkno = PG_GETARG_INT32(2);
+	int32		entryOffno = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointElement(elementBlkno, elementOffno, entryBlkno, entryOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_vacuum_entrypoint_element);
+Datum
+vector_rust_hnsw_should_have_matching_vacuum_entrypoint_element(PG_FUNCTION_ARGS)
+{
+	int32		elementBlkno = PG_GETARG_INT32(0);
+	int32		elementOffno = PG_GETARG_INT32(1);
+	int32		entryBlkno = PG_GETARG_INT32(2);
+	int32		entryOffno = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointElement(elementBlkno, elementOffno, entryBlkno, entryOffno, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_skip_entrypoint);
