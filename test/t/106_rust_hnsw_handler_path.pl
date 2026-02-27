@@ -2120,6 +2120,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_default_type_info(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_default_type_info'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_default_type_info(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_default_type_info'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_typeinfo_procinfo_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_typeinfo_procinfo_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -6856,6 +6866,18 @@ my $use_default_type_info_parity = $node->safe_psql("postgres", q{
 	) AS t(has_procinfo);
 });
 is($use_default_type_info_parity, "t\nt\nt\nt");
+
+my $have_default_type_info_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_default_type_info(has_procinfo) =
+		   rust_hnsw_should_have_default_type_info(has_procinfo)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_procinfo);
+});
+is($have_default_type_info_parity, "t\nt\nt\nt");
 
 my $have_typeinfo_procinfo_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_typeinfo_procinfo_pointer(has_procinfo) =
