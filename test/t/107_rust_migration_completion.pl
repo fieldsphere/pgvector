@@ -14,6 +14,7 @@ my $hnsw_utils_path = "$repo_root/src/hnswutils.c";
 my $ivf_vacuum_path = "$repo_root/src/ivfvacuum.c";
 my $ivf_insert_path = "$repo_root/src/ivfinsert.c";
 my $ivf_scan_path = "$repo_root/src/ivfscan.c";
+my $ivf_core_path = "$repo_root/src/ivfflat.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -51,6 +52,10 @@ close($ivf_insert_fh);
 open(my $ivf_scan_fh, '<', $ivf_scan_path) or die "could not open $ivf_scan_path: $!";
 my $ivf_scan_c = <$ivf_scan_fh>;
 close($ivf_scan_fh);
+
+open(my $ivf_core_fh, '<', $ivf_core_path) or die "could not open $ivf_core_path: $!";
+my $ivf_core_c = <$ivf_core_fh>;
+close($ivf_core_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -941,5 +946,19 @@ unlike($ivf_scan_c, qr/IvfflatScanProbeLimits\(int probes, int maxProbes, int li
 	"legacy C ivfscan-probe-limits fallback removed");
 unlike($ivf_scan_c, qr/IvfflatComputeScanLimits\(int probes, int maxProbes, int lists, int iterativeScanMode, bool useRust, int \*adjustedProbes, int \*adjustedMaxProbes\)\s*\{[^}]*if \(iterativeScanMode != IVFFLAT_ITERATIVE_SCAN_OFF\)[^}]*IvfflatScanProbeLimits\(probes, maxProbes, lists, false, adjustedProbes, adjustedMaxProbes\);/s,
 	"legacy C ivfscan-compute-scan-limits fallback removed");
+
+ok($ivf_core_c =~ /vector_rust_ivfflat_adjust_cost_kernel\(/,
+	"ivfflat.c uses rust adjust-cost kernel");
+ok($ivf_core_c =~ /vector_rust_ivfflat_probe_ratio_kernel\(/,
+	"ivfflat.c uses rust probe-ratio kernel");
+ok($ivf_core_c =~ /vector_rust_ivfflat_should_disable_without_order_kernel\(/,
+	"ivfflat.c uses rust disable-without-order kernel");
+
+unlike($ivf_core_c, qr/IvfflatAdjustCost\(float8 indexTotalCost, float8 numIndexPages, float8 randomPageCost, float8 seqPageCost, float8 ratio, float8 relPages, float8 sequentialRatio, bool useRust, float8 \*adjustedTotalCost, float8 \*adjustedStartupCost\)\s*\{[^}]*\*adjustedTotalCost = indexTotalCost - sequentialRatio \* numIndexPages \* \(randomPageCost - seqPageCost\);/s,
+	"legacy C ivfflat-adjust-cost fallback removed");
+unlike($ivf_core_c, qr/IvfflatProbeRatio\(int probes, int lists, bool useRust\)\s*\{[^}]*ratio = \(\(double\) probes\) \/ lists;[^}]*if \(ratio > 1\.0\)[^}]*ratio = 1\.0;[^}]*return ratio;/s,
+	"legacy C ivfflat-probe-ratio fallback removed");
+unlike($ivf_core_c, qr/IvfflatShouldDisableWithoutOrder\(int orderByCount, bool useRust\)\s*\{[^}]*return orderByCount == 0;/s,
+	"legacy C ivfflat-disable-without-order fallback removed");
 
 done_testing();
