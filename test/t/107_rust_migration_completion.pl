@@ -66,6 +66,24 @@ ok($hnsw_scan_c =~ /vector_rust_hnsw_should_reject_missing_orderby_kernel\(/,
 	"hnswscan.c uses rust missing-orderby kernel");
 ok($hnsw_scan_c =~ /vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel\(/,
 	"hnswscan.c uses rust non-mvcc kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_update_previous_distance_kernel\(/,
+	"hnswscan.c uses rust update-previous-distance kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_stop_without_discarded_kernel\(/,
+	"hnswscan.c uses rust stop-without-discarded kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_stop_when_iterative_scan_off_kernel\(/,
+	"hnswscan.c uses rust stop-iterative-scan-off kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_release_iterative_scan_memory_kernel\(/,
+	"hnswscan.c uses rust release-iterative-scan-memory kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_handle_empty_work_list_kernel\(/,
+	"hnswscan.c uses rust empty-work-list kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_use_null_scan_value_kernel\(/,
+	"hnswscan.c uses rust null-scan-value kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_normalize_scan_value_kernel\(/,
+	"hnswscan.c uses rust normalize-scan-value kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_initialize_scan_state_kernel\(/,
+	"hnswscan.c uses rust initialize-scan-state kernel");
+ok($hnsw_scan_c =~ /vector_rust_hnsw_should_increment_instrument_searches_kernel\(/,
+	"hnswscan.c uses rust increment-instrument-searches kernel");
 
 unlike($hnsw_scan_c, qr/return entryPointIsNull;/,
 	"legacy C entrypoint-null fallback removed");
@@ -81,6 +99,36 @@ unlike($hnsw_scan_c, qr/return !snapshotIsMVCC;/,
 	"legacy C non-mvcc fallback removed");
 unlike($hnsw_scan_c, qr/return hasPointer;/,
 	"legacy C scan-pointer fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveDecreasingScanDistanceFlag\(bool isDecreasingDistance, bool useRust\)\s*\{[^}]*return isDecreasingDistance;/s,
+	"legacy C decreasing-scan-distance-flag fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveStrictOutOfOrderScanMode\(int iterativeScanMode, bool useRust\)\s*\{[^}]*return iterativeScanMode == HNSW_ITERATIVE_SCAN_STRICT;/s,
+	"legacy C strict-out-of-order-scan-mode fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldStopWithoutDiscarded\(bool discardedIsNull, bool useRust\)\s*\{[^}]*return discardedIsNull;/s,
+	"legacy C stop-without-discarded fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveIterativeScanOffMode\(int iterativeScanMode, bool useRust\)\s*\{[^}]*return iterativeScanMode == HNSW_ITERATIVE_SCAN_OFF;/s,
+	"legacy C iterative-scan-off-mode fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveActiveIterativeScanMode\(int iterativeScanMode, bool useRust\)\s*\{[^}]*return iterativeScanMode != HNSW_ITERATIVE_SCAN_OFF;/s,
+	"legacy C active-iterative-scan-mode fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldReachScanTupleLimitFlag\(bool reachesTupleLimit, bool useRust\)\s*\{[^}]*return reachesTupleLimit;/s,
+	"legacy C reach-scan-tuple-limit-flag fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldExceedScanMemoryLimitFlag\(bool exceedsMemoryLimit, bool useRust\)\s*\{[^}]*return exceedsMemoryLimit;/s,
+	"legacy C exceed-scan-memory-limit-flag fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldLimitScanByResources\(int64 tupleCount, int64 maxScanTuples, int64 memoryUsed, int64 maxMemory, bool useRust\)\s*\{[^}]*return HnswShouldReachScanTupleLimit\(tupleCount, maxScanTuples, false\) \|\|[^}]*HnswShouldExceedScanMemoryLimit\(memoryUsed, maxMemory, false\);/s,
+	"legacy C limit-scan-by-resources fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveEmptyWorkList\(int workListLength, bool useRust\)\s*\{[^}]*return workListLength == 0;/s,
+	"legacy C empty-work-list fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHavePositiveRescanKeyCountFlag\(bool hasPositiveKeyCount, bool useRust\)\s*\{[^}]*return hasPositiveKeyCount;/s,
+	"legacy C positive-rescan-key-count-flag fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveMissingDiscardedHeap\(bool hasDiscardedHeap, bool useRust\)\s*\{[^}]*return !hasDiscardedHeap;/s,
+	"legacy C missing-discarded-heap fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveNullScanValue\(bool orderByIsNull, bool useRust\)\s*\{[^}]*return orderByIsNull;/s,
+	"legacy C null-scan-value fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveNormalizedScanValue\(bool hasNormproc, bool useRust\)\s*\{[^}]*return hasNormproc;/s,
+	"legacy C normalized-scan-value fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveInitialScanState\(bool isFirstScan, bool useRust\)\s*\{[^}]*return isFirstScan;/s,
+	"legacy C initial-scan-state fallback removed");
+unlike($hnsw_scan_c, qr/HnswShouldHaveInstrumentSearches\(bool hasInstrument, bool useRust\)\s*\{[^}]*return hasInstrument;/s,
+	"legacy C instrument-searches fallback removed");
 
 ok($hnsw_build_c =~ /vector_rust_hnsw_can_add_duplicate_heap_tid_kernel\(/,
 	"hnswbuild.c uses rust duplicate-heaptid kernel");
