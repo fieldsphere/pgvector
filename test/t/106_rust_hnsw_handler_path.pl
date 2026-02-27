@@ -440,6 +440,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_empty_scan_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_empty_scan_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_empty_scan_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_empty_scan_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_missing_orderby(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_missing_orderby'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4198,6 +4208,18 @@ my $advance_on_exhausted_heaptids_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptids_length);
 });
 is($advance_on_exhausted_heaptids_parity, "t\nt\nt\nt");
+
+my $have_empty_scan_heaptids_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_empty_scan_heaptids(heaptids_length) =
+		   rust_hnsw_should_have_empty_scan_heaptids(heaptids_length)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(heaptids_length);
+});
+is($have_empty_scan_heaptids_parity, "t\nt\nt\nt");
 
 my $reject_missing_orderby_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_missing_orderby(orderby_is_null) =
