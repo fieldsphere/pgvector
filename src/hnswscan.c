@@ -888,10 +888,16 @@ HnswShouldHavePositiveRescanKeyCount(int keyCount, bool useRust)
 }
 
 static bool
-HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
+HnswShouldHaveCopyableRescanKeys(bool hasKeys, int keyCount, bool useRust)
 {
 	return HnswShouldHaveRescanKeysFlag(hasKeys, useRust) &&
 		HnswShouldHavePositiveRescanKeyCount(keyCount, useRust);
+}
+
+static bool
+HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
+{
+	return HnswShouldHaveCopyableRescanKeys(hasKeys, keyCount, useRust);
 }
 
 static bool
@@ -1025,6 +1031,26 @@ vector_rust_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
 	int32		keyCount = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_copyable_rescan_keys);
+Datum
+vector_hnsw_should_have_copyable_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveCopyableRescanKeys(hasKeys != 0, keyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_copyable_rescan_keys);
+Datum
+vector_rust_hnsw_should_have_copyable_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveCopyableRescanKeys(hasKeys != 0, keyCount, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_rescan_keys);
