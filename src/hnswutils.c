@@ -1112,15 +1112,11 @@ HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust)
 static bool
 HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust)
 {
-	if (useRust)
-	{
-		bool		hasElementToSkip = vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
-		bool		matchesSkipElement = vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, skipBlkno, skipOffno);
+	bool		hasElementToSkip = vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
+	bool		matchesSkipElement = vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, skipBlkno, skipOffno);
 
-		return hasElementToSkip && matchesSkipElement;
-	}
-
-	return hasSkipElement && elementBlkno == skipBlkno && elementOffno == skipOffno;
+	(void) useRust;
+	return hasElementToSkip && matchesSkipElement;
 }
 
 static bool
@@ -1183,10 +1179,8 @@ HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust)
 static bool
 HnswShouldHaveTypeInfoProcInfoFlag(bool hasProcInfo, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasProcInfo);
-
-	return hasProcInfo;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasProcInfo);
 }
 
 static bool
@@ -1198,10 +1192,8 @@ HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust)
 static bool
 HnswShouldHaveDefaultTypeInfo(bool hasProcInfo, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcInfo);
-
-	return !hasProcInfo;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcInfo);
 }
 
 static bool
@@ -1213,28 +1205,22 @@ HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust)
 static bool
 HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_reject_excess_dimensions_kernel(nnz, maxNnz);
-
-	return nnz > maxNnz;
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_excess_dimensions_kernel(nnz, maxNnz);
 }
 
 static bool
 HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(sortCandidates);
-
-	return sortCandidates;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(sortCandidates);
 }
 
 static bool
 HnswShouldHaveSortBasePointerFlag(bool hasBasePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
-
-	return hasBasePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
 }
 
 static bool
@@ -1246,64 +1232,50 @@ HnswShouldHaveSortBasePointer(const void *base, bool useRust)
 static bool
 HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
-
-	return !hasBasePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
 }
 
 static bool
 HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(mustCalculate);
-
-	return mustCalculate;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(mustCalculate);
 }
 
 static bool
 HnswShouldReuseAddedCandidates(int addedCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(addedCount > 0);
-
-	return addedCount > 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(addedCount > 0);
 }
 
 static bool
 HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
-
-	return hasBasePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
 }
 
 static bool
 HnswShouldAppendCloserCandidate(bool isCloser, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isCloser);
-
-	return isCloser;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isCloser);
 }
 
 static bool
 HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(removedAny);
-
-	return removedAny;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(removedAny);
 }
 
 static bool
 HnswShouldHavePrunedOutputPointerFlag(bool hasPrunedOutput, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPrunedOutput);
-
-	return hasPrunedOutput;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPrunedOutput);
 }
 
 static bool
@@ -1327,10 +1299,8 @@ HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
 static bool
 HnswShouldHaveNewCandidatePointerFlag(bool hasNewCandidatePointer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNewCandidatePointer);
-
-	return hasNewCandidatePointer;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNewCandidatePointer);
 }
 
 static bool
@@ -1342,10 +1312,8 @@ HnswShouldHaveNewCandidatePointer(HnswCandidate *candidate, HnswCandidate *newCa
 static bool
 HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNewCandidate);
-
-	return isNewCandidate;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNewCandidate);
 }
 
 static bool
