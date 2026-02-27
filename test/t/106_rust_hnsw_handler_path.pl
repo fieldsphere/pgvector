@@ -550,6 +550,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_provided_rescan_key_array(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_provided_rescan_key_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_provided_rescan_key_array(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_provided_rescan_key_array'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_scan_pointer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_scan_pointer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -4660,6 +4670,18 @@ my $use_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
 	) AS t(has_key_array);
 });
 is($use_provided_rescan_key_array_parity, "t\nt\nt\nt");
+
+my $have_provided_rescan_key_array_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_provided_rescan_key_array(has_key_array) =
+		   rust_hnsw_should_have_provided_rescan_key_array(has_key_array)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_key_array);
+});
+is($have_provided_rescan_key_array_parity, "t\nt\nt\nt");
 
 my $have_scan_pointer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_scan_pointer(has_pointer) =
