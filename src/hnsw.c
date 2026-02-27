@@ -135,10 +135,8 @@ hnswbuildphasename(int64 phasenum)
 static bool
 HnswShouldInitLockTranche(bool preloadInProgress, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_init_lock_tranche_kernel(preloadInProgress);
-
-	return !preloadInProgress;
+	(void) useRust;
+	return vector_rust_hnsw_should_init_lock_tranche_kernel(preloadInProgress);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_init_lock_tranche);
@@ -162,10 +160,8 @@ vector_rust_hnsw_should_init_lock_tranche(PG_FUNCTION_ARGS)
 static bool
 HnswShouldAssignNewLockTranche(bool found, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(found);
-
-	return !found;
+	(void) useRust;
+	return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(found);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_assign_new_lock_tranche);
@@ -189,10 +185,8 @@ vector_rust_hnsw_should_assign_new_lock_tranche(PG_FUNCTION_ARGS)
 static bool
 HnswShouldDisableWithoutOrder(int orderbyCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_disable_without_order_kernel(orderbyCount);
-
-	return orderbyCount == 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_disable_without_order_kernel(orderbyCount);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_disable_without_order);
@@ -216,22 +210,15 @@ vector_rust_hnsw_should_disable_without_order(PG_FUNCTION_ARGS)
 static double
 HnswClampRatio(double ratio, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_clamp_ratio_kernel(ratio);
-
-	if (HnswShouldCapRatioAtOne(ratio, true))
-		return 1;
-
-	return ratio;
+	(void) useRust;
+	return vector_rust_hnsw_clamp_ratio_kernel(ratio);
 }
 
 static bool
 HnswShouldCapRatioAtOne(double ratio, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, 1, ratio);
-
-	return ratio > 1;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, 1, ratio);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_clamp_ratio);
@@ -273,10 +260,8 @@ vector_rust_hnsw_should_cap_ratio_at_one(PG_FUNCTION_ARGS)
 static bool
 HnswShouldAdjustStartupCost(double startupPages, double relPages, double ratio, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_adjust_startup_cost_kernel(startupPages, relPages, ratio);
-
-	return startupPages > relPages && ratio < 0.5;
+	(void) useRust;
+	return vector_rust_hnsw_should_adjust_startup_cost_kernel(startupPages, relPages, ratio);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_adjust_startup_cost);
@@ -304,10 +289,8 @@ vector_rust_hnsw_should_adjust_startup_cost(PG_FUNCTION_ARGS)
 static bool
 HnswShouldComputeScanRatioFromTuples(double tupleCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_compute_scan_ratio_from_tuples_kernel(tupleCount);
-
-	return tupleCount > 0;
+	(void) useRust;
+	return vector_rust_hnsw_should_compute_scan_ratio_from_tuples_kernel(tupleCount);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_compute_scan_ratio_from_tuples);
