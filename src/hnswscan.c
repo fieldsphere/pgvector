@@ -1313,12 +1313,18 @@ vector_rust_hnsw_should_have_initial_scan_state(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldIncrementInstrumentSearches(bool hasInstrument, bool useRust)
+HnswShouldHaveInstrumentSearches(bool hasInstrument, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_increment_instrument_searches_kernel(hasInstrument);
 
 	return hasInstrument;
+}
+
+static bool
+HnswShouldIncrementInstrumentSearches(bool hasInstrument, bool useRust)
+{
+	return HnswShouldHaveInstrumentSearches(hasInstrument, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_increment_instrument_searches);
@@ -1337,6 +1343,24 @@ vector_rust_hnsw_should_increment_instrument_searches(PG_FUNCTION_ARGS)
 	int32		hasInstrument = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldIncrementInstrumentSearches(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_instrument_searches);
+Datum
+vector_hnsw_should_have_instrument_searches(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInstrumentSearches(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_instrument_searches);
+Datum
+vector_rust_hnsw_should_have_instrument_searches(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInstrumentSearches(hasInstrument != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_instrument);
