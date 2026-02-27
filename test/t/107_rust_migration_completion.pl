@@ -10,6 +10,7 @@ my $hnsw_scan_path = "$repo_root/src/hnswscan.c";
 my $hnsw_build_path = "$repo_root/src/hnswbuild.c";
 my $hnsw_insert_path = "$repo_root/src/hnswinsert.c";
 my $hnsw_vacuum_path = "$repo_root/src/hnswvacuum.c";
+my $hnsw_utils_path = "$repo_root/src/hnswutils.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -31,6 +32,10 @@ close($insert_fh);
 open(my $vacuum_fh, '<', $hnsw_vacuum_path) or die "could not open $hnsw_vacuum_path: $!";
 my $hnsw_vacuum_c = <$vacuum_fh>;
 close($vacuum_fh);
+
+open(my $utils_fh, '<', $hnsw_utils_path) or die "could not open $hnsw_utils_path: $!";
+my $hnsw_utils_c = <$utils_fh>;
+close($utils_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -637,5 +642,43 @@ unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumCleanupAnalyzeOnly\(bool analyzeOn
 	"legacy C vacuum-cleanup-analyze-only fallback removed");
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedMarkDeletedTuple\(bool isDeletedTuple, bool useRust\)\s*\{[^}]*return isDeletedTuple;/s,
 	"legacy C deleted-markdeleted-tuple fallback removed");
+
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswutils.c uses rust update-progress-after-insert kernel");
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_skip_invalid_index_value_kernel\(/,
+	"hnswutils.c uses rust skip-invalid-index-value kernel");
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(/,
+	"hnswutils.c uses rust update-ondisk-insert-page kernel");
+ok($hnsw_utils_c =~ /vector_rust_hnsw_should_update_element_max_distance_kernel\(/,
+	"hnswutils.c uses rust update-element-max-distance kernel");
+
+unlike($hnsw_utils_c, qr/HnswShouldHaveQueryValuePointerFlag\(bool hasQueryValue, bool useRust\)\s*\{[^}]*return hasQueryValue;/s,
+	"legacy C query-value-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldZeroDistanceForNullQueryValue\(bool hasQueryValue, bool useRust\)\s*\{[^}]*return !hasQueryValue;/s,
+	"legacy C zero-distance-for-null-query-value fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveElementDistancePointerFlag\(bool hasDistancePointer, bool useRust\)\s*\{[^}]*return hasDistancePointer;/s,
+	"legacy C element-distance-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveElementMaxDistancePointerFlag\(bool hasMaxDistancePointer, bool useRust\)\s*\{[^}]*return hasMaxDistancePointer;/s,
+	"legacy C element-max-distance-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldUpdateElementMaxDistance\(bool hasDistancePointer, bool hasMaxDistancePointer, double distanceValue, double maxDistanceValue, bool useRust\)\s*\{[^}]*return !hasDistancePointer \|\| !hasMaxDistancePointer \|\| distanceValue < maxDistanceValue;/s,
+	"legacy C update-element-max-distance fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveDefaultDistanceValue\(bool hasDistancePointer, bool useRust\)\s*\{[^}]*return !hasDistancePointer;/s,
+	"legacy C default-distance-value fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveDefaultMaxDistanceValue\(bool hasMaxDistancePointer, bool useRust\)\s*\{[^}]*return !hasMaxDistancePointer;/s,
+	"legacy C default-max-distance-value fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveLoadedElementPointerFlag\(bool hasElement, bool useRust\)\s*\{[^}]*return hasElement;/s,
+	"legacy C loaded-element-pointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldInitializeLoadedElement\(bool hasElement, bool useRust\)\s*\{[^}]*return !hasElement;/s,
+	"legacy C initialize-loaded-element fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldLoadElementVector\(bool shouldLoadVector, bool useRust\)\s*\{[^}]*return shouldLoadVector;/s,
+	"legacy C load-element-vector fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldLoadElementHeapTids\(bool shouldLoadHeaptids, bool useRust\)\s*\{[^}]*return shouldLoadHeaptids;/s,
+	"legacy C load-element-heaptids fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldHaveElementHeapTidItemPointerFlag\(bool heaptidValid, bool useRust\)\s*\{[^}]*return heaptidValid;/s,
+	"legacy C element-heaptid-itempointer-flag fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldStopLoadingElementHeapTids\(bool heaptidValid, bool useRust\)\s*\{[^}]*return !heaptidValid;/s,
+	"legacy C stop-loading-element-heaptids fallback removed");
+unlike($hnsw_utils_c, qr/HnswShouldCountWithoutSkipElement\(bool hasSkipElement, bool useRust\)\s*\{[^}]*return !hasSkipElement;/s,
+	"legacy C count-without-skip-element fallback removed");
 
 done_testing();
