@@ -2205,12 +2205,18 @@ vector_rust_hnsw_should_return_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
+HnswShouldHaveDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDeletedTuple);
 
 	return isDeletedTuple;
+}
+
+static bool
+HnswShouldSkipDeletedMarkDeletedTuple(bool isDeletedTuple, bool useRust)
+{
+	return HnswShouldHaveDeletedMarkDeletedTuple(isDeletedTuple, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_deleted_markdeleted_tuple);
@@ -2229,6 +2235,24 @@ vector_rust_hnsw_should_skip_deleted_markdeleted_tuple(PG_FUNCTION_ARGS)
 	int32		isDeletedTuple = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldSkipDeletedMarkDeletedTuple(isDeletedTuple != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_deleted_markdeleted_tuple);
+Datum
+vector_hnsw_should_have_deleted_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedMarkDeletedTuple(isDeletedTuple != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_deleted_markdeleted_tuple);
+Datum
+vector_rust_hnsw_should_have_deleted_markdeleted_tuple(PG_FUNCTION_ARGS)
+{
+	int32		isDeletedTuple = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedMarkDeletedTuple(isDeletedTuple != 0, true));
 }
 
 /*
