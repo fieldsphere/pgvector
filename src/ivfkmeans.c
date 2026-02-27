@@ -66,13 +66,8 @@ IvfflatCenterCounts(ArrayType *assignmentsArray, int32 centerCount, bool useRust
 
 	counts = palloc0(sizeof(int32) * centerCount);
 
-	if (useRust)
-		vector_rust_ivfflat_center_counts_kernel(assignmentLength, assignments, centerCount, counts);
-	else
-	{
-		for (int i = 0; i < assignmentLength; i++)
-			counts[assignments[i]] += 1;
-	}
+	(void) useRust;
+	vector_rust_ivfflat_center_counts_kernel(assignmentLength, assignments, centerCount, counts);
 
 	countDatums = palloc(sizeof(Datum) * centerCount);
 	for (int i = 0; i < centerCount; i++)
@@ -124,17 +119,8 @@ IvfflatFinalizeCenter(ArrayType *aggArray, int32 centerCount, bool useRust)
 	for (int i = 0; i < dimensions; i++)
 		agg[i] = (float) DatumGetFloat8(aggDatums[i]);
 
-	if (useRust)
-		vector_rust_ivfflat_finalize_center_kernel(dimensions, agg, centerCount);
-	else
-	{
-		for (int i = 0; i < dimensions; i++)
-		{
-			if (isinf(agg[i]))
-				agg[i] = agg[i] > 0 ? FLT_MAX : -FLT_MAX;
-			agg[i] /= centerCount;
-		}
-	}
+	(void) useRust;
+	vector_rust_ivfflat_finalize_center_kernel(dimensions, agg, centerCount);
 
 	resultDatums = palloc(sizeof(Datum) * dimensions);
 	for (int i = 0; i < dimensions; i++)
@@ -169,13 +155,8 @@ IvfflatZeroAgg(int32 centerCount, int32 dimensions, bool useRust)
 
 	values = palloc(sizeof(float) * totalLength);
 
-	if (useRust)
-		vector_rust_ivfflat_zero_agg_kernel(centerCount, dimensions, values);
-	else
-	{
-		for (int64 i = 0; i < totalLength; i++)
-			values[i] = 0.0;
-	}
+	(void) useRust;
+	vector_rust_ivfflat_zero_agg_kernel(centerCount, dimensions, values);
 
 	resultDatums = palloc(sizeof(Datum) * totalLength);
 	for (int64 i = 0; i < totalLength; i++)
@@ -219,19 +200,8 @@ IvfflatAllFinite(ArrayType *valuesArray, bool useRust)
 	for (int i = 0; i < length; i++)
 		values[i] = DatumGetFloat4(valueDatums[i]);
 
-	if (useRust)
-		allFinite = vector_rust_ivfflat_all_finite_kernel(length, values);
-	else
-	{
-		for (int i = 0; i < length; i++)
-		{
-			if (isnan(values[i]) || isinf(values[i]))
-			{
-				allFinite = false;
-				break;
-			}
-		}
-	}
+	(void) useRust;
+	allFinite = vector_rust_ivfflat_all_finite_kernel(length, values);
 
 	pfree(values);
 	pfree(valueDatums);
@@ -297,22 +267,8 @@ IvfflatAdjustLowerBounds(ArrayType *lowerBoundsArray, int32 centerCount, ArrayTy
 	for (int i = 0; i < distanceLength; i++)
 		centerDistances[i] = DatumGetFloat4(distanceDatums[i]);
 
-	if (useRust)
-		vector_rust_ivfflat_adjust_lower_bounds_kernel(sampleCount, centerCount, lowerBounds, centerDistances);
-	else
-	{
-		for (int sample = 0; sample < sampleCount; sample++)
-		{
-			float	   *row = lowerBounds + ((int64) sample * centerCount);
-
-			for (int center = 0; center < centerCount; center++)
-			{
-				float		updated = row[center] - centerDistances[center];
-
-				row[center] = updated < 0 ? 0 : updated;
-			}
-		}
-	}
+	(void) useRust;
+	vector_rust_ivfflat_adjust_lower_bounds_kernel(sampleCount, centerCount, lowerBounds, centerDistances);
 
 	resultDatums = palloc(sizeof(Datum) * lowerLength);
 	for (int i = 0; i < lowerLength; i++)
@@ -401,13 +357,8 @@ IvfflatAdjustUpperBounds(ArrayType *upperBoundsArray, ArrayType *closestCentersA
 	for (int i = 0; i < distanceLength; i++)
 		centerDistances[i] = DatumGetFloat4(distanceDatums[i]);
 
-	if (useRust)
-		vector_rust_ivfflat_adjust_upper_bounds_kernel(upperLength, upperBounds, closestCenters, centerDistances);
-	else
-	{
-		for (int i = 0; i < upperLength; i++)
-			upperBounds[i] += centerDistances[closestCenters[i]];
-	}
+	(void) useRust;
+	vector_rust_ivfflat_adjust_upper_bounds_kernel(upperLength, upperBounds, closestCenters, centerDistances);
 
 	resultDatums = palloc(sizeof(Datum) * upperLength);
 	for (int i = 0; i < upperLength; i++)
@@ -472,29 +423,8 @@ IvfflatInitBoundsArrays(ArrayType *lowerBoundsArray, int32 centerCount, bool use
 	for (int i = 0; i < lowerLength; i++)
 		lowerBounds[i] = DatumGetFloat4(lowerDatums[i]);
 
-	if (useRust)
-		vector_rust_ivfflat_init_bounds_kernel(sampleCount, centerCount, lowerBounds, upperBounds, closestCenters);
-	else
-	{
-		for (int sample = 0; sample < sampleCount; sample++)
-		{
-			float	   *row = lowerBounds + ((int64) sample * centerCount);
-			float		minDistance = FLT_MAX;
-			int32		closestCenter = 0;
-
-			for (int center = 0; center < centerCount; center++)
-			{
-				if (row[center] < minDistance)
-				{
-					minDistance = row[center];
-					closestCenter = center;
-				}
-			}
-
-			upperBounds[sample] = minDistance;
-			closestCenters[sample] = closestCenter;
-		}
-	}
+	(void) useRust;
+	vector_rust_ivfflat_init_bounds_kernel(sampleCount, centerCount, lowerBounds, upperBounds, closestCenters);
 
 	pfree(lowerBounds);
 	pfree(lowerDatums);
@@ -597,26 +527,8 @@ IvfflatComputeS(ArrayType *halfcdistArray, int32 centerCount, bool useRust)
 	for (int i = 0; i < halfcdistLength; i++)
 		halfcdist[i] = DatumGetFloat4(halfcdistDatums[i]);
 
-	if (useRust)
-		vector_rust_ivfflat_compute_s_kernel(centerCount, halfcdist, s);
-	else
-	{
-		for (int center = 0; center < centerCount; center++)
-		{
-			float		minDistance = FLT_MAX;
-			float	   *row = halfcdist + ((int64) center * centerCount);
-
-			for (int other = 0; other < centerCount; other++)
-			{
-				if (center == other)
-					continue;
-				if (row[other] < minDistance)
-					minDistance = row[other];
-			}
-
-			s[center] = minDistance;
-		}
-	}
+	(void) useRust;
+	vector_rust_ivfflat_compute_s_kernel(centerCount, halfcdist, s);
 
 	resultDatums = palloc(sizeof(Datum) * centerCount);
 	for (int i = 0; i < centerCount; i++)
