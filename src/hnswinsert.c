@@ -3630,10 +3630,8 @@ vector_rust_hnsw_should_have_matching_ondisk_buffer_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReleaseReusedNeighborBuffer(bool sameBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
-
-	return !sameBuffer;
+	(void) useRust;
+	return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_reused_neighbor_buffer);
@@ -3657,10 +3655,8 @@ vector_rust_hnsw_should_release_reused_neighbor_buffer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDistinctNeighborPageSpace(bool samePage, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
-
-	return !samePage;
+	(void) useRust;
+	return !vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
 }
 
 static bool
@@ -3708,10 +3704,8 @@ vector_rust_hnsw_should_have_distinct_neighbor_page_space(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHavePageSpaceForTuple(int64 pageFree, int64 tupleSize, bool useRust)
 {
-	if (useRust)
-		return !vector_rust_hnsw_should_append_neighbor_page_kernel(pageFree, tupleSize);
-
-	return pageFree >= tupleSize;
+	(void) useRust;
+	return !vector_rust_hnsw_should_append_neighbor_page_kernel(pageFree, tupleSize);
 }
 
 static bool
@@ -3768,11 +3762,9 @@ vector_rust_hnsw_should_have_page_space_for_tuple(PG_FUNCTION_ARGS)
 static bool
 HnswShouldBorrowSamePageNeighborSpace(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage) &&
-			HnswShouldHavePageSpaceForTuple(pageFree, elementTupleSize, true);
-
-	return samePage && HnswShouldHavePageSpaceForTuple(pageFree, elementTupleSize, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage) &&
+		HnswShouldHavePageSpaceForTuple(pageFree, elementTupleSize, true);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_borrow_same_page_neighbor_space);
@@ -3800,10 +3792,8 @@ vector_rust_hnsw_should_borrow_same_page_neighbor_space(PG_FUNCTION_ARGS)
 static bool
 HnswShouldRegisterReusedNeighborBuffer(bool sameBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
-
-	return !sameBuffer;
+	(void) useRust;
+	return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(sameBuffer);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_register_reused_neighbor_buffer);
@@ -3827,10 +3817,8 @@ vector_rust_hnsw_should_register_reused_neighbor_buffer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldReturnEmptyWithoutNeighborTids(bool neighborTidsLoaded, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
-
-	return !neighborTidsLoaded;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_empty_without_neighbor_tids);
@@ -3854,19 +3842,15 @@ vector_rust_hnsw_should_return_empty_without_neighbor_tids(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveEmptyInsertHeapTidsFlag(bool hasEmptyHeapTids, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEmptyHeapTids);
-
-	return hasEmptyHeapTids;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEmptyHeapTids);
 }
 
 static bool
 HnswShouldHaveEmptyInsertHeapTids(int32 heaptidsLength, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
-
-	return HnswShouldHaveEmptyInsertHeapTidsFlag(heaptidsLength == 0, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
 }
 
 static bool
@@ -3932,10 +3916,8 @@ vector_rust_hnsw_should_have_empty_insert_heaptids_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNeighborCountBeforeLayerM(int32 neighborCount, int32 layerM, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) neighborCount, (int64) layerM);
-
-	return neighborCount < layerM;
+	(void) useRust;
+	return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) neighborCount, (int64) layerM);
 }
 
 static bool
@@ -3987,10 +3969,8 @@ vector_rust_hnsw_should_have_neighbor_count_before_layer_m(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveExistingNeighborCheckFlag(bool shouldCheckExisting, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(shouldCheckExisting);
-
-	return shouldCheckExisting;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(shouldCheckExisting);
 }
 
 static bool
@@ -4002,10 +3982,8 @@ HnswShouldHaveExistingNeighborCheck(bool checkExisting, bool useRust)
 static bool
 HnswShouldHaveExistingNeighborConnectionFlag(bool hasConnection, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(hasConnection);
-
-	return hasConnection;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(hasConnection);
 }
 
 static bool
@@ -4116,10 +4094,8 @@ vector_rust_hnsw_should_have_existing_neighbor_connection_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldProbeUndecidedUpdateIndex(int32 updateIndex, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_probe_undecided_update_index_kernel(updateIndex);
-
-	return updateIndex == -2;
+	(void) useRust;
+	return vector_rust_hnsw_should_probe_undecided_update_index_kernel(updateIndex);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_probe_undecided_update_index);
@@ -4143,10 +4119,8 @@ vector_rust_hnsw_should_probe_undecided_update_index(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveNonNegativeUpdateIndexFlag(bool isNonNegative, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNonNegative);
-
-	return isNonNegative;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNonNegative);
 }
 
 static bool
@@ -4158,10 +4132,8 @@ HnswShouldHaveNonNegativeUpdateIndex(int32 updateIndex, bool useRust)
 static bool
 HnswShouldHaveUpdateIndexBeforeTupleCount(int32 updateIndex, int32 tupleCount, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) updateIndex, (int64) tupleCount);
-
-	return updateIndex < tupleCount;
+	(void) useRust;
+	return vector_rust_hnsw_should_append_neighbor_page_kernel((int64) updateIndex, (int64) tupleCount);
 }
 
 static bool
@@ -4174,19 +4146,15 @@ HnswShouldApplyNeighborUpdateSlot(int32 updateIndex, int32 tupleCount, bool useR
 static bool
 HnswShouldHaveCandidateUpdateIndexFlag(bool hasCandidateIndex, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCandidateIndex);
-
-	return hasCandidateIndex;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCandidateIndex);
 }
 
 static bool
 HnswShouldHaveCandidateUpdateIndex(int32 updateIndex, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(updateIndex);
-
-	return HnswShouldHaveCandidateUpdateIndexFlag(updateIndex == -1, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_unselected_ondisk_neighbor_kernel(updateIndex);
 }
 
 static bool
