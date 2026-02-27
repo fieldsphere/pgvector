@@ -2530,6 +2530,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_build_path_for_appended_ondisk_buffer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_build_path_for_appended_ondisk_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_build_path_for_appended_ondisk_buffer(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_build_path_for_appended_ondisk_buffer'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_build_path_for_reused_ondisk_buffer(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_build_path_for_reused_ondisk_buffer'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7135,6 +7145,18 @@ my $use_build_path_for_appended_ondisk_buffer_parity = $node->safe_psql("postgre
 	) AS t(building);
 });
 is($use_build_path_for_appended_ondisk_buffer_parity, "t\nt\nt\nt");
+
+my $have_build_path_for_appended_ondisk_buffer_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_build_path_for_appended_ondisk_buffer(building) =
+		   rust_hnsw_should_have_build_path_for_appended_ondisk_buffer(building)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(building);
+});
+is($have_build_path_for_appended_ondisk_buffer_parity, "t\nt\nt\nt");
 
 my $use_build_path_for_reused_ondisk_buffer_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_build_path_for_reused_ondisk_buffer(building) =
