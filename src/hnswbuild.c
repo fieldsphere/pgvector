@@ -422,10 +422,8 @@ vector_rust_hnsw_should_have_stop_duplicate_search_on_value_mismatch(PG_FUNCTION
 static bool
 HnswShouldHaveReturnAfterDuplicateInsert(bool duplicateInserted, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_return_after_duplicate_insert_kernel(duplicateInserted);
-
-	return duplicateInserted;
+	(void) useRust;
+	return vector_rust_hnsw_should_return_after_duplicate_insert_kernel(duplicateInserted);
 }
 
 static bool
@@ -473,10 +471,8 @@ vector_rust_hnsw_should_have_return_after_duplicate_insert(PG_FUNCTION_ARGS)
 static bool
 HnswShouldSkipUpdateGraphForDuplicate(bool duplicateFound, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(duplicateFound);
-
-	return duplicateFound;
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_update_graph_for_duplicate_kernel(duplicateFound);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_update_graph_for_duplicate);
@@ -553,10 +549,8 @@ vector_rust_hnsw_should_have_flush_graph(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveOnDiskPhase(bool graphFlushed, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_ondisk_phase_kernel(graphFlushed);
-
-	return graphFlushed;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_ondisk_phase_kernel(graphFlushed);
 }
 
 static bool
@@ -917,10 +911,8 @@ vector_rust_hnsw_should_have_build_pointer_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFlushPagesInBuild(bool graphFlushed, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_flush_pages_in_build_kernel(graphFlushed);
-
-	return !graphFlushed;
+	(void) useRust;
+	return vector_rust_hnsw_should_flush_pages_in_build_kernel(graphFlushed);
 }
 
 static bool
@@ -968,10 +960,8 @@ vector_rust_hnsw_should_have_flush_pages_in_build(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveFlushGraphPagesAtEnd(bool graphFlushed, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_flush_graph_pages_at_end_kernel(graphFlushed);
-
-	return !graphFlushed;
+	(void) useRust;
+	return vector_rust_hnsw_should_flush_graph_pages_at_end_kernel(graphFlushed);
 }
 
 static bool
@@ -1068,10 +1058,8 @@ vector_rust_hnsw_should_have_begin_parallel_build(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveEndParallelBuild(bool hasLeader, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_end_parallel_build_kernel(hasLeader);
-
-	return hasLeader;
+	(void) useRust;
+	return vector_rust_hnsw_should_end_parallel_build_kernel(hasLeader);
 }
 
 static bool
@@ -1189,10 +1177,8 @@ vector_rust_hnsw_should_have_build_leader_pointer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveScanHeapForBuild(bool hasHeap, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_scan_heap_for_build_kernel(hasHeap);
-
-	return hasHeap;
+	(void) useRust;
+	return vector_rust_hnsw_should_scan_heap_for_build_kernel(hasHeap);
 }
 
 static bool
@@ -1310,10 +1296,8 @@ vector_rust_hnsw_should_have_build_heap_pointer(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveParallelHeapScan(bool hasLeader, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_use_parallel_heap_scan_kernel(hasLeader);
-
-	return hasLeader;
+	(void) useRust;
+	return vector_rust_hnsw_should_use_parallel_heap_scan_kernel(hasLeader);
 }
 
 static bool
