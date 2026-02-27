@@ -2227,19 +2227,15 @@ vector_rust_hnsw_should_have_missing_vacuum_insert_page_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveMatchingMarkDeletedNeighborPageFlag(bool pagesMatch, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(pagesMatch);
-
-	return pagesMatch;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(pagesMatch);
 }
 
 static bool
 HnswShouldHaveMatchingMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
-
-	return HnswShouldHaveMatchingMarkDeletedNeighborPageFlag(neighborPage == elementPage, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(neighborPage, 0, elementPage, 0);
 }
 
 static bool
@@ -2251,19 +2247,15 @@ HnswShouldMatchMarkDeletedNeighborPage(int32 neighborPage, int32 elementPage, bo
 static bool
 HnswShouldHaveMatchingMarkDeletedBuffersFlag(bool buffersMatch, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_progress_after_insert_kernel(buffersMatch);
-
-	return buffersMatch;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(buffersMatch);
 }
 
 static bool
 HnswShouldHaveMatchingMarkDeletedBuffers(int32 leftBuffer, int32 rightBuffer, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
-
-	return HnswShouldHaveMatchingMarkDeletedBuffersFlag(leftBuffer == rightBuffer, false);
+	(void) useRust;
+	return vector_rust_hnsw_should_match_neighbor_connection_kernel(leftBuffer, 0, rightBuffer, 0);
 }
 
 static bool
@@ -2275,10 +2267,8 @@ HnswShouldMatchMarkDeletedBuffers(int32 leftBuffer, int32 rightBuffer, bool useR
 static bool
 HnswShouldReuseMarkDeletedBufferForNeighborPage(bool samePage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
-
-	return samePage;
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(samePage);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_markdeleted_buffer_for_neighbor_page);
@@ -2418,10 +2408,8 @@ vector_rust_hnsw_should_have_matching_markdeleted_buffers_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveDistinctMarkDeletedBuffersFlag(bool buffersMatch, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(buffersMatch);
-
-	return !buffersMatch;
+	(void) useRust;
+	return vector_rust_hnsw_should_mark_ondisk_neighbor_buffer_dirty_kernel(buffersMatch);
 }
 
 static bool
@@ -2495,10 +2483,8 @@ vector_rust_hnsw_should_have_distinct_markdeleted_buffers_flag(PG_FUNCTION_ARGS)
 static bool
 HnswShouldHaveMarkDeletedVersionBeyondMaxFlag(bool versionWithinRange, bool useRust)
 {
-	if (useRust)
-		return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(versionWithinRange);
-
-	return !versionWithinRange;
+	(void) useRust;
+	return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(versionWithinRange);
 }
 
 static bool
