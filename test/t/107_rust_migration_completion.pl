@@ -15,6 +15,7 @@ my $ivf_vacuum_path = "$repo_root/src/ivfvacuum.c";
 my $ivf_insert_path = "$repo_root/src/ivfinsert.c";
 my $ivf_scan_path = "$repo_root/src/ivfscan.c";
 my $ivf_core_path = "$repo_root/src/ivfflat.c";
+my $ivf_build_path = "$repo_root/src/ivfbuild.c";
 
 open(my $fh, '<', $hnsw_path) or die "could not open $hnsw_path: $!";
 local $/ = undef;
@@ -56,6 +57,10 @@ close($ivf_scan_fh);
 open(my $ivf_core_fh, '<', $ivf_core_path) or die "could not open $ivf_core_path: $!";
 my $ivf_core_c = <$ivf_core_fh>;
 close($ivf_core_fh);
+
+open(my $ivf_build_fh, '<', $ivf_build_path) or die "could not open $ivf_build_path: $!";
+my $ivf_build_c = <$ivf_build_fh>;
+close($ivf_build_fh);
 
 ok($hnsw_c =~ /vector_rust_hnsw_should_disable_without_order_kernel\(/,
 	"hnsw.c uses rust disable-without-order kernel");
@@ -960,5 +965,15 @@ unlike($ivf_core_c, qr/IvfflatProbeRatio\(int probes, int lists, bool useRust\)\
 	"legacy C ivfflat-probe-ratio fallback removed");
 unlike($ivf_core_c, qr/IvfflatShouldDisableWithoutOrder\(int orderByCount, bool useRust\)\s*\{[^}]*return orderByCount == 0;/s,
 	"legacy C ivfflat-disable-without-order fallback removed");
+
+ok($ivf_build_c =~ /vector_rust_ivfflat_choose_build_center_candidate_kernel\(/,
+	"ivfbuild.c uses rust choose-build-center-candidate kernel");
+ok($ivf_build_c =~ /vector_rust_ivfflat_should_append_page_kernel\(/,
+	"ivfbuild.c uses rust append-page kernel");
+
+unlike($ivf_build_c, qr/IvfflatChooseBuildCenterCandidate\(float8 distance, float8 minDistance, bool useRust\)\s*\{[^}]*return distance < minDistance;/s,
+	"legacy C ivfbuild-choose-build-center-candidate fallback removed");
+unlike($ivf_build_c, qr/IvfflatBuildShouldAppendPage\(int freeSpace, Size itemSize, bool useRust\)\s*\{[^}]*return freeSpace < itemSize;/s,
+	"legacy C ivfbuild-append-page fallback removed");
 
 done_testing();
