@@ -414,5 +414,37 @@ unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingOnDiskBufferFlag\(bool hasMatchi
 	"legacy C matching-ondisk-buffer-flag fallback removed");
 unlike($hnsw_insert_c, qr/HnswShouldHaveMatchingOnDiskBuffer\(int32 leftBuffer, int32 rightBuffer, bool useRust\)\s*\{[^}]*return HnswShouldHaveMatchingOnDiskBufferFlag\(leftBuffer == rightBuffer, false\);/s,
 	"legacy C matching-ondisk-buffer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldReleaseReusedNeighborBuffer\(bool sameBuffer, bool useRust\)\s*\{[^}]*return !sameBuffer;/s,
+	"legacy C release-reused-neighbor-buffer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveDistinctNeighborPageSpace\(bool samePage, bool useRust\)\s*\{[^}]*return !samePage;/s,
+	"legacy C distinct-neighbor-page-space fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHavePageSpaceForTuple\(int64 pageFree, int64 tupleSize, bool useRust\)\s*\{[^}]*return pageFree >= tupleSize;/s,
+	"legacy C page-space-for-tuple fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldBorrowSamePageNeighborSpace\(int64 pageFree, int64 elementTupleSize, bool samePage, bool useRust\)\s*\{[^}]*return samePage && HnswShouldHavePageSpaceForTuple\(pageFree, elementTupleSize, false\);/s,
+	"legacy C borrow-same-page-neighbor-space fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldRegisterReusedNeighborBuffer\(bool sameBuffer, bool useRust\)\s*\{[^}]*return !sameBuffer;/s,
+	"legacy C register-reused-neighbor-buffer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldReturnEmptyWithoutNeighborTids\(bool neighborTidsLoaded, bool useRust\)\s*\{[^}]*return !neighborTidsLoaded;/s,
+	"legacy C return-empty-without-neighbor-tids fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveEmptyInsertHeapTidsFlag\(bool hasEmptyHeapTids, bool useRust\)\s*\{[^}]*return hasEmptyHeapTids;/s,
+	"legacy C empty-insert-heaptids-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveEmptyInsertHeapTids\(int32 heaptidsLength, bool useRust\)\s*\{[^}]*return HnswShouldHaveEmptyInsertHeapTidsFlag\(heaptidsLength == 0, false\);/s,
+	"legacy C empty-insert-heaptids fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveNeighborCountBeforeLayerM\(int32 neighborCount, int32 layerM, bool useRust\)\s*\{[^}]*return neighborCount < layerM;/s,
+	"legacy C neighbor-count-before-layer-m fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveExistingNeighborCheckFlag\(bool shouldCheckExisting, bool useRust\)\s*\{[^}]*return shouldCheckExisting;/s,
+	"legacy C existing-neighbor-check-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveExistingNeighborConnectionFlag\(bool hasConnection, bool useRust\)\s*\{[^}]*return hasConnection;/s,
+	"legacy C existing-neighbor-connection-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldProbeUndecidedUpdateIndex\(int32 updateIndex, bool useRust\)\s*\{[^}]*return updateIndex == -2;/s,
+	"legacy C probe-undecided-update-index fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveNonNegativeUpdateIndexFlag\(bool isNonNegative, bool useRust\)\s*\{[^}]*return isNonNegative;/s,
+	"legacy C non-negative-update-index-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveUpdateIndexBeforeTupleCount\(int32 updateIndex, int32 tupleCount, bool useRust\)\s*\{[^}]*return updateIndex < tupleCount;/s,
+	"legacy C update-index-before-tuple-count fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveCandidateUpdateIndexFlag\(bool hasCandidateIndex, bool useRust\)\s*\{[^}]*return hasCandidateIndex;/s,
+	"legacy C candidate-update-index-flag fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveCandidateUpdateIndex\(int32 updateIndex, bool useRust\)\s*\{[^}]*return HnswShouldHaveCandidateUpdateIndexFlag\(updateIndex == -1, false\);/s,
+	"legacy C candidate-update-index fallback removed");
 
 done_testing();
