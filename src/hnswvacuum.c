@@ -439,12 +439,18 @@ vector_rust_hnsw_should_mark_vacuum_tuple_deleted(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldStopVacuumHeapTidScan(bool heapTidValid, bool useRust)
+HnswShouldHaveInvalidVacuumHeapTid(bool heapTidValid, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heapTidValid);
 
 	return !heapTidValid;
+}
+
+static bool
+HnswShouldStopVacuumHeapTidScan(bool heapTidValid, bool useRust)
+{
+	return HnswShouldHaveInvalidVacuumHeapTid(heapTidValid, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_vacuum_heaptid_scan);
@@ -463,6 +469,24 @@ vector_rust_hnsw_should_stop_vacuum_heaptid_scan(PG_FUNCTION_ARGS)
 	int32		heapTidValid = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldStopVacuumHeapTidScan(heapTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_vacuum_heaptid);
+Datum
+vector_hnsw_should_have_invalid_vacuum_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidVacuumHeapTid(heapTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_vacuum_heaptid);
+Datum
+vector_rust_hnsw_should_have_invalid_vacuum_heaptid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidVacuumHeapTid(heapTidValid != 0, true));
 }
 
 static bool
