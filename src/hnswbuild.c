@@ -852,6 +852,24 @@ vector_rust_hnsw_should_have_build_entrypoint(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_entrypoint_flag);
+Datum
+vector_hnsw_should_have_build_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_entrypoint_flag);
+Datum
+vector_rust_hnsw_should_have_build_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildEntrypointFlag(hasEntryPoint != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_entrypoint_pointer);
 Datum
 vector_hnsw_should_have_build_entrypoint_pointer(PG_FUNCTION_ARGS)
@@ -886,6 +904,24 @@ vector_hnsw_should_have_build_pointer(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_pointer);
 Datum
 vector_rust_hnsw_should_have_build_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_pointer_flag);
+Datum
+vector_hnsw_should_have_build_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_build_pointer_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasPointer = PG_GETARG_INT32(0);
 
@@ -1126,6 +1162,24 @@ vector_rust_hnsw_should_have_build_leader(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveBuildLeaderFlag(hasLeader != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_leader_flag);
+Datum
+vector_hnsw_should_have_build_leader_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildLeaderFlag(hasLeader != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_leader_flag);
+Datum
+vector_rust_hnsw_should_have_build_leader_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasLeader = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildLeaderFlag(hasLeader != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_leader_pointer);
 Datum
 vector_hnsw_should_have_build_leader_pointer(PG_FUNCTION_ARGS)
@@ -1223,6 +1277,24 @@ vector_hnsw_should_have_build_heap(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_heap);
 Datum
 vector_rust_hnsw_should_have_build_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildHeapFlag(hasHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_heap_flag);
+Datum
+vector_hnsw_should_have_build_heap_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildHeapFlag(hasHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_heap_flag);
+Datum
+vector_rust_hnsw_should_have_build_heap_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasHeap = PG_GETARG_INT32(0);
 
@@ -2513,6 +2585,24 @@ vector_hnsw_should_have_parallel_dsm_segment(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_parallel_dsm_segment);
 Datum
 vector_rust_hnsw_should_have_parallel_dsm_segment(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveParallelDsmSegmentFlag(hasDsmSegment != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_parallel_dsm_segment_flag);
+Datum
+vector_hnsw_should_have_parallel_dsm_segment_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDsmSegment = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveParallelDsmSegmentFlag(hasDsmSegment != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_parallel_dsm_segment_flag);
+Datum
+vector_rust_hnsw_should_have_parallel_dsm_segment_flag(PG_FUNCTION_ARGS)
 {
 	int32		hasDsmSegment = PG_GETARG_INT32(0);
 
