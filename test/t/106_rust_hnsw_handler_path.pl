@@ -3210,6 +3210,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_deleted_repairgraph_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_deleted_repairgraph_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_deleted_repairgraph_element(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_deleted_repairgraph_element'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_track_vacuum_highest_non_entrypoint(integer, integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_track_vacuum_highest_non_entrypoint'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7641,6 +7651,18 @@ my $skip_deleted_repairgraph_element_parity = $node->safe_psql("postgres", q{
 	) AS t(is_live_tuple);
 });
 is($skip_deleted_repairgraph_element_parity, "t\nt\nt\nt");
+
+my $have_deleted_repairgraph_element_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_deleted_repairgraph_element(is_live_tuple) =
+		   rust_hnsw_should_have_deleted_repairgraph_element(is_live_tuple)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(is_live_tuple);
+});
+is($have_deleted_repairgraph_element_parity, "t\nt\nt\nt");
 
 my $track_vacuum_highest_non_entrypoint_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_track_vacuum_highest_non_entrypoint(is_higher_level, is_entrypoint) =
