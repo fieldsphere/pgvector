@@ -351,4 +351,32 @@ unlike($hnsw_insert_c, qr/HnswShouldHaveFreeOnDiskOffsets\(bool freeOffsetValid,
 unlike($hnsw_insert_c, qr/HnswShouldProcessFreeOffsetResult\(bool freeOffsetResult, bool useRust\)\s*\{[^}]*return freeOffsetResult;/s,
 	"legacy C process-free-offset-result fallback removed");
 
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_append_neighbor_page_kernel\(/,
+	"hnswinsert.c uses rust append-neighbor-page kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel\(/,
+	"hnswinsert.c uses rust commit-ondisk-duplicate-dirty kernel");
+ok($hnsw_insert_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
+	"hnswinsert.c uses rust update-progress-after-insert kernel");
+
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskSpaceForCombinedTuple\(int64 freeSpace, int64 combinedSize, bool useRust\)\s*\{[^}]*return freeSpace >= combinedSize;/s,
+	"legacy C ondisk-space-for-combined-tuple fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveBuildPathForOnDiskAddElement\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-path-for-ondisk-add-element fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldCommitOnDiskPageAppendWithBufferDirty\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C commit-ondisk-page-append-dirty fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveBuildPathForAppendedOnDiskBuffer\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-path-for-appended-buffer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveBuildPathForReusedOnDiskBuffer\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-path-for-reused-buffer fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveBuildPathForOnDiskAppendPage\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-path-for-ondisk-append-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveBuildPathForOnDiskNeighborUpdate\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-path-for-ondisk-neighbor-update fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveBuildPathForOnDiskDuplicatePage\(bool building, bool useRust\)\s*\{[^}]*return building;/s,
+	"legacy C build-path-for-ondisk-duplicate-page fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveNonBuildingOnDiskDuplicateSlotReject\(bool building, bool useRust\)\s*\{[^}]*return !building;/s,
+	"legacy C nonbuilding-ondisk-duplicate-slot-reject fallback removed");
+unlike($hnsw_insert_c, qr/HnswShouldHaveOnDiskItemPointerFlag\(bool itemPointerValid, bool useRust\)\s*\{[^}]*return itemPointerValid;/s,
+	"legacy C ondisk-itempointer fallback removed");
+
 done_testing();
