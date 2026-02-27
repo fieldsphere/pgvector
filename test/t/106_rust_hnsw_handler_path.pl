@@ -1970,6 +1970,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_boundary_duplicate_insert_slot_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_boundary_duplicate_insert_slot_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_boundary_duplicate_insert_slot_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_boundary_duplicate_insert_slot_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5330,6 +5340,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_existing_neighbor_check_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_existing_neighbor_check_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_existing_neighbor_check_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_existing_neighbor_check_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_existing_neighbor_connection(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_existing_neighbor_connection'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5337,6 +5357,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_existing_neighbor_connection(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_existing_neighbor_connection'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_existing_neighbor_connection_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_existing_neighbor_connection_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_existing_neighbor_connection_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_existing_neighbor_connection_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5440,6 +5470,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_candidate_update_index_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_candidate_update_index_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_candidate_update_index_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_candidate_update_index_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_reject_ondisk_element_overwrite(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_reject_ondisk_element_overwrite'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5507,6 +5547,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_have_empty_insert_heaptids(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_have_empty_insert_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_empty_insert_heaptids_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_empty_insert_heaptids_flag'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_empty_insert_heaptids_flag(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_empty_insert_heaptids_flag'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -7898,6 +7948,18 @@ my $have_boundary_duplicate_insert_slot_parity = $node->safe_psql("postgres", q{
 	) AS t(free_slot_index, max_heaptids);
 });
 is($have_boundary_duplicate_insert_slot_parity, "t\nt\nt\nt");
+
+my $have_boundary_duplicate_insert_slot_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_boundary_duplicate_insert_slot_flag(has_boundary_slot) =
+		   rust_hnsw_should_have_boundary_duplicate_insert_slot_flag(has_boundary_slot)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_boundary_slot);
+});
+is($have_boundary_duplicate_insert_slot_flag_parity, "t\nt\nt\nt");
 
 my $commit_ondisk_duplicate_with_buffer_dirty_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty(building) =
@@ -11938,6 +12000,18 @@ my $have_existing_neighbor_check_parity = $node->safe_psql("postgres", q{
 });
 is($have_existing_neighbor_check_parity, "t\nt\nt\nt");
 
+my $have_existing_neighbor_check_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_existing_neighbor_check_flag(check_existing) =
+		   rust_hnsw_should_have_existing_neighbor_check_flag(check_existing)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(check_existing);
+});
+is($have_existing_neighbor_check_flag_parity, "t\nt\nt\nt");
+
 my $have_existing_neighbor_connection_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_existing_neighbor_connection(connection_exists) =
 		   rust_hnsw_should_have_existing_neighbor_connection(connection_exists)
@@ -11949,6 +12023,18 @@ my $have_existing_neighbor_connection_parity = $node->safe_psql("postgres", q{
 	) AS t(connection_exists);
 });
 is($have_existing_neighbor_connection_parity, "t\nt\nt\nt");
+
+my $have_existing_neighbor_connection_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_existing_neighbor_connection_flag(connection_exists) =
+		   rust_hnsw_should_have_existing_neighbor_connection_flag(connection_exists)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(connection_exists);
+});
+is($have_existing_neighbor_connection_flag_parity, "t\nt\nt\nt");
 
 my $apply_neighbor_update_slot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_apply_neighbor_update_slot(update_idx, tuple_count) =
@@ -12070,6 +12156,18 @@ my $have_candidate_update_index_parity = $node->safe_psql("postgres", q{
 });
 is($have_candidate_update_index_parity, "t\nt\nt\nt");
 
+my $have_candidate_update_index_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_candidate_update_index_flag(has_candidate_index) =
+		   rust_hnsw_should_have_candidate_update_index_flag(has_candidate_index)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_candidate_index);
+});
+is($have_candidate_update_index_flag_parity, "t\nt\nt\nt");
+
 my $reject_ondisk_element_overwrite_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_reject_ondisk_element_overwrite(overwrite_succeeded) =
 		   rust_hnsw_should_reject_ondisk_element_overwrite(overwrite_succeeded)
@@ -12153,6 +12251,18 @@ my $have_empty_insert_heaptids_parity = $node->safe_psql("postgres", q{
 	) AS t(heaptids_length);
 });
 is($have_empty_insert_heaptids_parity, "t\nt\nt\nt");
+
+my $have_empty_insert_heaptids_flag_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_empty_insert_heaptids_flag(has_empty_heaptids) =
+		   rust_hnsw_should_have_empty_insert_heaptids_flag(has_empty_heaptids)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_empty_heaptids);
+});
+is($have_empty_insert_heaptids_flag_parity, "t\nt\nt\nt");
 
 my $unregister_mvcc_snapshot_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_unregister_mvcc_snapshot(snapshot_is_mvcc) =
