@@ -279,6 +279,24 @@ vector_rust_hnsw_should_have_vacuum_block_number(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveVacuumBlockNumber((BlockNumber) blkno, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_block_flag);
+Datum
+vector_hnsw_should_have_vacuum_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		blockValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumBlockFlag(blockValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_block_flag);
+Datum
+vector_rust_hnsw_should_have_vacuum_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		blockValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumBlockFlag(blockValid != 0, true));
+}
+
 static bool
 DeletedContains(tidhash_hash * deleted, ItemPointer indextid)
 {
@@ -561,6 +579,24 @@ vector_rust_hnsw_should_have_vacuum_itempointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveVacuumItemPointerFlag(itemPointerValid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_itempointer_flag);
+Datum
+vector_hnsw_should_have_vacuum_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumItemPointerFlag(itemPointerValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_itempointer_flag);
+Datum
+vector_rust_hnsw_should_have_vacuum_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		itemPointerValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumItemPointerFlag(itemPointerValid != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_tuple_heaptid_pointer);
 Datum
 vector_hnsw_should_have_vacuum_tuple_heaptid_pointer(PG_FUNCTION_ARGS)
@@ -705,6 +741,24 @@ vector_hnsw_should_have_vacuum_heaptid_scan_tid(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_heaptid_scan_tid);
 Datum
 vector_rust_hnsw_should_have_vacuum_heaptid_scan_tid(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHeapTidScanFlag(heapTidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_vacuum_heaptid_scan_flag);
+Datum
+vector_hnsw_should_have_vacuum_heaptid_scan_flag(PG_FUNCTION_ARGS)
+{
+	int32		heapTidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVacuumHeapTidScanFlag(heapTidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_vacuum_heaptid_scan_flag);
+Datum
+vector_rust_hnsw_should_have_vacuum_heaptid_scan_flag(PG_FUNCTION_ARGS)
 {
 	int32		heapTidValid = PG_GETARG_INT32(0);
 
@@ -2353,6 +2407,24 @@ vector_rust_hnsw_should_have_matching_markdeleted_neighbor_page(PG_FUNCTION_ARGS
 	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedNeighborPage(neighborPage, elementPage, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_markdeleted_neighbor_page_flag);
+Datum
+vector_hnsw_should_have_matching_markdeleted_neighbor_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		pagesMatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedNeighborPageFlag(pagesMatch != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_markdeleted_neighbor_page_flag);
+Datum
+vector_rust_hnsw_should_have_matching_markdeleted_neighbor_page_flag(PG_FUNCTION_ARGS)
+{
+	int32		pagesMatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedNeighborPageFlag(pagesMatch != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_markdeleted_buffers);
 Datum
 vector_hnsw_should_match_markdeleted_buffers(PG_FUNCTION_ARGS)
@@ -2391,6 +2463,24 @@ vector_rust_hnsw_should_have_matching_markdeleted_buffers(PG_FUNCTION_ARGS)
 	int32		rightBuffer = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedBuffers(leftBuffer, rightBuffer, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_markdeleted_buffers_flag);
+Datum
+vector_hnsw_should_have_matching_markdeleted_buffers_flag(PG_FUNCTION_ARGS)
+{
+	int32		buffersMatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedBuffersFlag(buffersMatch != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_markdeleted_buffers_flag);
+Datum
+vector_rust_hnsw_should_have_matching_markdeleted_buffers_flag(PG_FUNCTION_ARGS)
+{
+	int32		buffersMatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingMarkDeletedBuffersFlag(buffersMatch != 0, true));
 }
 
 static bool
@@ -2452,6 +2542,24 @@ vector_rust_hnsw_should_have_distinct_markdeleted_buffers(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveDistinctMarkDeletedBuffers(leftBuffer, rightBuffer, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_distinct_markdeleted_buffers_flag);
+Datum
+vector_hnsw_should_have_distinct_markdeleted_buffers_flag(PG_FUNCTION_ARGS)
+{
+	int32		buffersMatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctMarkDeletedBuffersFlag(buffersMatch != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_distinct_markdeleted_buffers_flag);
+Datum
+vector_rust_hnsw_should_have_distinct_markdeleted_buffers_flag(PG_FUNCTION_ARGS)
+{
+	int32		buffersMatch = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDistinctMarkDeletedBuffersFlag(buffersMatch != 0, true));
+}
+
 static bool
 HnswShouldHaveMarkDeletedVersionBeyondMaxFlag(bool versionWithinRange, bool useRust)
 {
@@ -2511,6 +2619,24 @@ vector_rust_hnsw_should_have_markdeleted_version_beyond_max(PG_FUNCTION_ARGS)
 	int32		maxVersion = PG_GETARG_INT32(1);
 
 	PG_RETURN_BOOL(HnswShouldHaveMarkDeletedVersionBeyondMax(version, maxVersion, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_markdeleted_version_beyond_max_flag);
+Datum
+vector_hnsw_should_have_markdeleted_version_beyond_max_flag(PG_FUNCTION_ARGS)
+{
+	int32		versionWithinRange = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMarkDeletedVersionBeyondMaxFlag(versionWithinRange != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_markdeleted_version_beyond_max_flag);
+Datum
+vector_rust_hnsw_should_have_markdeleted_version_beyond_max_flag(PG_FUNCTION_ARGS)
+{
+	int32		versionWithinRange = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMarkDeletedVersionBeyondMaxFlag(versionWithinRange != 0, true));
 }
 
 static bool
