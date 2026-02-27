@@ -2329,12 +2329,18 @@ vector_rust_hnsw_should_have_build_path_for_ondisk_neighbor_update(PG_FUNCTION_A
 }
 
 static bool
-HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust)
+HnswShouldHaveBuildPathForOnDiskDuplicatePage(bool building, bool useRust)
 {
 	if (useRust)
 		return vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 
 	return building;
+}
+
+static bool
+HnswShouldUseBuildPathForOnDiskDuplicatePage(bool building, bool useRust)
+{
+	return HnswShouldHaveBuildPathForOnDiskDuplicatePage(building, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_build_path_for_ondisk_duplicate_page);
@@ -2353,6 +2359,24 @@ vector_rust_hnsw_should_use_build_path_for_ondisk_duplicate_page(PG_FUNCTION_ARG
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseBuildPathForOnDiskDuplicatePage(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_path_for_ondisk_duplicate_page);
+Datum
+vector_hnsw_should_have_build_path_for_ondisk_duplicate_page(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPathForOnDiskDuplicatePage(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_path_for_ondisk_duplicate_page);
+Datum
+vector_rust_hnsw_should_have_build_path_for_ondisk_duplicate_page(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildPathForOnDiskDuplicatePage(building != 0, true));
 }
 
 static bool
