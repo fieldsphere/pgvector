@@ -2840,6 +2840,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_compacted_vacuum_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_compacted_vacuum_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_compacted_vacuum_heaptids(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_compacted_vacuum_heaptids'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_finish_vacuum_page_update(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_finish_vacuum_page_update'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -7297,6 +7307,18 @@ my $compact_vacuum_heaptids_parity = $node->safe_psql("postgres", q{
 	) AS t(item_updated);
 });
 is($compact_vacuum_heaptids_parity, "t\nt\nt\nt");
+
+my $have_compacted_vacuum_heaptids_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_compacted_vacuum_heaptids(item_updated) =
+		   rust_hnsw_should_have_compacted_vacuum_heaptids(item_updated)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(item_updated);
+});
+is($have_compacted_vacuum_heaptids_parity, "t\nt\nt\nt");
 
 my $finish_vacuum_page_update_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_finish_vacuum_page_update(page_updated) =
