@@ -17,37 +17,29 @@
 static bool
 IvfflatInsertPageIsValid(BlockNumber page, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
-
-	return BlockNumberIsValid(page);
+	(void) useRust;
+	return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
 }
 
 static bool
 IvfflatChooseInsertCandidate(float8 distance, float8 minDistance, BlockNumber insertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_choose_insert_candidate_kernel(distance, minDistance, IvfflatInsertPageIsValid(insertPage, true));
-
-	return distance < minDistance || !IvfflatInsertPageIsValid(insertPage, false);
+	(void) useRust;
+	return vector_rust_ivfflat_choose_insert_candidate_kernel(distance, minDistance, IvfflatInsertPageIsValid(insertPage, true));
 }
 
 static bool
 IvfflatShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
-
-	return freeSpace < itemSize;
+	(void) useRust;
+	return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
 }
 
 static bool
 IvfflatShouldUpdateInsertPage(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust)
 {
-	if (useRust)
-		return vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) originalInsertPage);
-
-	return insertPage != originalInsertPage;
+	(void) useRust;
+	return vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) originalInsertPage);
 }
 
 static bool
