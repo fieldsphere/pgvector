@@ -478,6 +478,10 @@ ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_update_ondisk_insert_page_kernel\(
 	"hnswvacuum.c uses rust update-ondisk-insert-page kernel");
 ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_update_progress_after_insert_kernel\(/,
 	"hnswvacuum.c uses rust update-progress-after-insert kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_match_neighbor_connection_kernel\(/,
+	"hnswvacuum.c uses rust match-neighbor-connection kernel");
+ok($hnsw_vacuum_c =~ /vector_rust_hnsw_should_update_entry_point_kernel\(/,
+	"hnswvacuum.c uses rust update-entry-point kernel");
 
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedTidPointerFlag\(bool hasDeletedTid, bool useRust\)\s*\{[^}]*return hasDeletedTid;/s,
 	"legacy C deleted-tid-pointer-flag fallback removed");
@@ -507,5 +511,27 @@ unlike($hnsw_vacuum_c, qr/HnswShouldHaveInvalidVacuumNeighborTid\(bool neighborT
 	"legacy C invalid-vacuum-neighbor-tid fallback removed");
 unlike($hnsw_vacuum_c, qr/HnswShouldHaveDeletedVacuumNeighbor\(bool isDeletedNeighbor, bool useRust\)\s*\{[^}]*return isDeletedNeighbor;/s,
 	"legacy C deleted-vacuum-neighbor fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumUnderfilledLayer0\(bool needsUpdated, bool useRust\)\s*\{[^}]*return !needsUpdated;/s,
+	"legacy C vacuum-underfilled-layer0 fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumSkipEntrypoint\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return hasEntryPoint;/s,
+	"legacy C vacuum-skip-entrypoint fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMatchingVacuumEntrypointElement\(int32 elementBlkno, int32 elementOffno, int32 entryBlkno, int32 entryOffno, bool useRust\)\s*\{[^}]*return elementBlkno == entryBlkno && elementOffno == entryOffno;/s,
+	"legacy C matching-vacuum-entrypoint-element fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumPointerFlag\(bool hasPointer, bool useRust\)\s*\{[^}]*return hasPointer;/s,
+	"legacy C vacuum-pointer-flag fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveMissingVacuumEntrypointTid\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return !hasEntryPoint;/s,
+	"legacy C missing-vacuum-entrypoint-tid fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumElementWithoutUpdatesFlag\(bool needsUpdated, bool useRust\)\s*\{[^}]*return !needsUpdated;/s,
+	"legacy C vacuum-element-without-updates fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveHigherVacuumEntrypointLevel\(int32 elementLevel, int32 entryPointLevel, bool useRust\)\s*\{[^}]*return elementLevel > entryPointLevel;/s,
+	"legacy C higher-vacuum-entrypoint-level fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumMissingEntrypoint\(bool entryPointIsNull, bool useRust\)\s*\{[^}]*return entryPointIsNull;/s,
+	"legacy C vacuum-missing-entrypoint fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveDefaultVacuumEntryLevel\(bool hasEntryPoint, bool useRust\)\s*\{[^}]*return !hasEntryPoint;/s,
+	"legacy C default-vacuum-entry-level fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldResetVacuumHighestPoint\(bool highestPointValid, bool useRust\)\s*\{[^}]*return !highestPointValid;/s,
+	"legacy C reset-vacuum-highest-point fallback removed");
+unlike($hnsw_vacuum_c, qr/HnswShouldHaveVacuumHighestPointBlockFlag\(bool highestPointValid, bool useRust\)\s*\{[^}]*return highestPointValid;/s,
+	"legacy C vacuum-highest-point-block-flag fallback removed");
 
 done_testing();
