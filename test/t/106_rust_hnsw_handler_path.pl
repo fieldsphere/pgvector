@@ -380,6 +380,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_flush_graph_pages_at_end(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_flush_graph_pages_at_end'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_flush_graph_pages_at_end(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_flush_graph_pages_at_end'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_have_flush_pages_in_build(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_have_flush_pages_in_build'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -420,6 +430,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_begin_parallel_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_begin_parallel_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_begin_parallel_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_begin_parallel_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_end_parallel_build(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_end_parallel_build'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -427,6 +447,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_end_parallel_build(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_end_parallel_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_end_parallel_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_end_parallel_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_end_parallel_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_end_parallel_build'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -447,6 +477,16 @@ $node->safe_psql("postgres", q{
 $node->safe_psql("postgres", q{
 	CREATE FUNCTION rust_hnsw_should_scan_heap_for_build(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_rust_hnsw_should_scan_heap_for_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_scan_heap_for_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_scan_heap_for_build'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_scan_heap_for_build(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_scan_heap_for_build'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
@@ -5407,6 +5447,18 @@ my $flush_graph_pages_at_end_parity = $node->safe_psql("postgres", q{
 });
 is($flush_graph_pages_at_end_parity, "t\nt\nt\nt");
 
+my $have_flush_graph_pages_at_end_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_flush_graph_pages_at_end(graph_flushed) =
+		   rust_hnsw_should_have_flush_graph_pages_at_end(graph_flushed)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(graph_flushed);
+});
+is($have_flush_graph_pages_at_end_parity, "t\nt\nt\nt");
+
 my $have_flush_pages_in_build_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_flush_pages_in_build(graph_flushed) =
 		   rust_hnsw_should_have_flush_pages_in_build(graph_flushed)
@@ -5455,6 +5507,18 @@ my $begin_parallel_build_parity = $node->safe_psql("postgres", q{
 });
 is($begin_parallel_build_parity, "t\nt\nt\nt");
 
+my $have_begin_parallel_build_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_begin_parallel_build(parallel_workers) =
+		   rust_hnsw_should_have_begin_parallel_build(parallel_workers)
+	FROM (VALUES
+		(0),
+		(1),
+		(4),
+		(-1)
+	) AS t(parallel_workers);
+});
+is($have_begin_parallel_build_parity, "t\nt\nt\nt");
+
 my $end_parallel_build_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_end_parallel_build(has_leader) =
 		   rust_hnsw_should_end_parallel_build(has_leader)
@@ -5466,6 +5530,18 @@ my $end_parallel_build_parity = $node->safe_psql("postgres", q{
 	) AS t(has_leader);
 });
 is($end_parallel_build_parity, "t\nt\nt\nt");
+
+my $have_end_parallel_build_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_end_parallel_build(has_leader) =
+		   rust_hnsw_should_have_end_parallel_build(has_leader)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_leader);
+});
+is($have_end_parallel_build_parity, "t\nt\nt\nt");
 
 my $have_build_leader_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_build_leader(has_leader) =
@@ -5490,6 +5566,18 @@ my $scan_heap_for_build_parity = $node->safe_psql("postgres", q{
 	) AS t(has_heap);
 });
 is($scan_heap_for_build_parity, "t\nt\nt\nt");
+
+my $have_scan_heap_for_build_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_scan_heap_for_build(has_heap) =
+		   rust_hnsw_should_have_scan_heap_for_build(has_heap)
+	FROM (VALUES
+		(0),
+		(1),
+		(1),
+		(0)
+	) AS t(has_heap);
+});
+is($have_scan_heap_for_build_parity, "t\nt\nt\nt");
 
 my $have_build_heap_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_have_build_heap(has_heap) =
