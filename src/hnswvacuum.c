@@ -129,6 +129,24 @@ vector_rust_hnsw_should_have_deleted_tid_pointer(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveDeletedTidPointerFlag(hasDeletedTid != 0, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_deleted_tid_pointer_flag);
+Datum
+vector_hnsw_should_have_deleted_tid_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDeletedTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedTidPointerFlag(hasDeletedTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_deleted_tid_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_deleted_tid_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDeletedTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDeletedTidPointerFlag(hasDeletedTid != 0, true));
+}
+
 static bool
 HnswShouldHaveContinuableVacuumBlockScan(bool hasValidBlock, bool useRust)
 {
@@ -318,6 +336,24 @@ vector_hnsw_should_have_invalid_vacuum_last_item(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_vacuum_last_item);
 Datum
 vector_rust_hnsw_should_have_invalid_vacuum_last_item(PG_FUNCTION_ARGS)
+{
+	int32		lastItemValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidVacuumLastItemFlag(lastItemValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_invalid_vacuum_last_item_flag);
+Datum
+vector_hnsw_should_have_invalid_vacuum_last_item_flag(PG_FUNCTION_ARGS)
+{
+	int32		lastItemValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInvalidVacuumLastItemFlag(lastItemValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_invalid_vacuum_last_item_flag);
+Datum
+vector_rust_hnsw_should_have_invalid_vacuum_last_item_flag(PG_FUNCTION_ARGS)
 {
 	int32		lastItemValid = PG_GETARG_INT32(0);
 
@@ -2552,6 +2588,24 @@ vector_rust_hnsw_should_have_higher_vacuum_element_level(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumElementLevel(elementLevel, highestLevel, true));
 }
 
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_higher_vacuum_element_level_flag);
+Datum
+vector_hnsw_should_have_higher_vacuum_element_level_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasHigherLevel = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumElementLevelFlag(hasHigherLevel != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_higher_vacuum_element_level_flag);
+Datum
+vector_rust_hnsw_should_have_higher_vacuum_element_level_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasHigherLevel = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveHigherVacuumElementLevelFlag(hasHigherLevel != 0, true));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_vacuum_entrypoint_tid);
 Datum
 vector_hnsw_should_have_matching_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
@@ -2574,6 +2628,24 @@ vector_rust_hnsw_should_have_matching_vacuum_entrypoint_tid(PG_FUNCTION_ARGS)
 	int32		entryOffno = PG_GETARG_INT32(3);
 
 	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointTid(blkno, offno, entryBlkno, entryOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_matching_vacuum_entrypoint_tid_flag);
+Datum
+vector_hnsw_should_have_matching_vacuum_entrypoint_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointTidFlag(hasMatchingTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_matching_vacuum_entrypoint_tid_flag);
+Datum
+vector_rust_hnsw_should_have_matching_vacuum_entrypoint_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMatchingTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMatchingVacuumEntrypointTidFlag(hasMatchingTid != 0, true));
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_match_vacuum_entrypoint_tuple);
@@ -2647,6 +2719,24 @@ vector_hnsw_should_have_failed_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite);
 Datum
 vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFailedVacuumNeighborOverwriteFlag(overwriteSucceeded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag);
+Datum
+vector_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(PG_FUNCTION_ARGS)
+{
+	int32		overwriteSucceeded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveFailedVacuumNeighborOverwriteFlag(overwriteSucceeded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag);
+Datum
+vector_rust_hnsw_should_have_failed_vacuum_neighbor_overwrite_flag(PG_FUNCTION_ARGS)
 {
 	int32		overwriteSucceeded = PG_GETARG_INT32(0);
 
