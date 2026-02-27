@@ -1430,6 +1430,16 @@ $node->safe_psql("postgres", q{
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 });
 $node->safe_psql("postgres", q{
+	CREATE FUNCTION c_hnsw_should_have_neighbor_page_as_insert_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_hnsw_should_have_neighbor_page_as_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
+	CREATE FUNCTION rust_hnsw_should_have_neighbor_page_as_insert_page(integer) RETURNS boolean
+	AS '$libdir/vector', 'vector_rust_hnsw_should_have_neighbor_page_as_insert_page'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+});
+$node->safe_psql("postgres", q{
 	CREATE FUNCTION c_hnsw_should_use_next_neighbor_offset(integer) RETURNS boolean
 	AS '$libdir/vector', 'vector_hnsw_should_use_next_neighbor_offset'
 	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
@@ -5878,6 +5888,18 @@ my $use_neighbor_page_as_insert_page_parity = $node->safe_psql("postgres", q{
 	) AS t(has_new_insert_page);
 });
 is($use_neighbor_page_as_insert_page_parity, "t\nt\nt\nt");
+
+my $have_neighbor_page_as_insert_page_parity = $node->safe_psql("postgres", q{
+	SELECT c_hnsw_should_have_neighbor_page_as_insert_page(has_new_insert_page) =
+		   rust_hnsw_should_have_neighbor_page_as_insert_page(has_new_insert_page)
+	FROM (VALUES
+		(0),
+		(1),
+		(0),
+		(1)
+	) AS t(has_new_insert_page);
+});
+is($have_neighbor_page_as_insert_page_parity, "t\nt\nt\nt");
 
 my $use_next_neighbor_offset_parity = $node->safe_psql("postgres", q{
 	SELECT c_hnsw_should_use_next_neighbor_offset(same_buffer) =
