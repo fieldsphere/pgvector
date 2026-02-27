@@ -919,9 +919,15 @@ HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
 }
 
 static bool
-HnswShouldUseScanNormprocFlag(bool hasNormproc, bool useRust)
+HnswShouldHaveScanNormproc(bool hasNormproc, bool useRust)
 {
 	return HnswShouldHaveScanPointerFlag(hasNormproc, useRust);
+}
+
+static bool
+HnswShouldUseScanNormprocFlag(bool hasNormproc, bool useRust)
+{
+	return HnswShouldHaveScanNormproc(hasNormproc, useRust);
 }
 
 static bool
@@ -1265,6 +1271,24 @@ vector_rust_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
 	int32		hasNormproc = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_normproc);
+Datum
+vector_hnsw_should_have_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormproc(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_normproc);
+Datum
+vector_rust_hnsw_should_have_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormproc(hasNormproc != 0, true));
 }
 
 static bool
