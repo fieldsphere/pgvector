@@ -2253,9 +2253,15 @@ vector_rust_hnsw_should_have_vacuum_cleanup_analyze_only(PG_FUNCTION_ARGS)
 }
 
 static bool
-HnswShouldReturnNullVacuumCleanupStats(bool hasStats, bool useRust)
+HnswShouldHaveNullVacuumCleanupStats(bool hasStats, bool useRust)
 {
 	return HnswShouldHaveMissingVacuumStatsFlag(hasStats, useRust);
+}
+
+static bool
+HnswShouldReturnNullVacuumCleanupStats(bool hasStats, bool useRust)
+{
+	return HnswShouldHaveNullVacuumCleanupStats(hasStats, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_null_vacuum_cleanup_stats);
@@ -2274,6 +2280,24 @@ vector_rust_hnsw_should_return_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
 	int32		hasStats = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldReturnNullVacuumCleanupStats(hasStats != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_null_vacuum_cleanup_stats);
+Datum
+vector_hnsw_should_have_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNullVacuumCleanupStats(hasStats != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_null_vacuum_cleanup_stats);
+Datum
+vector_rust_hnsw_should_have_null_vacuum_cleanup_stats(PG_FUNCTION_ARGS)
+{
+	int32		hasStats = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNullVacuumCleanupStats(hasStats != 0, true));
 }
 
 static bool
