@@ -40,6 +40,7 @@ static bool HnswShouldBreakOnInvalidOnDiskHeapTid(bool heapTidValid, bool useRus
 static bool HnswShouldCommitOnDiskDuplicateWithBufferDirty(bool building, bool useRust);
 static bool HnswShouldSkipUnselectedOnDiskNeighbor(int32 updateIndex, bool useRust);
 static bool HnswShouldCommitOnDiskNeighborUpdateWithBufferDirty(bool building, bool useRust);
+static bool HnswShouldHaveNonBuildingOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust);
 static bool HnswShouldHaveInsufficientOnDiskNeighborSpace(int64 freeSpace, int64 tupleSize, bool useRust);
 static bool HnswShouldAppendOnDiskNeighborPage(int64 freeSpace, int64 tupleSize, bool useRust);
@@ -1449,12 +1450,18 @@ vector_rust_hnsw_should_commit_ondisk_neighbor_update_with_buffer_dirty(PG_FUNCT
 }
 
 static bool
-HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust)
+HnswShouldHaveNonBuildingOnDiskNeighborUpdate(bool building, bool useRust)
 {
 	if (useRust)
 		return !vector_rust_hnsw_should_commit_ondisk_duplicate_with_buffer_dirty_kernel(building);
 
 	return !building;
+}
+
+static bool
+HnswShouldAbortOnDiskNeighborUpdate(bool building, bool useRust)
+{
+	return HnswShouldHaveNonBuildingOnDiskNeighborUpdate(building, useRust);
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_ondisk_neighbor_update);
@@ -1473,6 +1480,24 @@ vector_rust_hnsw_should_abort_ondisk_neighbor_update(PG_FUNCTION_ARGS)
 	int32		building = PG_GETARG_INT32(0);
 
 	PG_RETURN_BOOL(HnswShouldAbortOnDiskNeighborUpdate(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonbuilding_ondisk_neighbor_update);
+Datum
+vector_hnsw_should_have_nonbuilding_ondisk_neighbor_update(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonBuildingOnDiskNeighborUpdate(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonbuilding_ondisk_neighbor_update);
+Datum
+vector_rust_hnsw_should_have_nonbuilding_ondisk_neighbor_update(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonBuildingOnDiskNeighborUpdate(building != 0, true));
 }
 
 static bool
