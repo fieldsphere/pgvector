@@ -5,12 +5,137 @@
 #include "access/itup.h"
 #include "commands/vacuum.h"
 #include "ivfflat.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "utils/relcache.h"
 
 #if PG_VERSION_NUM >= 180000
 #define vacuum_delay_point() vacuum_delay_point(false)
 #endif
+
+static bool
+IvfflatVacuumPageIsValid(BlockNumber page, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+}
+
+static bool
+IvfflatShouldSetInsertPage(int ndeletable, BlockNumber insertPage, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_set_insert_page_kernel(ndeletable, IvfflatVacuumPageIsValid(insertPage, true));
+}
+
+static bool
+IvfflatShouldUpdateVacuumInsertPage(BlockNumber insertPage, bool useRust)
+{
+	return IvfflatVacuumPageIsValid(insertPage, useRust);
+}
+
+static bool
+IvfflatShouldVisitVacuumListPage(BlockNumber page, bool useRust)
+{
+	return IvfflatVacuumPageIsValid(page, useRust);
+}
+
+static bool
+IvfflatShouldVisitVacuumEntryPage(BlockNumber page, bool useRust)
+{
+	return IvfflatVacuumPageIsValid(page, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_set_insert_page);
+Datum
+vector_ivfflat_should_set_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		ndeletable = PG_GETARG_INT32(0);
+	int32		insertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldSetInsertPage(ndeletable, (BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_set_insert_page);
+Datum
+vector_rust_ivfflat_should_set_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		ndeletable = PG_GETARG_INT32(0);
+	int32		insertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldSetInsertPage(ndeletable, (BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_update_vacuum_insert_page);
+Datum
+vector_ivfflat_should_update_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateVacuumInsertPage((BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_update_vacuum_insert_page);
+Datum
+vector_rust_ivfflat_should_update_vacuum_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateVacuumInsertPage((BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_vacuum_list_page);
+Datum
+vector_ivfflat_should_visit_vacuum_list_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitVacuumListPage((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_visit_vacuum_list_page);
+Datum
+vector_rust_ivfflat_should_visit_vacuum_list_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitVacuumListPage((BlockNumber) page, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_vacuum_entry_page);
+Datum
+vector_ivfflat_should_visit_vacuum_entry_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitVacuumEntryPage((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_visit_vacuum_entry_page);
+Datum
+vector_rust_ivfflat_should_visit_vacuum_entry_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitVacuumEntryPage((BlockNumber) page, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_vacuum_page_is_valid);
+Datum
+vector_ivfflat_vacuum_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatVacuumPageIsValid((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_vacuum_page_is_valid);
+Datum
+vector_rust_ivfflat_vacuum_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatVacuumPageIsValid((BlockNumber) page, true));
+}
 
 /*
  * Bulk delete tuples from the index
@@ -27,7 +152,7 @@ ivfflatbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
 
 	/* Iterate over list pages */
-	while (BlockNumberIsValid(blkno))
+	while (IvfflatShouldVisitVacuumListPage(blkno, true))
 	{
 		Buffer		cbuf;
 		Page		cpage;
@@ -61,7 +186,7 @@ ivfflatbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 			BlockNumber insertPage = InvalidBlockNumber;
 
 			/* Iterate over entry pages */
-			while (BlockNumberIsValid(searchPage))
+			while (IvfflatShouldVisitVacuumEntryPage(searchPage, true))
 			{
 				Buffer		buf;
 				Page		page;
@@ -106,7 +231,7 @@ ivfflatbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 
 				/* Set to first free page */
 				/* Must be set before searchPage is updated */
-				if (!BlockNumberIsValid(insertPage) && ndeletable > 0)
+				if (IvfflatShouldSetInsertPage(ndeletable, insertPage, true))
 					insertPage = searchPage;
 
 				searchPage = IvfflatPageGetOpaque(page)->nextblkno;
@@ -129,7 +254,7 @@ ivfflatbulkdelete(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 			 * We don't add or delete items from lists pages, so offset won't
 			 * change.
 			 */
-			if (BlockNumberIsValid(insertPage))
+			if (IvfflatShouldUpdateVacuumInsertPage(insertPage, true))
 			{
 				listInfo.offno = coffno;
 				IvfflatUpdateList(index, listInfo, insertPage, InvalidBlockNumber, InvalidBlockNumber, MAIN_FORKNUM);

@@ -10,6 +10,7 @@
 #include "halfvec.h"
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
@@ -601,36 +602,32 @@ vector_to_sparsevec(PG_FUNCTION_ARGS)
 	int32		typmod = PG_GETARG_INT32(1);
 	SparseVector *result;
 	int			dim = vec->dim;
-	int			nnz = 0;
+	int			nnz;
 	float	   *values;
-	int			j = 0;
+	int			j;
 
 	CheckDim(dim);
 	CheckExpectedDim(typmod, dim);
 
-	for (int i = 0; i < dim; i++)
-	{
-		if (vec->x[i] != 0)
-			nnz++;
-	}
-
+	nnz = vector_rust_vector_to_sparse_count_kernel(dim, vec->x);
 	result = InitSparseVector(dim, nnz);
 	values = SPARSEVEC_VALUES(result);
-	for (int i = 0; i < dim; i++)
-	{
-		if (vec->x[i] != 0)
-		{
-			/* Safety check */
-			if (j >= result->nnz)
-				elog(ERROR, "safety check failed");
+	j = vector_rust_vector_to_sparse_fill_kernel(dim, vec->x, result->indices, values);
 
-			result->indices[j] = i;
-			values[j] = vec->x[i];
-			j++;
-		}
-	}
+	if (j != result->nnz)
+		elog(ERROR, "safety check failed");
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: vector to sparse vector cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_vector_to_sparsevec);
+Datum
+vector_rust_vector_to_sparsevec(PG_FUNCTION_ARGS)
+{
+	return vector_to_sparsevec(fcinfo);
 }
 
 /*
@@ -644,36 +641,32 @@ halfvec_to_sparsevec(PG_FUNCTION_ARGS)
 	int32		typmod = PG_GETARG_INT32(1);
 	SparseVector *result;
 	int			dim = vec->dim;
-	int			nnz = 0;
+	int			nnz;
 	float	   *values;
-	int			j = 0;
+	int			j;
 
 	CheckDim(dim);
 	CheckExpectedDim(typmod, dim);
 
-	for (int i = 0; i < dim; i++)
-	{
-		if (!HalfIsZero(vec->x[i]))
-			nnz++;
-	}
-
+	nnz = vector_rust_halfvec_to_sparse_count_kernel(dim, vec->x);
 	result = InitSparseVector(dim, nnz);
 	values = SPARSEVEC_VALUES(result);
-	for (int i = 0; i < dim; i++)
-	{
-		if (!HalfIsZero(vec->x[i]))
-		{
-			/* Safety check */
-			if (j >= result->nnz)
-				elog(ERROR, "safety check failed");
+	j = vector_rust_halfvec_to_sparse_fill_kernel(dim, vec->x, result->indices, values);
 
-			result->indices[j] = i;
-			values[j] = HalfToFloat4(vec->x[i]);
-			j++;
-		}
-	}
+	if (j != result->nnz)
+		elog(ERROR, "safety check failed");
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec to sparse vector cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_to_sparsevec);
+Datum
+vector_rust_halfvec_to_sparsevec(PG_FUNCTION_ARGS)
+{
+	return halfvec_to_sparsevec(fcinfo);
 }
 
 /*
@@ -691,9 +684,10 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 	char		typalign;
 	Datum	   *elemsp;
 	int			nelemsp;
-	int			nnz = 0;
+	int			nnz;
+	float	   *dense_values;
 	float	   *values;
-	int			j = 0;
+	int			j;
 
 	if (ARR_NDIM(array) > 1)
 		ereport(ERROR,
@@ -711,85 +705,41 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 	CheckDim(nelemsp);
 	CheckExpectedDim(typmod, nelemsp);
 
-#ifdef _MSC_VER
-/* /fp:fast may not propagate +/-Infinity or NaN */
-#define IS_NOT_ZERO(v) (isnan((float) (v)) || isinf((float) (v)) || ((float) (v)) != 0)
-#else
-#define IS_NOT_ZERO(v) (((float) (v)) != 0)
-#endif
+	dense_values = palloc(sizeof(float) * nelemsp);
 
 	if (ARR_ELEMTYPE(array) == INT4OID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DatumGetInt32(elemsp[i]));
+			dense_values[i] = (float) DatumGetInt32(elemsp[i]);
 	}
 	else if (ARR_ELEMTYPE(array) == FLOAT8OID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DatumGetFloat8(elemsp[i]));
+			dense_values[i] = (float) DatumGetFloat8(elemsp[i]);
 	}
 	else if (ARR_ELEMTYPE(array) == FLOAT4OID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DatumGetFloat4(elemsp[i]));
+			dense_values[i] = DatumGetFloat4(elemsp[i]);
 	}
 	else if (ARR_ELEMTYPE(array) == NUMERICOID)
 	{
 		for (int i = 0; i < nelemsp; i++)
-			nnz += IS_NOT_ZERO(DirectFunctionCall1(numeric_float4, elemsp[i]));
+			dense_values[i] = DatumGetFloat4(DirectFunctionCall1(numeric_float4, elemsp[i]));
 	}
 	else
 	{
+		pfree(dense_values);
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
 				 errmsg("unsupported array type")));
 	}
 
+	nnz = vector_rust_vector_to_sparse_count_kernel(nelemsp, dense_values);
 	result = InitSparseVector(nelemsp, nnz);
 	values = SPARSEVEC_VALUES(result);
-
-#define PROCESS_ARRAY_ELEM(elem) \
-	do { \
-		float v = (float) (elem); \
-		if (IS_NOT_ZERO(v)) { \
-			/* Safety check */ \
-			if (j >= result->nnz) \
-				elog(ERROR, "safety check failed"); \
-			result->indices[j] = i; \
-			values[j] = v; \
-			j++; \
-		} \
-	} while (0)
-
-	if (ARR_ELEMTYPE(array) == INT4OID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetInt32(elemsp[i]));
-	}
-	else if (ARR_ELEMTYPE(array) == FLOAT8OID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetFloat8(elemsp[i]));
-	}
-	else if (ARR_ELEMTYPE(array) == FLOAT4OID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetFloat4(elemsp[i]));
-	}
-	else if (ARR_ELEMTYPE(array) == NUMERICOID)
-	{
-		for (int i = 0; i < nelemsp; i++)
-			PROCESS_ARRAY_ELEM(DatumGetFloat4(DirectFunctionCall1(numeric_float4, elemsp[i])));
-	}
-	else
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_EXCEPTION),
-				 errmsg("unsupported array type")));
-	}
-
-#undef PROCESS_ARRAY_ELEM
-#undef IS_NOT_ZERO
+	j = vector_rust_vector_to_sparse_fill_kernel(nelemsp, dense_values, result->indices, values);
+	pfree(dense_values);
 
 	/*
 	 * Free allocation from deconstruct_array. Do not free individual elements
@@ -808,51 +758,23 @@ array_to_sparsevec(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Rust parity wrapper: array to sparse vector cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_array_to_sparsevec);
+Datum
+vector_rust_array_to_sparsevec(PG_FUNCTION_ARGS)
+{
+	return array_to_sparsevec(fcinfo);
+}
+
+/*
  * Get the L2 squared distance between sparse vectors
  */
 static float
 SparsevecL2SquaredDistance(SparseVector * a, SparseVector * b)
 {
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		distance = 0.0;
-	int			bpos = 0;
-
-	for (int i = 0; i < a->nnz; i++)
-	{
-		int			ai = a->indices[i];
-		int			bi = -1;
-
-		for (int j = bpos; j < b->nnz; j++)
-		{
-			bi = b->indices[j];
-
-			if (ai == bi)
-			{
-				float		diff = ax[i] - bx[j];
-
-				distance += diff * diff;
-			}
-			else if (ai > bi)
-				distance += bx[j] * bx[j];
-
-			/* Update start for next iteration */
-			if (ai >= bi)
-				bpos = j + 1;
-
-			/* Found or passed it */
-			if (bi >= ai)
-				break;
-		}
-
-		if (ai != bi)
-			distance += ax[i] * ax[i];
-	}
-
-	for (int j = bpos; j < b->nnz; j++)
-		distance += bx[j] * bx[j];
-
-	return distance;
+	return vector_rust_sparsevec_l2_squared_distance_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+															 b->nnz, b->indices, SPARSEVEC_VALUES(b));
 }
 
 /*
@@ -892,34 +814,8 @@ sparsevec_l2_squared_distance(PG_FUNCTION_ARGS)
 static float
 SparsevecInnerProduct(SparseVector * a, SparseVector * b)
 {
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		distance = 0.0;
-	int			bpos = 0;
-
-	for (int i = 0; i < a->nnz; i++)
-	{
-		int			ai = a->indices[i];
-
-		for (int j = bpos; j < b->nnz; j++)
-		{
-			int			bi = b->indices[j];
-
-			/* Only update when the same index */
-			if (ai == bi)
-				distance += ax[i] * bx[j];
-
-			/* Update start for next iteration */
-			if (ai >= bi)
-				bpos = j + 1;
-
-			/* Found or passed it */
-			if (bi >= ai)
-				break;
-		}
-	}
-
-	return distance;
+	return vector_rust_sparsevec_inner_product_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+													   b->nnz, b->indices, SPARSEVEC_VALUES(b));
 }
 
 /*
@@ -961,40 +857,11 @@ sparsevec_cosine_distance(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
 	SparseVector *b = PG_GETARG_SPARSEVEC_P(1);
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		norma = 0.0;
-	float		normb = 0.0;
-	double		similarity;
 
 	CheckDims(a, b);
 
-	similarity = SparsevecInnerProduct(a, b);
-
-	/* Auto-vectorized */
-	for (int i = 0; i < a->nnz; i++)
-		norma += ax[i] * ax[i];
-
-	/* Auto-vectorized */
-	for (int i = 0; i < b->nnz; i++)
-		normb += bx[i] * bx[i];
-
-	/* Use sqrt(a * b) over sqrt(a) * sqrt(b) */
-	similarity /= sqrt((double) norma * (double) normb);
-
-#ifdef _MSC_VER
-	/* /fp:fast may not propagate NaN */
-	if (isnan(similarity))
-		PG_RETURN_FLOAT8(NAN);
-#endif
-
-	/* Keep in range */
-	if (similarity > 1)
-		similarity = 1.0;
-	else if (similarity < -1)
-		similarity = -1.0;
-
-	PG_RETURN_FLOAT8(1.0 - similarity);
+	PG_RETURN_FLOAT8(vector_rust_sparsevec_cosine_distance_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+																   b->nnz, b->indices, SPARSEVEC_VALUES(b)));
 }
 
 /*
@@ -1006,44 +873,51 @@ sparsevec_l1_distance(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
 	SparseVector *b = PG_GETARG_SPARSEVEC_P(1);
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	float		distance = 0.0;
-	int			bpos = 0;
 
 	CheckDims(a, b);
 
-	for (int i = 0; i < a->nnz; i++)
-	{
-		int			ai = a->indices[i];
-		int			bi = -1;
+	PG_RETURN_FLOAT8((double) vector_rust_sparsevec_l1_distance_kernel(a->nnz, a->indices, SPARSEVEC_VALUES(a),
+																		b->nnz, b->indices, SPARSEVEC_VALUES(b)));
+}
 
-		for (int j = bpos; j < b->nnz; j++)
-		{
-			bi = b->indices[j];
+/*
+ * Rust parity wrapper: sparse vector L1 distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l1_distance);
+Datum
+vector_rust_sparsevec_l1_distance(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l1_distance(fcinfo);
+}
 
-			if (ai == bi)
-				distance += fabsf(ax[i] - bx[j]);
-			else if (ai > bi)
-				distance += fabsf(bx[j]);
+/*
+ * Rust parity wrapper: sparse vector L2 squared distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l2_squared_distance);
+Datum
+vector_rust_sparsevec_l2_squared_distance(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l2_squared_distance(fcinfo);
+}
 
-			/* Update start for next iteration */
-			if (ai >= bi)
-				bpos = j + 1;
+/*
+ * Rust parity wrapper: sparse vector inner product
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_inner_product);
+Datum
+vector_rust_sparsevec_inner_product(PG_FUNCTION_ARGS)
+{
+	return sparsevec_inner_product(fcinfo);
+}
 
-			/* Found or passed it */
-			if (bi >= ai)
-				break;
-		}
-
-		if (ai != bi)
-			distance += fabsf(ax[i]);
-	}
-
-	for (int j = bpos; j < b->nnz; j++)
-		distance += fabsf(bx[j]);
-
-	PG_RETURN_FLOAT8((double) distance);
+/*
+ * Rust parity wrapper: sparse vector cosine distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_cosine_distance);
+Datum
+vector_rust_sparsevec_cosine_distance(PG_FUNCTION_ARGS)
+{
+	return sparsevec_cosine_distance(fcinfo);
 }
 
 /*
@@ -1054,14 +928,18 @@ Datum
 sparsevec_l2_norm(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
-	float	   *ax = SPARSEVEC_VALUES(a);
-	double		norm = 0.0;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->nnz; i++)
-		norm += (double) ax[i] * (double) ax[i];
+	PG_RETURN_FLOAT8(vector_rust_sparsevec_l2_norm_kernel(a->nnz, SPARSEVEC_VALUES(a)));
+}
 
-	PG_RETURN_FLOAT8(sqrt(norm));
+/*
+ * Rust parity wrapper: sparse vector L2 norm
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l2_norm);
+Datum
+vector_rust_sparsevec_l2_norm(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l2_norm(fcinfo);
 }
 
 /*
@@ -1073,28 +951,25 @@ sparsevec_l2_normalize(PG_FUNCTION_ARGS)
 {
 	SparseVector *a = PG_GETARG_SPARSEVEC_P(0);
 	float	   *ax = SPARSEVEC_VALUES(a);
-	double		norm = 0;
+	double		norm;
 	SparseVector *result;
 	float	   *rx;
 
 	result = InitSparseVector(a->dim, a->nnz);
 	rx = SPARSEVEC_VALUES(result);
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->nnz; i++)
-		norm += (double) ax[i] * (double) ax[i];
-
-	norm = sqrt(norm);
+	norm = vector_rust_sparsevec_l2_norm_kernel(a->nnz, ax);
 
 	/* Return zero vector for zero norm */
 	if (norm > 0)
 	{
 		int			zeros = 0;
 
+		vector_rust_sparsevec_l2_normalize_values_kernel(a->nnz, ax, norm, rx);
+
 		for (int i = 0; i < a->nnz; i++)
 		{
 			result->indices[i] = a->indices[i];
-			rx[i] = ax[i] / norm;
 
 			if (isinf(rx[i]))
 				float_overflow_error();
@@ -1134,44 +1009,23 @@ sparsevec_l2_normalize(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Rust parity wrapper: sparse vector L2 normalize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_l2_normalize);
+Datum
+vector_rust_sparsevec_l2_normalize(PG_FUNCTION_ARGS)
+{
+	return sparsevec_l2_normalize(fcinfo);
+}
+
+/*
  * Internal helper to compare sparse vectors
  */
 static int
 sparsevec_cmp_internal(SparseVector * a, SparseVector * b)
 {
-	float	   *ax = SPARSEVEC_VALUES(a);
-	float	   *bx = SPARSEVEC_VALUES(b);
-	int			nnz = Min(a->nnz, b->nnz);
-
-	/* Check values before dimensions to be consistent with Postgres arrays */
-	for (int i = 0; i < nnz; i++)
-	{
-		if (a->indices[i] < b->indices[i])
-			return ax[i] < 0 ? -1 : 1;
-
-		if (a->indices[i] > b->indices[i])
-			return bx[i] < 0 ? 1 : -1;
-
-		if (ax[i] < bx[i])
-			return -1;
-
-		if (ax[i] > bx[i])
-			return 1;
-	}
-
-	if (a->nnz < b->nnz && b->indices[nnz] < a->dim)
-		return bx[nnz] < 0 ? 1 : -1;
-
-	if (a->nnz > b->nnz && a->indices[nnz] < b->dim)
-		return ax[nnz] < 0 ? -1 : 1;
-
-	if (a->dim < b->dim)
-		return -1;
-
-	if (a->dim > b->dim)
-		return 1;
-
-	return 0;
+	return vector_rust_sparsevec_cmp_kernel(a->dim, a->nnz, a->indices, SPARSEVEC_VALUES(a),
+											b->dim, b->nnz, b->indices, SPARSEVEC_VALUES(b));
 }
 
 /*
@@ -1263,4 +1117,14 @@ sparsevec_cmp(PG_FUNCTION_ARGS)
 	SparseVector *b = PG_GETARG_SPARSEVEC_P(1);
 
 	PG_RETURN_INT32(sparsevec_cmp_internal(a, b));
+}
+
+/*
+ * Rust parity wrapper: compare sparse vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_cmp);
+Datum
+vector_rust_sparsevec_cmp(PG_FUNCTION_ARGS)
+{
+	return sparsevec_cmp(fcinfo);
 }

@@ -14,6 +14,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 #include "port.h"				/* for strtof() */
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "utils/array.h"
 #include "utils/float.h"
@@ -52,10 +53,21 @@ PGDLLEXPORT void _PG_init(void);
 void
 _PG_init(void)
 {
+	vector_rust_init();
 	BitvecInit();
 	HalfvecInit();
 	HnswInit();
 	IvfflatInit();
+}
+
+/*
+ * Expose Rust bridge version for migration smoke test
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_bridge_version);
+Datum
+vector_rust_bridge_version(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_CSTRING(pstrdup(vector_rust_bridge_version_cstr()));
 }
 
 /*
@@ -545,8 +557,25 @@ halfvec_to_vector(PG_FUNCTION_ARGS)
 
 	result = InitVector(vec->dim);
 
-	for (int i = 0; i < vec->dim; i++)
-		result->x[i] = HalfToFloat4(vec->x[i]);
+	vector_rust_halfvec_to_vector(vec->dim, vec->x, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: convert half vector to vector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_to_vector_cast);
+Datum
+vector_rust_halfvec_to_vector_cast(PG_FUNCTION_ARGS)
+{
+	HalfVector *vec = PG_GETARG_HALFVEC_P(0);
+	Vector	   *result;
+
+	CheckDim(vec->dim);
+
+	result = InitVector(vec->dim);
+	vector_rust_halfvec_to_vector(vec->dim, vec->x, result->x);
 
 	PG_RETURN_POINTER(result);
 }
@@ -554,17 +583,7 @@ halfvec_to_vector(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static float
 VectorL2SquaredDistance(int dim, float *ax, float *bx)
 {
-	float		distance = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-	{
-		float		diff = ax[i] - bx[i];
-
-		distance += diff * diff;
-	}
-
-	return distance;
+	return vector_rust_vector_l2_squared_distance(dim, ax, bx);
 }
 
 /*
@@ -601,13 +620,7 @@ vector_l2_squared_distance(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static float
 VectorInnerProduct(int dim, float *ax, float *bx)
 {
-	float		distance = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-		distance += ax[i] * bx[i];
-
-	return distance;
+	return vector_rust_vector_inner_product(dim, ax, bx);
 }
 
 /*
@@ -643,20 +656,7 @@ vector_negative_inner_product(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static double
 VectorCosineSimilarity(int dim, float *ax, float *bx)
 {
-	float		similarity = 0.0;
-	float		norma = 0.0;
-	float		normb = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-	{
-		similarity += ax[i] * bx[i];
-		norma += ax[i] * ax[i];
-		normb += bx[i] * bx[i];
-	}
-
-	/* Use sqrt(a * b) over sqrt(a) * sqrt(b) */
-	return (double) similarity / sqrt((double) norma * (double) normb);
+	return vector_rust_vector_cosine_similarity(dim, ax, bx);
 }
 
 /*
@@ -719,13 +719,7 @@ vector_spherical_distance(PG_FUNCTION_ARGS)
 VECTOR_TARGET_CLONES static float
 VectorL1Distance(int dim, float *ax, float *bx)
 {
-	float		distance = 0.0;
-
-	/* Auto-vectorized */
-	for (int i = 0; i < dim; i++)
-		distance += fabsf(ax[i] - bx[i]);
-
-	return distance;
+	return vector_rust_vector_l1_distance(dim, ax, bx);
 }
 
 /*
@@ -741,6 +735,102 @@ l1_distance(PG_FUNCTION_ARGS)
 	CheckDims(a, b);
 
 	PG_RETURN_FLOAT8((double) VectorL1Distance(a->dim, a->x, b->x));
+}
+
+/*
+ * Rust parity wrapper: L2 distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_l2_distance);
+Datum
+vector_rust_l2_distance(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8(sqrt((double) vector_rust_vector_l2_squared_distance(a->dim, a->x, b->x)));
+}
+
+/*
+ * Rust parity wrapper: inner product
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_inner_product);
+Datum
+vector_rust_inner_product(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_vector_inner_product(a->dim, a->x, b->x));
+}
+
+/*
+ * Rust parity wrapper: cosine distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_cosine_distance);
+Datum
+vector_rust_cosine_distance(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+	double		similarity;
+
+	CheckDims(a, b);
+
+	similarity = vector_rust_vector_cosine_similarity(a->dim, a->x, b->x);
+
+	/* Keep in range */
+	if (similarity > 1.0)
+		similarity = 1.0;
+	else if (similarity < -1.0)
+		similarity = -1.0;
+
+	PG_RETURN_FLOAT8(1.0 - similarity);
+}
+
+/*
+ * Rust parity wrapper: L1 distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_l1_distance);
+Datum
+vector_rust_l1_distance(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_vector_l1_distance(a->dim, a->x, b->x));
+}
+
+/*
+ * Rust parity wrapper: vector norm
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_norm);
+Datum
+vector_rust_norm(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+
+	PG_RETURN_FLOAT8(vector_rust_vector_norm(a->dim, a->x));
+}
+
+/*
+ * Rust parity wrapper: L2 normalize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_l2_normalize);
+Datum
+vector_rust_l2_normalize(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *result = InitVector(a->dim);
+
+	vector_rust_vector_l2_normalize(a->dim, a->x, result->x);
+
+	PG_RETURN_POINTER(result);
 }
 
 /*
@@ -763,14 +853,8 @@ Datum
 vector_norm(PG_FUNCTION_ARGS)
 {
 	Vector	   *a = PG_GETARG_VECTOR_P(0);
-	float	   *ax = a->x;
-	double		norm = 0.0;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->dim; i++)
-		norm += (double) ax[i] * (double) ax[i];
-
-	PG_RETURN_FLOAT8(sqrt(norm));
+	PG_RETURN_FLOAT8(vector_rust_vector_norm(a->dim, a->x));
 }
 
 /*
@@ -781,32 +865,19 @@ Datum
 l2_normalize(PG_FUNCTION_ARGS)
 {
 	Vector	   *a = PG_GETARG_VECTOR_P(0);
-	float	   *ax = a->x;
-	double		norm = 0;
 	Vector	   *result;
 	float	   *rx;
 
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
+	vector_rust_vector_l2_normalize(a->dim, a->x, rx);
+
+	/* Check for overflow */
 	for (int i = 0; i < a->dim; i++)
-		norm += (double) ax[i] * (double) ax[i];
-
-	norm = sqrt(norm);
-
-	/* Return zero vector for zero norm */
-	if (norm > 0)
 	{
-		for (int i = 0; i < a->dim; i++)
-			rx[i] = ax[i] / norm;
-
-		/* Check for overflow */
-		for (int i = 0; i < a->dim; i++)
-		{
-			if (isinf(rx[i]))
-				float_overflow_error();
-		}
+		if (isinf(rx[i]))
+			float_overflow_error();
 	}
 
 	PG_RETURN_POINTER(result);
@@ -831,9 +902,7 @@ vector_add(PG_FUNCTION_ARGS)
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		rx[i] = ax[i] + bx[i];
+	vector_rust_vector_add(a->dim, ax, bx, rx);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -864,9 +933,7 @@ vector_sub(PG_FUNCTION_ARGS)
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		rx[i] = ax[i] - bx[i];
+	vector_rust_vector_sub(a->dim, ax, bx, rx);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -897,9 +964,7 @@ vector_mul(PG_FUNCTION_ARGS)
 	result = InitVector(a->dim);
 	rx = result->x;
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		rx[i] = ax[i] * bx[i];
+	vector_rust_vector_mul(a->dim, ax, bx, rx);
 
 	/* Check for overflow and underflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -929,13 +994,7 @@ vector_concat(PG_FUNCTION_ARGS)
 	CheckDim(dim);
 	result = InitVector(dim);
 
-	/* Auto-vectorized */
-	for (int i = 0, imax = a->dim; i < imax; i++)
-		result->x[i] = a->x[i];
-
-	/* Auto-vectorized */
-	for (int i = 0, imax = b->dim, start = a->dim; i < imax; i++)
-		result->x[i + start] = b->x[i];
+	vector_rust_vector_concat(a->dim, a->x, b->dim, b->x, result->x);
 
 	PG_RETURN_POINTER(result);
 }
@@ -948,25 +1007,24 @@ Datum
 binary_quantize(PG_FUNCTION_ARGS)
 {
 	Vector	   *a = PG_GETARG_VECTOR_P(0);
-	float	   *ax = a->x;
 	VarBit	   *result = InitBitVector(a->dim);
-	unsigned char *rx = VARBITS(result);
-	int			i = 0;
-	int			count = (a->dim / 8) * 8;
 
-	/* Auto-vectorized */
-	for (; i < count; i += 8)
-	{
-		unsigned char result_byte = 0;
+	vector_rust_vector_binary_quantize(a->dim, a->x, VARBITS(result));
 
-		for (int j = 0; j < 8; j++)
-			result_byte |= (ax[i + j] > 0) << (7 - j);
+	PG_RETURN_VARBIT_P(result);
+}
 
-		rx[i / 8] = result_byte;
-	}
+/*
+ * Rust parity wrapper: binary quantize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_binary_quantize);
+Datum
+vector_rust_binary_quantize(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	VarBit	   *result = InitBitVector(a->dim);
 
-	for (; i < a->dim; i++)
-		rx[i / 8] |= (ax[i] > 0) << (7 - (i % 8));
+	vector_rust_vector_binary_quantize(a->dim, a->x, VARBITS(result));
 
 	PG_RETURN_VARBIT_P(result);
 }
@@ -1012,8 +1070,47 @@ subvector(PG_FUNCTION_ARGS)
 	CheckDim(dim);
 	result = InitVector(dim);
 
-	for (int i = 0; i < dim; i++)
-		result->x[i] = ax[start - 1 + i];
+	vector_rust_vector_subvector(dim, ax, start - 1, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: subvector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_subvector);
+Datum
+vector_rust_subvector(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	int32		start = PG_GETARG_INT32(1);
+	int32		count = PG_GETARG_INT32(2);
+	int32		end;
+	int			dim;
+	Vector	   *result;
+
+	if (count < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("vector must have at least 1 dimension")));
+
+	if (start > a->dim - count)
+		end = a->dim + 1;
+	else
+		end = start + count;
+
+	if (start < 1)
+		start = 1;
+	else if (start > a->dim)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("vector must have at least 1 dimension")));
+
+	dim = end - start;
+	CheckDim(dim);
+	result = InitVector(dim);
+
+	vector_rust_vector_subvector(dim, a->x, start - 1, result->x);
 
 	PG_RETURN_POINTER(result);
 }
@@ -1024,25 +1121,7 @@ subvector(PG_FUNCTION_ARGS)
 int
 vector_cmp_internal(Vector * a, Vector * b)
 {
-	int			dim = Min(a->dim, b->dim);
-
-	/* Check values before dimensions to be consistent with Postgres arrays */
-	for (int i = 0; i < dim; i++)
-	{
-		if (a->x[i] < b->x[i])
-			return -1;
-
-		if (a->x[i] > b->x[i])
-			return 1;
-	}
-
-	if (a->dim < b->dim)
-		return -1;
-
-	if (a->dim > b->dim)
-		return 1;
-
-	return 0;
+	return vector_rust_vector_cmp(a->dim, a->x, b->dim, b->x);
 }
 
 /*
@@ -1137,6 +1216,19 @@ vector_cmp(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Rust parity wrapper: compare vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_cmp);
+Datum
+vector_rust_cmp(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+
+	PG_RETURN_INT32(vector_rust_vector_cmp(a->dim, a->x, b->dim, b->x));
+}
+
+/*
  * Accumulate vectors
  */
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_accum);
@@ -1151,6 +1243,7 @@ vector_accum(PG_FUNCTION_ARGS)
 	float8		n;
 	Datum	   *statedatums;
 	float	   *x = newval->x;
+	float8	   *sums;
 	ArrayType  *result;
 
 	/* Check array before using */
@@ -1167,24 +1260,20 @@ vector_accum(PG_FUNCTION_ARGS)
 
 	statedatums = CreateStateDatums(dim);
 	statedatums[0] = Float8GetDatum(n);
+	sums = palloc(sizeof(float8) * dim);
 
 	if (newarr)
-	{
-		for (int i = 0; i < dim; i++)
-			statedatums[i + 1] = Float8GetDatum((double) x[i]);
-	}
+		vector_rust_vector_accum_init(dim, x, sums);
 	else
+		vector_rust_vector_accum_add(dim, statevalues + 1, x, sums);
+
+	for (int i = 0; i < dim; i++)
 	{
-		for (int i = 0; i < dim; i++)
-		{
-			double		v = statevalues[i + 1] + x[i];
+		/* Check for overflow */
+		if (isinf(sums[i]))
+			float_overflow_error();
 
-			/* Check for overflow */
-			if (isinf(v))
-				float_overflow_error();
-
-			statedatums[i + 1] = Float8GetDatum(v);
-		}
+		statedatums[i + 1] = Float8GetDatum(sums[i]);
 	}
 
 	/* Use float8 array like float4_accum */
@@ -1192,6 +1281,7 @@ vector_accum(PG_FUNCTION_ARGS)
 							 FLOAT8OID,
 							 sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE);
 
+	pfree(sums);
 	pfree(statedatums);
 
 	PG_RETURN_ARRAYTYPE_P(result);
@@ -1214,6 +1304,7 @@ vector_combine(PG_FUNCTION_ARGS)
 	float8		n2;
 	int16		dim;
 	Datum	   *statedatums;
+	float8	   *sums;
 	ArrayType  *result;
 
 	/* Check arrays before using */
@@ -1228,16 +1319,16 @@ vector_combine(PG_FUNCTION_ARGS)
 		n = n2;
 		dim = STATE_DIMS(statearray2);
 		statedatums = CreateStateDatums(dim);
-		for (int i = 1; i <= dim; i++)
-			statedatums[i] = Float8GetDatum(statevalues2[i]);
+		sums = palloc(sizeof(float8) * dim);
+		vector_rust_vector_copy_f64(dim, statevalues2 + 1, sums);
 	}
 	else if (n2 == 0.0)
 	{
 		n = n1;
 		dim = STATE_DIMS(statearray1);
 		statedatums = CreateStateDatums(dim);
-		for (int i = 1; i <= dim; i++)
-			statedatums[i] = Float8GetDatum(statevalues1[i]);
+		sums = palloc(sizeof(float8) * dim);
+		vector_rust_vector_copy_f64(dim, statevalues1 + 1, sums);
 	}
 	else
 	{
@@ -1245,16 +1336,17 @@ vector_combine(PG_FUNCTION_ARGS)
 		dim = STATE_DIMS(statearray1);
 		CheckExpectedDim(dim, STATE_DIMS(statearray2));
 		statedatums = CreateStateDatums(dim);
-		for (int i = 1; i <= dim; i++)
-		{
-			double		v = statevalues1[i] + statevalues2[i];
+		sums = palloc(sizeof(float8) * dim);
+		vector_rust_vector_combine_add(dim, statevalues1 + 1, statevalues2 + 1, sums);
+	}
 
-			/* Check for overflow */
-			if (isinf(v))
-				float_overflow_error();
+	for (int i = 0; i < dim; i++)
+	{
+		/* Check for overflow */
+		if (isinf(sums[i]))
+			float_overflow_error();
 
-			statedatums[i] = Float8GetDatum(v);
-		}
+		statedatums[i + 1] = Float8GetDatum(sums[i]);
 	}
 
 	statedatums[0] = Float8GetDatum(n);
@@ -1263,6 +1355,7 @@ vector_combine(PG_FUNCTION_ARGS)
 							 FLOAT8OID,
 							 sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE);
 
+	pfree(sums);
 	pfree(statedatums);
 
 	PG_RETURN_ARRAYTYPE_P(result);
@@ -1293,13 +1386,41 @@ vector_avg(PG_FUNCTION_ARGS)
 	dim = STATE_DIMS(statearray);
 	CheckDim(dim);
 	result = InitVector(dim);
+	vector_rust_vector_avg(dim, statevalues + 1, n, result->x);
 	for (int i = 0; i < dim; i++)
-	{
-		result->x[i] = statevalues[i + 1] / n;
 		CheckElement(result->x[i]);
-	}
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: vector aggregate transition
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_accum);
+Datum
+vector_rust_accum(PG_FUNCTION_ARGS)
+{
+	return vector_accum(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: vector aggregate combine
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_combine);
+Datum
+vector_rust_combine(PG_FUNCTION_ARGS)
+{
+	return vector_combine(fcinfo);
+}
+
+/*
+ * Rust parity wrapper: vector aggregate final
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_avg);
+Datum
+vector_rust_avg(PG_FUNCTION_ARGS)
+{
+	return vector_avg(fcinfo);
 }
 
 /*
@@ -1319,8 +1440,27 @@ sparsevec_to_vector(PG_FUNCTION_ARGS)
 	CheckExpectedDim(typmod, dim);
 
 	result = InitVector(dim);
-	for (int i = 0; i < svec->nnz; i++)
-		result->x[svec->indices[i]] = values[i];
+	vector_rust_sparse_to_dense(svec->nnz, svec->indices, values, result->x);
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: convert sparse vector to dense vector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_to_vector);
+Datum
+vector_rust_sparsevec_to_vector(PG_FUNCTION_ARGS)
+{
+	SparseVector *svec = PG_GETARG_SPARSEVEC_P(0);
+	Vector	   *result;
+	int			dim = svec->dim;
+	float	   *values = SPARSEVEC_VALUES(svec);
+
+	CheckDim(dim);
+
+	result = InitVector(dim);
+	vector_rust_sparse_to_dense(svec->nnz, svec->indices, values, result->x);
 
 	PG_RETURN_POINTER(result);
 }

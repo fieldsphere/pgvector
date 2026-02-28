@@ -8,10 +8,51 @@
 #include "fmgr.h"
 #include "ivfflat.h"
 #include "nodes/execnodes.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+
+static bool
+IvfflatInsertPageIsValid(BlockNumber page, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+}
+
+static bool
+IvfflatChooseInsertCandidate(float8 distance, float8 minDistance, BlockNumber insertPage, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_choose_insert_candidate_kernel(distance, minDistance, IvfflatInsertPageIsValid(insertPage, true));
+}
+
+static bool
+IvfflatShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
+}
+
+static bool
+IvfflatShouldUpdateInsertPage(BlockNumber insertPage, BlockNumber originalInsertPage, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_update_insert_page_kernel((int32) insertPage, (int32) originalInsertPage);
+}
+
+static bool
+IvfflatShouldFollowInsertPageLink(BlockNumber insertPage, bool useRust)
+{
+	return IvfflatInsertPageIsValid(insertPage, useRust);
+}
+
+static bool
+IvfflatShouldVisitInsertListPage(BlockNumber page, bool useRust)
+{
+	return IvfflatInsertPageIsValid(page, useRust);
+}
 
 /*
  * Find the list that minimizes the distance function
@@ -32,7 +73,7 @@ FindInsertPage(Relation index, Datum *values, BlockNumber *insertPage, ListInfo 
 	collation = index->rd_indcollation[0];
 
 	/* Search all list pages */
-	while (BlockNumberIsValid(nextblkno))
+	while (IvfflatShouldVisitInsertListPage(nextblkno, true))
 	{
 		Buffer		cbuf;
 		Page		cpage;
@@ -51,7 +92,7 @@ FindInsertPage(Relation index, Datum *values, BlockNumber *insertPage, ListInfo 
 			list = (IvfflatList) PageGetItem(cpage, PageGetItemId(cpage, offno));
 			distance = DatumGetFloat8(FunctionCall2Coll(procinfo, collation, values[0], PointerGetDatum(&list->center)));
 
-			if (distance < minDistance || !BlockNumberIsValid(*insertPage))
+			if (IvfflatChooseInsertCandidate(distance, minDistance, *insertPage, true))
 			{
 				*insertPage = list->insertPage;
 				listInfo->blkno = nextblkno;
@@ -64,6 +105,122 @@ FindInsertPage(Relation index, Datum *values, BlockNumber *insertPage, ListInfo 
 
 		UnlockReleaseBuffer(cbuf);
 	}
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_insert_candidate);
+Datum
+vector_ivfflat_choose_insert_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		minDistance = PG_GETARG_FLOAT8(1);
+	int32		insertPage = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(IvfflatChooseInsertCandidate(distance, minDistance, (BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_choose_insert_candidate);
+Datum
+vector_rust_ivfflat_choose_insert_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		minDistance = PG_GETARG_FLOAT8(1);
+	int32		insertPage = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(IvfflatChooseInsertCandidate(distance, minDistance, (BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_append_page);
+Datum
+vector_ivfflat_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldAppendPage(freeSpace, itemSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_append_page);
+Datum
+vector_rust_ivfflat_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldAppendPage(freeSpace, itemSize, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_update_insert_page);
+Datum
+vector_ivfflat_should_update_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		originalInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateInsertPage((BlockNumber) insertPage, (BlockNumber) originalInsertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_update_insert_page);
+Datum
+vector_rust_ivfflat_should_update_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+	int32		originalInsertPage = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldUpdateInsertPage((BlockNumber) insertPage, (BlockNumber) originalInsertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_follow_insert_page_link);
+Datum
+vector_ivfflat_should_follow_insert_page_link(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldFollowInsertPageLink((BlockNumber) insertPage, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_follow_insert_page_link);
+Datum
+vector_rust_ivfflat_should_follow_insert_page_link(PG_FUNCTION_ARGS)
+{
+	int32		insertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldFollowInsertPageLink((BlockNumber) insertPage, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_insert_page_is_valid);
+Datum
+vector_ivfflat_insert_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatInsertPageIsValid((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_insert_page_is_valid);
+Datum
+vector_rust_ivfflat_insert_page_is_valid(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatInsertPageIsValid((BlockNumber) page, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_insert_list_page);
+Datum
+vector_ivfflat_should_visit_insert_list_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitInsertListPage((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_visit_insert_list_page);
+Datum
+vector_rust_ivfflat_should_visit_insert_list_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitInsertListPage((BlockNumber) page, true));
 }
 
 /*
@@ -124,12 +281,12 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heap_tid)
 		state = GenericXLogStart(index);
 		page = GenericXLogRegisterBuffer(state, buf, 0);
 
-		if (PageGetFreeSpace(page) >= itemsz)
+		if (!IvfflatShouldAppendPage(PageGetFreeSpace(page), itemsz, true))
 			break;
 
 		insertPage = IvfflatPageGetOpaque(page)->nextblkno;
 
-		if (BlockNumberIsValid(insertPage))
+		if (IvfflatShouldFollowInsertPageLink(insertPage, true))
 		{
 			/* Move to next page */
 			GenericXLogAbort(state);
@@ -176,7 +333,7 @@ InsertTuple(Relation index, Datum *values, bool *isnull, ItemPointer heap_tid)
 	IvfflatCommitBuffer(buf, state);
 
 	/* Update the insert page */
-	if (insertPage != originalInsertPage)
+	if (IvfflatShouldUpdateInsertPage(insertPage, originalInsertPage, true))
 		IvfflatUpdateList(index, listInfo, insertPage, originalInsertPage, InvalidBlockNumber, MAIN_FORKNUM);
 }
 

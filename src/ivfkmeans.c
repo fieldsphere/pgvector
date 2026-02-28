@@ -5,15 +5,726 @@
 #include <math.h>
 
 #include "access/genam.h"
+#include "catalog/pg_type.h"
 #include "fmgr.h"
 #include "ivfflat.h"
 #include "miscadmin.h"
+#include "rust_ffi.h"
+#include "utils/array.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
 
 #if PG_VERSION_NUM >= 160000
 #include "varatt.h"
 #endif
+
+static ArrayType *
+IvfflatCenterCounts(ArrayType *assignmentsArray, int32 centerCount, bool useRust)
+{
+	Datum	   *assignmentDatums;
+	int			assignmentLength;
+	int32	   *assignments;
+	int32	   *counts;
+	Datum	   *countDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(assignmentsArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("assignments array must be 1-D")));
+
+	if (ARR_HASNULL(assignmentsArray) && array_contains_nulls(assignmentsArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("assignments array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(assignmentsArray) != INT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("assignments array must be integer[]")));
+
+	deconstruct_array(assignmentsArray, INT4OID, sizeof(int32), true, TYPALIGN_INT,
+					  &assignmentDatums, NULL, &assignmentLength);
+
+	assignments = palloc(sizeof(int32) * assignmentLength);
+	for (int i = 0; i < assignmentLength; i++)
+	{
+		int32		center = DatumGetInt32(assignmentDatums[i]);
+
+		if (center < 0 || center >= centerCount)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("assignment index out of bounds")));
+
+		assignments[i] = center;
+	}
+
+	counts = palloc0(sizeof(int32) * centerCount);
+
+	(void) useRust;
+	vector_rust_ivfflat_center_counts_kernel(assignmentLength, assignments, centerCount, counts);
+
+	countDatums = palloc(sizeof(Datum) * centerCount);
+	for (int i = 0; i < centerCount; i++)
+		countDatums[i] = Int32GetDatum(counts[i]);
+
+	result = construct_array(countDatums, centerCount, INT4OID, sizeof(int32), true, TYPALIGN_INT);
+
+	pfree(countDatums);
+	pfree(counts);
+	pfree(assignments);
+	pfree(assignmentDatums);
+
+	return result;
+}
+
+static ArrayType *
+IvfflatFinalizeCenter(ArrayType *aggArray, int32 centerCount, bool useRust)
+{
+	Datum	   *aggDatums;
+	int			dimensions;
+	float	   *agg;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(aggArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("aggregate array must be 1-D")));
+
+	if (ARR_HASNULL(aggArray) && array_contains_nulls(aggArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("aggregate array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(aggArray) != FLOAT8OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("aggregate array must be double precision[]")));
+
+	deconstruct_array(aggArray, FLOAT8OID, sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE,
+					  &aggDatums, NULL, &dimensions);
+
+	agg = palloc(sizeof(float) * dimensions);
+	for (int i = 0; i < dimensions; i++)
+		agg[i] = (float) DatumGetFloat8(aggDatums[i]);
+
+	(void) useRust;
+	vector_rust_ivfflat_finalize_center_kernel(dimensions, agg, centerCount);
+
+	resultDatums = palloc(sizeof(Datum) * dimensions);
+	for (int i = 0; i < dimensions; i++)
+		resultDatums[i] = Float4GetDatum(agg[i]);
+
+	result = construct_array(resultDatums, dimensions, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(agg);
+	pfree(aggDatums);
+
+	return result;
+}
+
+static ArrayType *
+IvfflatZeroAgg(int32 centerCount, int32 dimensions, bool useRust)
+{
+	int64		totalLength = (int64) centerCount * dimensions;
+	float	   *values;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (dimensions < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("dimensions must be at least 1")));
+
+	values = palloc(sizeof(float) * totalLength);
+
+	(void) useRust;
+	vector_rust_ivfflat_zero_agg_kernel(centerCount, dimensions, values);
+
+	resultDatums = palloc(sizeof(Datum) * totalLength);
+	for (int64 i = 0; i < totalLength; i++)
+		resultDatums[i] = Float4GetDatum(values[i]);
+
+	result = construct_array(resultDatums, totalLength, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(values);
+
+	return result;
+}
+
+static bool
+IvfflatAllFinite(ArrayType *valuesArray, bool useRust)
+{
+	Datum	   *valueDatums;
+	int			length;
+	float	   *values;
+	bool		allFinite = true;
+
+	if (ARR_NDIM(valuesArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("values array must be 1-D")));
+
+	if (ARR_HASNULL(valuesArray) && array_contains_nulls(valuesArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("values array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(valuesArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("values array must be real[]")));
+
+	deconstruct_array(valuesArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &valueDatums, NULL, &length);
+
+	values = palloc(sizeof(float) * length);
+	for (int i = 0; i < length; i++)
+		values[i] = DatumGetFloat4(valueDatums[i]);
+
+	(void) useRust;
+	allFinite = vector_rust_ivfflat_all_finite_kernel(length, values);
+
+	pfree(values);
+	pfree(valueDatums);
+
+	return allFinite;
+}
+
+static ArrayType *
+IvfflatAdjustLowerBounds(ArrayType *lowerBoundsArray, int32 centerCount, ArrayType *centerDistancesArray, bool useRust)
+{
+	Datum	   *lowerDatums;
+	Datum	   *distanceDatums;
+	int			lowerLength;
+	int			distanceLength;
+	int			sampleCount;
+	float	   *lowerBounds;
+	float	   *centerDistances;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(lowerBoundsArray) > 1 || ARR_NDIM(centerDistancesArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("input arrays must be 1-D")));
+
+	if ((ARR_HASNULL(lowerBoundsArray) && array_contains_nulls(lowerBoundsArray)) ||
+		(ARR_HASNULL(centerDistancesArray) && array_contains_nulls(centerDistancesArray)))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("input arrays must not contain nulls")));
+
+	if (ARR_ELEMTYPE(lowerBoundsArray) != FLOAT4OID || ARR_ELEMTYPE(centerDistancesArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("input arrays must be real[]")));
+
+	deconstruct_array(lowerBoundsArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &lowerDatums, NULL, &lowerLength);
+	deconstruct_array(centerDistancesArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &distanceDatums, NULL, &distanceLength);
+
+	if (distanceLength != centerCount)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center distance length must match center count")));
+
+	if (lowerLength % centerCount != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("lower bounds length must be divisible by center count")));
+
+	sampleCount = lowerLength / centerCount;
+	lowerBounds = palloc(sizeof(float) * lowerLength);
+	centerDistances = palloc(sizeof(float) * distanceLength);
+
+	for (int i = 0; i < lowerLength; i++)
+		lowerBounds[i] = DatumGetFloat4(lowerDatums[i]);
+	for (int i = 0; i < distanceLength; i++)
+		centerDistances[i] = DatumGetFloat4(distanceDatums[i]);
+
+	(void) useRust;
+	vector_rust_ivfflat_adjust_lower_bounds_kernel(sampleCount, centerCount, lowerBounds, centerDistances);
+
+	resultDatums = palloc(sizeof(Datum) * lowerLength);
+	for (int i = 0; i < lowerLength; i++)
+		resultDatums[i] = Float4GetDatum(lowerBounds[i]);
+
+	result = construct_array(resultDatums, lowerLength, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(centerDistances);
+	pfree(lowerBounds);
+	pfree(distanceDatums);
+	pfree(lowerDatums);
+
+	return result;
+}
+
+static ArrayType *
+IvfflatAdjustUpperBounds(ArrayType *upperBoundsArray, ArrayType *closestCentersArray, ArrayType *centerDistancesArray, bool useRust)
+{
+	Datum	   *upperDatums;
+	Datum	   *closestDatums;
+	Datum	   *distanceDatums;
+	int			upperLength;
+	int			closestLength;
+	int			distanceLength;
+	float	   *upperBounds;
+	int32	   *closestCenters;
+	float	   *centerDistances;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (ARR_NDIM(upperBoundsArray) > 1 || ARR_NDIM(closestCentersArray) > 1 || ARR_NDIM(centerDistancesArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("input arrays must be 1-D")));
+
+	if ((ARR_HASNULL(upperBoundsArray) && array_contains_nulls(upperBoundsArray)) ||
+		(ARR_HASNULL(closestCentersArray) && array_contains_nulls(closestCentersArray)) ||
+		(ARR_HASNULL(centerDistancesArray) && array_contains_nulls(centerDistancesArray)))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("input arrays must not contain nulls")));
+
+	if (ARR_ELEMTYPE(upperBoundsArray) != FLOAT4OID || ARR_ELEMTYPE(centerDistancesArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("upper bounds and center distances must be real[]")));
+	if (ARR_ELEMTYPE(closestCentersArray) != INT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("closest centers must be integer[]")));
+
+	deconstruct_array(upperBoundsArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &upperDatums, NULL, &upperLength);
+	deconstruct_array(closestCentersArray, INT4OID, sizeof(int32), true, TYPALIGN_INT,
+					  &closestDatums, NULL, &closestLength);
+	deconstruct_array(centerDistancesArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &distanceDatums, NULL, &distanceLength);
+
+	if (upperLength != closestLength)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("upper bounds and closest centers must have the same length")));
+	if (distanceLength < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center distances must contain at least one element")));
+
+	upperBounds = palloc(sizeof(float) * upperLength);
+	closestCenters = palloc(sizeof(int32) * closestLength);
+	centerDistances = palloc(sizeof(float) * distanceLength);
+
+	for (int i = 0; i < upperLength; i++)
+		upperBounds[i] = DatumGetFloat4(upperDatums[i]);
+	for (int i = 0; i < closestLength; i++)
+	{
+		int32		center = DatumGetInt32(closestDatums[i]);
+
+		if (center < 0 || center >= distanceLength)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("closest center index out of bounds")));
+
+		closestCenters[i] = center;
+	}
+	for (int i = 0; i < distanceLength; i++)
+		centerDistances[i] = DatumGetFloat4(distanceDatums[i]);
+
+	(void) useRust;
+	vector_rust_ivfflat_adjust_upper_bounds_kernel(upperLength, upperBounds, closestCenters, centerDistances);
+
+	resultDatums = palloc(sizeof(Datum) * upperLength);
+	for (int i = 0; i < upperLength; i++)
+		resultDatums[i] = Float4GetDatum(upperBounds[i]);
+
+	result = construct_array(resultDatums, upperLength, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(centerDistances);
+	pfree(closestCenters);
+	pfree(upperBounds);
+	pfree(distanceDatums);
+	pfree(closestDatums);
+	pfree(upperDatums);
+
+	return result;
+}
+
+static void
+IvfflatInitBoundsArrays(ArrayType *lowerBoundsArray, int32 centerCount, bool useRust, float **upperBoundsOut, int32 **closestCentersOut, int *sampleCountOut)
+{
+	Datum	   *lowerDatums;
+	int			lowerLength;
+	int			sampleCount;
+	float	   *lowerBounds;
+	float	   *upperBounds;
+	int32	   *closestCenters;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(lowerBoundsArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("lower bounds array must be 1-D")));
+
+	if (ARR_HASNULL(lowerBoundsArray) && array_contains_nulls(lowerBoundsArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("lower bounds array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(lowerBoundsArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("lower bounds array must be real[]")));
+
+	deconstruct_array(lowerBoundsArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &lowerDatums, NULL, &lowerLength);
+
+	if (lowerLength % centerCount != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("lower bounds length must be divisible by center count")));
+
+	sampleCount = lowerLength / centerCount;
+	lowerBounds = palloc(sizeof(float) * lowerLength);
+	upperBounds = palloc(sizeof(float) * sampleCount);
+	closestCenters = palloc(sizeof(int32) * sampleCount);
+
+	for (int i = 0; i < lowerLength; i++)
+		lowerBounds[i] = DatumGetFloat4(lowerDatums[i]);
+
+	(void) useRust;
+	vector_rust_ivfflat_init_bounds_kernel(sampleCount, centerCount, lowerBounds, upperBounds, closestCenters);
+
+	pfree(lowerBounds);
+	pfree(lowerDatums);
+
+	*upperBoundsOut = upperBounds;
+	*closestCentersOut = closestCenters;
+	*sampleCountOut = sampleCount;
+}
+
+static ArrayType *
+IvfflatInitUpperBounds(ArrayType *lowerBoundsArray, int32 centerCount, bool useRust)
+{
+	float	   *upperBounds;
+	int32	   *closestCenters;
+	int			sampleCount;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	IvfflatInitBoundsArrays(lowerBoundsArray, centerCount, useRust, &upperBounds, &closestCenters, &sampleCount);
+
+	resultDatums = palloc(sizeof(Datum) * sampleCount);
+	for (int i = 0; i < sampleCount; i++)
+		resultDatums[i] = Float4GetDatum(upperBounds[i]);
+
+	result = construct_array(resultDatums, sampleCount, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(closestCenters);
+	pfree(upperBounds);
+
+	return result;
+}
+
+static ArrayType *
+IvfflatInitClosestCenters(ArrayType *lowerBoundsArray, int32 centerCount, bool useRust)
+{
+	float	   *upperBounds;
+	int32	   *closestCenters;
+	int			sampleCount;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	IvfflatInitBoundsArrays(lowerBoundsArray, centerCount, useRust, &upperBounds, &closestCenters, &sampleCount);
+
+	resultDatums = palloc(sizeof(Datum) * sampleCount);
+	for (int i = 0; i < sampleCount; i++)
+		resultDatums[i] = Int32GetDatum(closestCenters[i]);
+
+	result = construct_array(resultDatums, sampleCount, INT4OID, sizeof(int32), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(closestCenters);
+	pfree(upperBounds);
+
+	return result;
+}
+
+static ArrayType *
+IvfflatComputeS(ArrayType *halfcdistArray, int32 centerCount, bool useRust)
+{
+	Datum	   *halfcdistDatums;
+	int			halfcdistLength;
+	int64		expectedLength = (int64) centerCount * centerCount;
+	float	   *halfcdist;
+	float	   *s;
+	Datum	   *resultDatums;
+	ArrayType  *result;
+
+	if (centerCount < 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("center count must be at least 1")));
+
+	if (ARR_NDIM(halfcdistArray) > 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("halfcdist array must be 1-D")));
+
+	if (ARR_HASNULL(halfcdistArray) && array_contains_nulls(halfcdistArray))
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("halfcdist array must not contain nulls")));
+
+	if (ARR_ELEMTYPE(halfcdistArray) != FLOAT4OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("halfcdist array must be real[]")));
+
+	deconstruct_array(halfcdistArray, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT,
+					  &halfcdistDatums, NULL, &halfcdistLength);
+
+	if (halfcdistLength != expectedLength)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("halfcdist length must equal center_count * center_count")));
+
+	halfcdist = palloc(sizeof(float) * halfcdistLength);
+	s = palloc(sizeof(float) * centerCount);
+
+	for (int i = 0; i < halfcdistLength; i++)
+		halfcdist[i] = DatumGetFloat4(halfcdistDatums[i]);
+
+	(void) useRust;
+	vector_rust_ivfflat_compute_s_kernel(centerCount, halfcdist, s);
+
+	resultDatums = palloc(sizeof(Datum) * centerCount);
+	for (int i = 0; i < centerCount; i++)
+		resultDatums[i] = Float4GetDatum(s[i]);
+
+	result = construct_array(resultDatums, centerCount, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
+
+	pfree(resultDatums);
+	pfree(s);
+	pfree(halfcdist);
+	pfree(halfcdistDatums);
+
+	return result;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_center_counts);
+Datum
+vector_ivfflat_center_counts(PG_FUNCTION_ARGS)
+{
+	ArrayType  *assignmentsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatCenterCounts(assignmentsArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_center_counts);
+Datum
+vector_rust_ivfflat_center_counts(PG_FUNCTION_ARGS)
+{
+	ArrayType  *assignmentsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatCenterCounts(assignmentsArray, centerCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_finalize_center);
+Datum
+vector_ivfflat_finalize_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *aggArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatFinalizeCenter(aggArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_finalize_center);
+Datum
+vector_rust_ivfflat_finalize_center(PG_FUNCTION_ARGS)
+{
+	ArrayType  *aggArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatFinalizeCenter(aggArray, centerCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_zero_agg);
+Datum
+vector_ivfflat_zero_agg(PG_FUNCTION_ARGS)
+{
+	int32		centerCount = PG_GETARG_INT32(0);
+	int32		dimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatZeroAgg(centerCount, dimensions, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_zero_agg);
+Datum
+vector_rust_ivfflat_zero_agg(PG_FUNCTION_ARGS)
+{
+	int32		centerCount = PG_GETARG_INT32(0);
+	int32		dimensions = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatZeroAgg(centerCount, dimensions, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_all_finite);
+Datum
+vector_ivfflat_all_finite(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_BOOL(IvfflatAllFinite(valuesArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_all_finite);
+Datum
+vector_rust_ivfflat_all_finite(PG_FUNCTION_ARGS)
+{
+	ArrayType  *valuesArray = PG_GETARG_ARRAYTYPE_P(0);
+
+	PG_RETURN_BOOL(IvfflatAllFinite(valuesArray, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_adjust_lower_bounds);
+Datum
+vector_ivfflat_adjust_lower_bounds(PG_FUNCTION_ARGS)
+{
+	ArrayType  *lowerBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+	ArrayType  *centerDistancesArray = PG_GETARG_ARRAYTYPE_P(2);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatAdjustLowerBounds(lowerBoundsArray, centerCount, centerDistancesArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_adjust_lower_bounds);
+Datum
+vector_rust_ivfflat_adjust_lower_bounds(PG_FUNCTION_ARGS)
+{
+	ArrayType  *lowerBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+	ArrayType  *centerDistancesArray = PG_GETARG_ARRAYTYPE_P(2);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatAdjustLowerBounds(lowerBoundsArray, centerCount, centerDistancesArray, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_adjust_upper_bounds);
+Datum
+vector_ivfflat_adjust_upper_bounds(PG_FUNCTION_ARGS)
+{
+	ArrayType  *upperBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *closestCentersArray = PG_GETARG_ARRAYTYPE_P(1);
+	ArrayType  *centerDistancesArray = PG_GETARG_ARRAYTYPE_P(2);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatAdjustUpperBounds(upperBoundsArray, closestCentersArray, centerDistancesArray, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_adjust_upper_bounds);
+Datum
+vector_rust_ivfflat_adjust_upper_bounds(PG_FUNCTION_ARGS)
+{
+	ArrayType  *upperBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *closestCentersArray = PG_GETARG_ARRAYTYPE_P(1);
+	ArrayType  *centerDistancesArray = PG_GETARG_ARRAYTYPE_P(2);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatAdjustUpperBounds(upperBoundsArray, closestCentersArray, centerDistancesArray, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_init_upper_bounds);
+Datum
+vector_ivfflat_init_upper_bounds(PG_FUNCTION_ARGS)
+{
+	ArrayType  *lowerBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatInitUpperBounds(lowerBoundsArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_init_upper_bounds);
+Datum
+vector_rust_ivfflat_init_upper_bounds(PG_FUNCTION_ARGS)
+{
+	ArrayType  *lowerBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatInitUpperBounds(lowerBoundsArray, centerCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_init_closest_centers);
+Datum
+vector_ivfflat_init_closest_centers(PG_FUNCTION_ARGS)
+{
+	ArrayType  *lowerBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatInitClosestCenters(lowerBoundsArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_init_closest_centers);
+Datum
+vector_rust_ivfflat_init_closest_centers(PG_FUNCTION_ARGS)
+{
+	ArrayType  *lowerBoundsArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatInitClosestCenters(lowerBoundsArray, centerCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_compute_s);
+Datum
+vector_ivfflat_compute_s(PG_FUNCTION_ARGS)
+{
+	ArrayType  *halfcdistArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatComputeS(halfcdistArray, centerCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_compute_s);
+Datum
+vector_rust_ivfflat_compute_s(PG_FUNCTION_ARGS)
+{
+	ArrayType  *halfcdistArray = PG_GETARG_ARRAYTYPE_P(0);
+	int32		centerCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_ARRAYTYPE_P(IvfflatComputeS(halfcdistArray, centerCount, true));
+}
 
 /*
  * Initialize with kmeans++
@@ -198,22 +909,13 @@ ComputeNewCenters(VectorArray samples, float *agg, VectorArray newCenters, int *
 	int			numSamples = samples->length;
 
 	/* Reset sum and count */
-	for (int j = 0; j < numCenters; j++)
-	{
-		float	   *x = agg + ((int64) j * dimensions);
-
-		for (int k = 0; k < dimensions; k++)
-			x[k] = 0.0;
-
-		centerCounts[j] = 0;
-	}
+	vector_rust_ivfflat_zero_agg_kernel(numCenters, dimensions, agg);
 
 	/* Increment sum of closest center */
 	SumCenters(samples, agg, closestCenters, typeInfo);
 
 	/* Increment count of closest center */
-	for (int j = 0; j < numSamples; j++)
-		centerCounts[closestCenters[j]] += 1;
+	vector_rust_ivfflat_center_counts_kernel(numSamples, closestCenters, numCenters, centerCounts);
 
 	/* Divide sum by count */
 	for (int j = 0; j < numCenters; j++)
@@ -222,16 +924,8 @@ ComputeNewCenters(VectorArray samples, float *agg, VectorArray newCenters, int *
 
 		if (centerCounts[j] > 0)
 		{
-			/* Double avoids overflow, but requires more memory */
 			/* TODO Update bounds */
-			for (int k = 0; k < dimensions; k++)
-			{
-				if (isinf(x[k]))
-					x[k] = x[k] > 0 ? FLT_MAX : -FLT_MAX;
-			}
-
-			for (int k = 0; k < dimensions; k++)
-				x[k] /= centerCounts[j];
+			vector_rust_ivfflat_finalize_center_kernel(dimensions, x, centerCounts[j]);
 		}
 		else
 		{
@@ -332,27 +1026,7 @@ ElkanKmeans(Relation index, VectorArray samples, VectorArray centers, const Ivff
 	InitCenters(index, samples, centers, lowerBound);
 
 	/* Assign each x to its closest initial center c(x) = argmin d(x,c) */
-	for (int64 j = 0; j < numSamples; j++)
-	{
-		float		minDistance = FLT_MAX;
-		int			closestCenter = 0;
-
-		/* Find closest center */
-		for (int64 k = 0; k < numCenters; k++)
-		{
-			/* TODO Use Lemma 1 in k-means++ initialization */
-			float		distance = lowerBound[j * numCenters + k];
-
-			if (distance < minDistance)
-			{
-				minDistance = distance;
-				closestCenter = k;
-			}
-		}
-
-		upperBound[j] = minDistance;
-		closestCenters[j] = closestCenter;
-	}
+	vector_rust_ivfflat_init_bounds_kernel(numSamples, numCenters, lowerBound, upperBound, closestCenters);
 
 	/* Give 500 iterations to converge */
 	for (int iteration = 0; iteration < 500; iteration++)
@@ -378,24 +1052,7 @@ ElkanKmeans(Relation index, VectorArray samples, VectorArray centers, const Ivff
 		}
 
 		/* For all centers c, compute s(c) */
-		for (int64 j = 0; j < numCenters; j++)
-		{
-			float		minDistance = FLT_MAX;
-
-			for (int64 k = 0; k < numCenters; k++)
-			{
-				float		distance;
-
-				if (j == k)
-					continue;
-
-				distance = halfcdist[j * numCenters + k];
-				if (distance < minDistance)
-					minDistance = distance;
-			}
-
-			s[j] = minDistance;
-		}
+		vector_rust_ivfflat_compute_s_kernel(numCenters, halfcdist, s);
 
 		rjreset = iteration != 0;
 
@@ -468,23 +1125,11 @@ ElkanKmeans(Relation index, VectorArray samples, VectorArray centers, const Ivff
 		for (int j = 0; j < numCenters; j++)
 			newcdist[j] = DatumGetFloat8(FunctionCall2Coll(procinfo, collation, PointerGetDatum(VectorArrayGet(centers, j)), PointerGetDatum(VectorArrayGet(newCenters, j))));
 
-		for (int64 j = 0; j < numSamples; j++)
-		{
-			for (int64 k = 0; k < numCenters; k++)
-			{
-				float		distance = lowerBound[j * numCenters + k] - newcdist[k];
-
-				if (distance < 0)
-					distance = 0;
-
-				lowerBound[j * numCenters + k] = distance;
-			}
-		}
+		vector_rust_ivfflat_adjust_lower_bounds_kernel(numSamples, numCenters, lowerBound, newcdist);
 
 		/* Step 6 */
 		/* We reset r(x) before Step 3 in the next iteration */
-		for (int j = 0; j < numSamples; j++)
-			upperBound[j] += newcdist[closestCenters[j]];
+		vector_rust_ivfflat_adjust_upper_bounds_kernel(numSamples, upperBound, closestCenters, newcdist);
 
 		/* Step 7 */
 		for (int j = 0; j < numCenters; j++)
@@ -505,20 +1150,12 @@ CheckElements(VectorArray centers, const IvfflatTypeInfo * typeInfo)
 
 	for (int i = 0; i < centers->length; i++)
 	{
-		for (int j = 0; j < centers->dim; j++)
-			scratch[j] = 0;
+		vector_rust_ivfflat_zero_agg_kernel(1, centers->dim, scratch);
 
 		/* /fp:fast may not propagate NaN with MSVC, but that's alright */
 		typeInfo->sumCenter(VectorArrayGet(centers, i), scratch);
-
-		for (int j = 0; j < centers->dim; j++)
-		{
-			if (isnan(scratch[j]))
-				elog(ERROR, "NaN detected. Please report a bug.");
-
-			if (isinf(scratch[j]))
-				elog(ERROR, "Infinite value detected. Please report a bug.");
-		}
+		if (!vector_rust_ivfflat_all_finite_kernel(centers->dim, scratch))
+			elog(ERROR, "Non-finite value detected. Please report a bug.");
 	}
 }
 

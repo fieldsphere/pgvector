@@ -13,6 +13,8 @@
 #include "hnsw.h"
 #include "miscadmin.h"
 #include "nodes/pg_list.h"
+#include "rust_ffi.h"
+#include "utils/builtins.h"
 #include "utils/float.h"
 #include "utils/guc.h"
 #include "utils/relcache.h"
@@ -37,6 +39,9 @@ int			hnsw_max_scan_tuples;
 double		hnsw_scan_mem_multiplier;
 int			hnsw_lock_tranche_id;
 static relopt_kind hnsw_relopt_kind;
+static bool HnswShouldInitLockTranche(bool preloadInProgress, bool useRust);
+static bool HnswShouldAssignNewLockTranche(bool found, bool useRust);
+static bool HnswShouldCapRatioAtOne(double ratio, bool useRust);
 
 /*
  * Assign a tranche ID for our LWLocks. This only needs to be done by one
@@ -57,7 +62,7 @@ HnswInitLockTranche(void)
 	tranche_ids = ShmemInitStruct("hnsw LWLock ids",
 								  sizeof(int) * 1,
 								  &found);
-	if (!found)
+	if (HnswShouldAssignNewLockTranche(found, true))
 	{
 #if PG_VERSION_NUM >= 190000
 		tranche_ids[0] = LWLockNewTrancheId("HnswBuild");
@@ -80,7 +85,7 @@ HnswInitLockTranche(void)
 void
 HnswInit(void)
 {
-	if (!process_shared_preload_libraries_in_progress)
+	if (HnswShouldInitLockTranche(process_shared_preload_libraries_in_progress, true))
 		HnswInitLockTranche();
 
 	hnsw_relopt_kind = add_reloption_kind();
@@ -127,6 +132,185 @@ hnswbuildphasename(int64 phasenum)
 	}
 }
 
+static bool
+HnswShouldInitLockTranche(bool preloadInProgress, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_init_lock_tranche_kernel(preloadInProgress);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_init_lock_tranche);
+Datum
+vector_hnsw_should_init_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		preloadInProgress = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitLockTranche(preloadInProgress != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_init_lock_tranche);
+Datum
+vector_rust_hnsw_should_init_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		preloadInProgress = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitLockTranche(preloadInProgress != 0, true));
+}
+
+static bool
+HnswShouldAssignNewLockTranche(bool found, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_assign_new_lock_tranche_kernel(found);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_assign_new_lock_tranche);
+Datum
+vector_hnsw_should_assign_new_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAssignNewLockTranche(found != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_assign_new_lock_tranche);
+Datum
+vector_rust_hnsw_should_assign_new_lock_tranche(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAssignNewLockTranche(found != 0, true));
+}
+
+static bool
+HnswShouldDisableWithoutOrder(int orderbyCount, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_disable_without_order_kernel(orderbyCount);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_disable_without_order);
+Datum
+vector_hnsw_should_disable_without_order(PG_FUNCTION_ARGS)
+{
+	int32		orderbyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDisableWithoutOrder(orderbyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_disable_without_order);
+Datum
+vector_rust_hnsw_should_disable_without_order(PG_FUNCTION_ARGS)
+{
+	int32		orderbyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDisableWithoutOrder(orderbyCount, true));
+}
+
+static double
+HnswClampRatio(double ratio, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_clamp_ratio_kernel(ratio);
+}
+
+static bool
+HnswShouldCapRatioAtOne(double ratio, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, 1, ratio);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_clamp_ratio);
+Datum
+vector_hnsw_clamp_ratio(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_FLOAT8(HnswClampRatio(ratio, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_clamp_ratio);
+Datum
+vector_rust_hnsw_clamp_ratio(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_FLOAT8(HnswClampRatio(ratio, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_cap_ratio_at_one);
+Datum
+vector_hnsw_should_cap_ratio_at_one(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldCapRatioAtOne(ratio, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_cap_ratio_at_one);
+Datum
+vector_rust_hnsw_should_cap_ratio_at_one(PG_FUNCTION_ARGS)
+{
+	float8		ratio = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldCapRatioAtOne(ratio, true));
+}
+
+static bool
+HnswShouldAdjustStartupCost(double startupPages, double relPages, double ratio, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_adjust_startup_cost_kernel(startupPages, relPages, ratio);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_adjust_startup_cost);
+Datum
+vector_hnsw_should_adjust_startup_cost(PG_FUNCTION_ARGS)
+{
+	float8		startupPages = PG_GETARG_FLOAT8(0);
+	float8		relPages = PG_GETARG_FLOAT8(1);
+	float8		ratio = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldAdjustStartupCost(startupPages, relPages, ratio, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_adjust_startup_cost);
+Datum
+vector_rust_hnsw_should_adjust_startup_cost(PG_FUNCTION_ARGS)
+{
+	float8		startupPages = PG_GETARG_FLOAT8(0);
+	float8		relPages = PG_GETARG_FLOAT8(1);
+	float8		ratio = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldAdjustStartupCost(startupPages, relPages, ratio, true));
+}
+
+static bool
+HnswShouldComputeScanRatioFromTuples(double tupleCount, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_compute_scan_ratio_from_tuples_kernel(tupleCount);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_compute_scan_ratio_from_tuples);
+Datum
+vector_hnsw_should_compute_scan_ratio_from_tuples(PG_FUNCTION_ARGS)
+{
+	float8		tupleCount = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldComputeScanRatioFromTuples(tupleCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_compute_scan_ratio_from_tuples);
+Datum
+vector_rust_hnsw_should_compute_scan_ratio_from_tuples(PG_FUNCTION_ARGS)
+{
+	float8		tupleCount = PG_GETARG_FLOAT8(0);
+
+	PG_RETURN_BOOL(HnswShouldComputeScanRatioFromTuples(tupleCount, true));
+}
+
 /*
  * Estimate the cost of an index scan
  */
@@ -144,7 +328,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	Relation	index;
 
 	/* Never use index without order */
-	if (path->indexorderbys == NIL)
+	if (HnswShouldDisableWithoutOrder(list_length(path->indexorderbys), true))
 	{
 		*indexStartupCost = get_float8_infinity();
 		*indexTotalCost = get_float8_infinity();
@@ -193,7 +377,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 	 * at L0, accounting for previously visited tuples, multiplied by the
 	 * "scalingFactor" (currently hardcoded).
 	 */
-	if (path->indexinfo->tuples > 0)
+	if (HnswShouldComputeScanRatioFromTuples(path->indexinfo->tuples, true))
 	{
 		double		scalingFactor = 0.55;
 		int			entryLevel = (int) (log(path->indexinfo->tuples) * HnswGetMl(m));
@@ -202,8 +386,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 
 		ratio = (entryLevel * m + layer0TuplesMax * layer0Selectivity) / path->indexinfo->tuples;
 
-		if (ratio > 1)
-			ratio = 1;
+		ratio = HnswClampRatio(ratio, true);
 	}
 	else
 		ratio = 1;
@@ -215,7 +398,7 @@ hnswcostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 
 	/* Adjust cost if needed since TOAST not included in seq scan cost */
 	startupPages = costs.numIndexPages * ratio;
-	if (startupPages > path->indexinfo->rel->pages && ratio < 0.5)
+	if (HnswShouldAdjustStartupCost(startupPages, path->indexinfo->rel->pages, ratio, true))
 	{
 		/* Change all page cost from random to sequential */
 		costs.indexStartupCost -= startupPages * (costs.spc_random_page_cost - spc_seq_page_cost);
@@ -255,6 +438,20 @@ static bool
 hnswvalidate(Oid opclassoid)
 {
 	return true;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_handler_probe);
+Datum
+vector_hnsw_handler_probe(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_DATUM(CStringGetTextDatum(vector_rust_hnsw_handler_probe_cstr()));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_handler_probe);
+Datum
+vector_rust_hnsw_handler_probe(PG_FUNCTION_ARGS)
+{
+	return vector_hnsw_handler_probe(fcinfo);
 }
 
 /*

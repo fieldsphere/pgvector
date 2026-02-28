@@ -2,11 +2,13 @@
 
 #include "access/genam.h"
 #include "access/relscan.h"
+#include "fmgr.h"
 #include "hnsw.h"
 #include "lib/pairingheap.h"
 #include "miscadmin.h"
 #include "nodes/pg_list.h"
 #include "pgstat.h"
+#include "rust_ffi.h"
 #include "storage/lmgr.h"
 #include "utils/float.h"
 #include "utils/memutils.h"
@@ -16,6 +18,1947 @@
 #if PG_VERSION_NUM >= 160000
 #include "varatt.h"
 #endif
+
+static bool HnswShouldHaveProvidedRescanKeyPointer(ScanKey keys, bool useRust);
+static bool HnswShouldHaveProvidedOrderByPointer(ScanKey orderByData, bool useRust);
+static bool HnswShouldHaveScanNormprocPointer(void *normprocinfo, bool useRust);
+static bool HnswShouldHaveScanInstrumentPointer(void *instrument, bool useRust);
+static bool HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool useRust);
+
+static bool
+HnswShouldReturnEmptyWithoutEntryPoint(bool entryPointIsNull, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_return_empty_without_entrypoint_kernel(entryPointIsNull);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_empty_without_entrypoint);
+Datum
+vector_hnsw_should_return_empty_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutEntryPoint(entryPointIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_empty_without_entrypoint);
+Datum
+vector_rust_hnsw_should_return_empty_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		entryPointIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnEmptyWithoutEntryPoint(entryPointIsNull != 0, true));
+}
+
+static bool
+HnswShouldHaveNonEmptyResumeDiscardedFlag(bool hasNonEmptyDiscarded, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNonEmptyDiscarded);
+}
+
+static bool
+HnswShouldHaveNonEmptyResumeDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_resume_from_discarded_kernel(discardedIsEmpty);
+}
+
+static bool
+HnswShouldResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	return HnswShouldHaveNonEmptyResumeDiscarded(discardedIsEmpty, useRust);
+}
+
+static bool
+HnswShouldHaveEmptyResumeDiscardedFlag(bool discardedIsEmpty, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
+}
+
+static bool
+HnswShouldHaveEmptyResumeDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	return HnswShouldHaveEmptyResumeDiscardedFlag(discardedIsEmpty, useRust);
+}
+
+static bool
+HnswShouldStopResumeFromDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	return HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_resume_from_discarded);
+Datum
+vector_hnsw_should_resume_from_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResumeFromDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_resume_from_discarded);
+Datum
+vector_rust_hnsw_should_resume_from_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResumeFromDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonempty_resume_discarded);
+Datum
+vector_hnsw_should_have_nonempty_resume_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonempty_resume_discarded);
+Datum
+vector_rust_hnsw_should_have_nonempty_resume_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonempty_resume_discarded_flag);
+Datum
+vector_hnsw_should_have_nonempty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscardedFlag(hasNonEmptyDiscarded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonempty_resume_discarded_flag);
+Datum
+vector_rust_hnsw_should_have_nonempty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyResumeDiscardedFlag(hasNonEmptyDiscarded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_resume_from_discarded);
+Datum
+vector_hnsw_should_stop_resume_from_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopResumeFromDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_resume_from_discarded);
+Datum
+vector_rust_hnsw_should_stop_resume_from_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopResumeFromDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_resume_discarded);
+Datum
+vector_hnsw_should_have_empty_resume_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_resume_discarded);
+Datum
+vector_rust_hnsw_should_have_empty_resume_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_resume_discarded_flag);
+Datum
+vector_hnsw_should_have_empty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscardedFlag(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_resume_discarded_flag);
+Datum
+vector_rust_hnsw_should_have_empty_resume_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyResumeDiscardedFlag(discardedIsEmpty != 0, true));
+}
+
+static bool
+HnswShouldHaveNonEmptyRemainingDiscardedFlag(bool hasNonEmptyDiscarded, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNonEmptyDiscarded);
+}
+
+static bool
+HnswShouldHaveNonEmptyRemainingDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_return_remaining_discarded_kernel(discardedIsEmpty);
+}
+
+static bool
+HnswShouldReturnRemainingDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	return HnswShouldHaveNonEmptyRemainingDiscarded(discardedIsEmpty, useRust);
+}
+
+static bool
+HnswShouldStopReturningRemainingDiscarded(bool discardedIsEmpty, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(discardedIsEmpty);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_remaining_discarded);
+Datum
+vector_hnsw_should_return_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnRemainingDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_remaining_discarded);
+Datum
+vector_rust_hnsw_should_return_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnRemainingDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonempty_remaining_discarded);
+Datum
+vector_hnsw_should_have_nonempty_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonempty_remaining_discarded);
+Datum
+vector_rust_hnsw_should_have_nonempty_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscarded(discardedIsEmpty != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_nonempty_remaining_discarded_flag);
+Datum
+vector_hnsw_should_have_nonempty_remaining_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscardedFlag(hasNonEmptyDiscarded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_nonempty_remaining_discarded_flag);
+Datum
+vector_rust_hnsw_should_have_nonempty_remaining_discarded_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNonEmptyDiscarded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonEmptyRemainingDiscardedFlag(hasNonEmptyDiscarded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_returning_remaining_discarded);
+Datum
+vector_hnsw_should_stop_returning_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopReturningRemainingDiscarded(discardedIsEmpty != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_returning_remaining_discarded);
+Datum
+vector_rust_hnsw_should_stop_returning_remaining_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsEmpty = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopReturningRemainingDiscarded(discardedIsEmpty != 0, true));
+}
+
+static bool
+HnswShouldHaveDecreasingScanDistanceFlag(bool isDecreasingDistance, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isDecreasingDistance);
+}
+
+static bool
+HnswShouldHaveDecreasingScanDistance(double distance, double previousDistance, bool useRust)
+{
+	return HnswShouldHaveDecreasingScanDistanceFlag(distance < previousDistance, useRust);
+}
+
+static bool
+HnswShouldHaveStrictOutOfOrderScanMode(int iterativeScanMode, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_previous_distance_kernel(iterativeScanMode);
+}
+
+static bool
+HnswShouldSkipStrictOutOfOrder(int iterativeScanMode, double distance, double previousDistance, bool useRust)
+{
+	return HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, useRust) &&
+		HnswShouldHaveDecreasingScanDistance(distance, previousDistance, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_strict_out_of_order);
+Datum
+vector_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+	float8		distance = PG_GETARG_FLOAT8(1);
+	float8		previousDistance = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_strict_out_of_order);
+Datum
+vector_rust_hnsw_should_skip_strict_out_of_order(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+	float8		distance = PG_GETARG_FLOAT8(1);
+	float8		previousDistance = PG_GETARG_FLOAT8(2);
+
+	PG_RETURN_BOOL(HnswShouldSkipStrictOutOfOrder(iterativeScanMode, distance, previousDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_strict_out_of_order_scan_mode);
+Datum
+vector_hnsw_should_have_strict_out_of_order_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_strict_out_of_order_scan_mode);
+Datum
+vector_rust_hnsw_should_have_strict_out_of_order_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_decreasing_scan_distance);
+Datum
+vector_hnsw_should_have_decreasing_scan_distance(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		previousDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistance(distance, previousDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_decreasing_scan_distance);
+Datum
+vector_rust_hnsw_should_have_decreasing_scan_distance(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		previousDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistance(distance, previousDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_decreasing_scan_distance_flag);
+Datum
+vector_hnsw_should_have_decreasing_scan_distance_flag(PG_FUNCTION_ARGS)
+{
+	int32		isDecreasingDistance = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistanceFlag(isDecreasingDistance != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_decreasing_scan_distance_flag);
+Datum
+vector_rust_hnsw_should_have_decreasing_scan_distance_flag(PG_FUNCTION_ARGS)
+{
+	int32		isDecreasingDistance = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDecreasingScanDistanceFlag(isDecreasingDistance != 0, true));
+}
+
+static bool
+HnswShouldStopWithoutDiscarded(bool discardedIsNull, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_without_discarded_kernel(discardedIsNull);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_without_discarded);
+Datum
+vector_hnsw_should_stop_without_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWithoutDiscarded(discardedIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_without_discarded);
+Datum
+vector_rust_hnsw_should_stop_without_discarded(PG_FUNCTION_ARGS)
+{
+	int32		discardedIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWithoutDiscarded(discardedIsNull != 0, true));
+}
+
+static bool
+HnswShouldHaveIterativeScanOffMode(int iterativeScanMode, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_when_iterative_scan_off_kernel(iterativeScanMode);
+}
+
+static bool
+HnswShouldStopWhenIterativeScanOff(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveIterativeScanOffMode(iterativeScanMode, useRust);
+}
+
+static bool
+HnswShouldHaveActiveIterativeScanMode(int iterativeScanMode, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_release_iterative_scan_memory_kernel(iterativeScanMode);
+}
+
+static bool
+HnswShouldTrackScanDiscarded(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_when_iterative_scan_off);
+Datum
+vector_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWhenIterativeScanOff(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_when_iterative_scan_off);
+Datum
+vector_rust_hnsw_should_stop_when_iterative_scan_off(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopWhenIterativeScanOff(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_iterative_scan_off_mode);
+Datum
+vector_hnsw_should_have_iterative_scan_off_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIterativeScanOffMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_iterative_scan_off_mode);
+Datum
+vector_rust_hnsw_should_have_iterative_scan_off_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIterativeScanOffMode(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_scan_discarded);
+Datum
+vector_hnsw_should_track_scan_discarded(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackScanDiscarded(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_scan_discarded);
+Datum
+vector_rust_hnsw_should_track_scan_discarded(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackScanDiscarded(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_active_iterative_scan_mode);
+Datum
+vector_hnsw_should_have_active_iterative_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_active_iterative_scan_mode);
+Datum
+vector_rust_hnsw_should_have_active_iterative_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, true));
+}
+
+static bool
+HnswShouldReachScanTupleLimitFlag(bool reachesTupleLimit, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(reachesTupleLimit);
+}
+
+static bool
+HnswShouldReachScanTupleLimit(int64 tupleCount, int64 maxScanTuples, bool useRust)
+{
+	return HnswShouldReachScanTupleLimitFlag(tupleCount >= maxScanTuples, useRust);
+}
+
+static bool
+HnswShouldExceedScanMemoryLimitFlag(bool exceedsMemoryLimit, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(exceedsMemoryLimit);
+}
+
+static bool
+HnswShouldExceedScanMemoryLimit(int64 memoryUsed, int64 maxMemory, bool useRust)
+{
+	return HnswShouldExceedScanMemoryLimitFlag(memoryUsed > maxMemory, useRust);
+}
+
+static bool
+HnswShouldLimitScanByResources(int64 tupleCount, int64 maxScanTuples, int64 memoryUsed, int64 maxMemory, bool useRust)
+{
+	(void) useRust;
+	return HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true) ||
+		HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, true);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_limit_scan_by_resources);
+Datum
+vector_hnsw_should_limit_scan_by_resources(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+	int64		memoryUsed = PG_GETARG_INT64(2);
+	int64		maxMemory = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldLimitScanByResources(tupleCount, maxScanTuples, memoryUsed, maxMemory, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_limit_scan_by_resources);
+Datum
+vector_rust_hnsw_should_limit_scan_by_resources(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+	int64		memoryUsed = PG_GETARG_INT64(2);
+	int64		maxMemory = PG_GETARG_INT64(3);
+
+	PG_RETURN_BOOL(HnswShouldLimitScanByResources(tupleCount, maxScanTuples, memoryUsed, maxMemory, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reach_scan_tuple_limit);
+Datum
+vector_hnsw_should_reach_scan_tuple_limit(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reach_scan_tuple_limit);
+Datum
+vector_rust_hnsw_should_reach_scan_tuple_limit(PG_FUNCTION_ARGS)
+{
+	int64		tupleCount = PG_GETARG_INT64(0);
+	int64		maxScanTuples = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimit(tupleCount, maxScanTuples, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reach_scan_tuple_limit_flag);
+Datum
+vector_hnsw_should_reach_scan_tuple_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		reachedTupleLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimitFlag(reachedTupleLimit != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reach_scan_tuple_limit_flag);
+Datum
+vector_rust_hnsw_should_reach_scan_tuple_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		reachedTupleLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReachScanTupleLimitFlag(reachedTupleLimit != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_exceed_scan_memory_limit);
+Datum
+vector_hnsw_should_exceed_scan_memory_limit(PG_FUNCTION_ARGS)
+{
+	int64		memoryUsed = PG_GETARG_INT64(0);
+	int64		maxMemory = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_exceed_scan_memory_limit);
+Datum
+vector_rust_hnsw_should_exceed_scan_memory_limit(PG_FUNCTION_ARGS)
+{
+	int64		memoryUsed = PG_GETARG_INT64(0);
+	int64		maxMemory = PG_GETARG_INT64(1);
+
+	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimit(memoryUsed, maxMemory, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_exceed_scan_memory_limit_flag);
+Datum
+vector_hnsw_should_exceed_scan_memory_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		exceededMemoryLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimitFlag(exceededMemoryLimit != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_exceed_scan_memory_limit_flag);
+Datum
+vector_rust_hnsw_should_exceed_scan_memory_limit_flag(PG_FUNCTION_ARGS)
+{
+	int32		exceededMemoryLimit = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldExceedScanMemoryLimitFlag(exceededMemoryLimit != 0, true));
+}
+
+static bool
+HnswShouldReleaseIterativeScanMemory(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveActiveIterativeScanMode(iterativeScanMode, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_release_iterative_scan_memory);
+Datum
+vector_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseIterativeScanMemory(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_release_iterative_scan_memory);
+Datum
+vector_rust_hnsw_should_release_iterative_scan_memory(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReleaseIterativeScanMemory(iterativeScanMode, true));
+}
+
+static bool
+HnswShouldHaveStrictScanMode(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveStrictOutOfOrderScanMode(iterativeScanMode, useRust);
+}
+
+static bool
+HnswShouldUseStrictScanMode(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldHaveStrictScanMode(iterativeScanMode, useRust);
+}
+
+static bool
+HnswShouldUpdatePreviousDistance(int iterativeScanMode, bool useRust)
+{
+	return HnswShouldUseStrictScanMode(iterativeScanMode, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_previous_distance);
+Datum
+vector_hnsw_should_update_previous_distance(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdatePreviousDistance(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_previous_distance);
+Datum
+vector_rust_hnsw_should_update_previous_distance(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdatePreviousDistance(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_strict_scan_mode);
+Datum
+vector_hnsw_should_use_strict_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseStrictScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_strict_scan_mode);
+Datum
+vector_rust_hnsw_should_use_strict_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseStrictScanMode(iterativeScanMode, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_strict_scan_mode);
+Datum
+vector_hnsw_should_have_strict_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictScanMode(iterativeScanMode, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_strict_scan_mode);
+Datum
+vector_rust_hnsw_should_have_strict_scan_mode(PG_FUNCTION_ARGS)
+{
+	int32		iterativeScanMode = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveStrictScanMode(iterativeScanMode, true));
+}
+
+static bool
+HnswShouldHaveEmptyWorkList(int workListLength, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_handle_empty_work_list_kernel(workListLength);
+}
+
+static bool
+HnswShouldHandleEmptyWorkList(int workListLength, bool useRust)
+{
+	return HnswShouldHaveEmptyWorkList(workListLength, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_handle_empty_work_list);
+Datum
+vector_hnsw_should_handle_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHandleEmptyWorkList(workListLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_handle_empty_work_list);
+Datum
+vector_rust_hnsw_should_handle_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHandleEmptyWorkList(workListLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_work_list);
+Datum
+vector_hnsw_should_have_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyWorkList(workListLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_work_list);
+Datum
+vector_rust_hnsw_should_have_empty_work_list(PG_FUNCTION_ARGS)
+{
+	int32		workListLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyWorkList(workListLength, true));
+}
+
+static bool
+HnswShouldHaveEmptyScanHeapTids(int heaptidsLength, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_advance_on_exhausted_heaptids_kernel(heaptidsLength);
+}
+
+static bool
+HnswShouldAdvanceOnExhaustedHeapTids(int heaptidsLength, bool useRust)
+{
+	return HnswShouldHaveEmptyScanHeapTids(heaptidsLength, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_advance_on_exhausted_heaptids);
+Datum
+vector_hnsw_should_advance_on_exhausted_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAdvanceOnExhaustedHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_advance_on_exhausted_heaptids);
+Datum
+vector_rust_hnsw_should_advance_on_exhausted_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAdvanceOnExhaustedHeapTids(heaptidsLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_empty_scan_heaptids);
+Datum
+vector_hnsw_should_have_empty_scan_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyScanHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_empty_scan_heaptids);
+Datum
+vector_rust_hnsw_should_have_empty_scan_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEmptyScanHeapTids(heaptidsLength, true));
+}
+
+static bool
+HnswShouldHaveMissingOrderBy(bool orderByIsNull, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_missing_orderby_kernel(orderByIsNull);
+}
+
+static bool
+HnswShouldRejectMissingOrderBy(bool orderByIsNull, bool useRust)
+{
+	return HnswShouldHaveMissingOrderBy(orderByIsNull, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_missing_orderby);
+Datum
+vector_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectMissingOrderBy(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_missing_orderby);
+Datum
+vector_rust_hnsw_should_reject_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectMissingOrderBy(orderByIsNull != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_orderby);
+Datum
+vector_hnsw_should_have_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingOrderBy(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_orderby);
+Datum
+vector_rust_hnsw_should_have_missing_orderby(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingOrderBy(orderByIsNull != 0, true));
+}
+
+static bool
+HnswShouldHaveNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_non_mvcc_snapshot_kernel(snapshotIsMVCC);
+}
+
+static bool
+HnswShouldRejectNonMVCCSnapshot(bool snapshotIsMVCC, bool useRust)
+{
+	return HnswShouldHaveNonMVCCSnapshot(snapshotIsMVCC, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_non_mvcc_snapshot);
+Datum
+vector_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectNonMVCCSnapshot(snapshotIsMVCC != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_non_mvcc_snapshot);
+Datum
+vector_rust_hnsw_should_reject_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectNonMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_non_mvcc_snapshot);
+Datum
+vector_hnsw_should_have_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonMVCCSnapshot(snapshotIsMVCC != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_non_mvcc_snapshot);
+Datum
+vector_rust_hnsw_should_have_non_mvcc_snapshot(PG_FUNCTION_ARGS)
+{
+	int32		snapshotIsMVCC = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNonMVCCSnapshot(snapshotIsMVCC != 0, true));
+}
+
+static bool
+HnswShouldHaveScanPointerFlag(bool hasPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPointer);
+}
+
+static bool
+HnswShouldHaveScanPointer(const void *pointer, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(pointer != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveRescanKeysFlag(bool hasKeys, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasKeys, useRust);
+}
+
+static bool
+HnswShouldHavePositiveRescanKeyCountFlag(bool hasPositiveKeyCount, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPositiveKeyCount);
+}
+
+static bool
+HnswShouldHavePositiveRescanKeyCount(int keyCount, bool useRust)
+{
+	return HnswShouldHavePositiveRescanKeyCountFlag(keyCount > 0, useRust);
+}
+
+static bool
+HnswShouldHaveCopyableRescanKeys(bool hasKeys, int keyCount, bool useRust)
+{
+	return HnswShouldHaveRescanKeysFlag(hasKeys, useRust) &&
+		HnswShouldHavePositiveRescanKeyCount(keyCount, useRust);
+}
+
+static bool
+HnswShouldCopyRescanKeys(bool hasKeys, int keyCount, bool useRust)
+{
+	return HnswShouldHaveCopyableRescanKeys(hasKeys, keyCount, useRust);
+}
+
+static bool
+HnswShouldHaveProvidedRescanKeyArray(bool hasKeyArray, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasKeyArray, useRust);
+}
+
+static bool
+HnswShouldUseProvidedRescanKeyArrayFlag(bool hasKeyArray, bool useRust)
+{
+	return HnswShouldHaveProvidedRescanKeyArray(hasKeyArray, useRust);
+}
+
+static bool
+HnswShouldUseProvidedRescanKeyArray(ScanKey keys, bool useRust)
+{
+	return HnswShouldHaveProvidedRescanKeyPointer(keys, useRust);
+}
+
+static bool
+HnswShouldHaveProvidedRescanKeyPointer(ScanKey keys, bool useRust)
+{
+	return HnswShouldHaveScanPointer((const void *) keys, useRust);
+}
+
+static bool
+HnswShouldHaveProvidedOrderByData(bool hasOrderByData, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasOrderByData, useRust);
+}
+
+static bool
+HnswShouldUseProvidedOrderByDataFlag(bool hasOrderByData, bool useRust)
+{
+	return HnswShouldHaveProvidedOrderByData(hasOrderByData, useRust);
+}
+
+static bool
+HnswShouldUseProvidedOrderByData(ScanKey orderByData, bool useRust)
+{
+	return HnswShouldHaveProvidedOrderByPointer(orderByData, useRust);
+}
+
+static bool
+HnswShouldHaveProvidedOrderByPointer(ScanKey orderByData, bool useRust)
+{
+	return HnswShouldHaveScanPointer((const void *) orderByData, useRust);
+}
+
+static bool
+HnswShouldHaveScanNormproc(bool hasNormproc, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasNormproc, useRust);
+}
+
+static bool
+HnswShouldUseScanNormprocFlag(bool hasNormproc, bool useRust)
+{
+	return HnswShouldHaveScanNormproc(hasNormproc, useRust);
+}
+
+static bool
+HnswShouldUseScanNormproc(void *normprocinfo, bool useRust)
+{
+	return HnswShouldHaveScanNormprocPointer(normprocinfo, useRust);
+}
+
+static bool
+HnswShouldHaveScanNormprocPointer(void *normprocinfo, bool useRust)
+{
+	return HnswShouldHaveScanPointer((const void *) normprocinfo, useRust);
+}
+
+static bool
+HnswShouldHaveScanEntrypoint(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasEntryPoint, useRust);
+}
+
+static bool
+HnswShouldHaveEntrypointForScan(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveScanEntrypoint(hasEntryPoint, useRust);
+}
+
+static bool
+HnswShouldUseEntrypointForScanFlag(bool hasEntryPoint, bool useRust)
+{
+	return HnswShouldHaveEntrypointForScan(hasEntryPoint, useRust);
+}
+
+static bool
+HnswShouldUseEntrypointForScan(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveEntrypointForScanPointer(entryPoint, useRust);
+}
+
+static bool
+HnswShouldHaveEntrypointForScanPointer(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveScanPointer((const void *) entryPoint, useRust);
+}
+
+static bool
+HnswShouldHaveScanInstrument(bool hasInstrument, bool useRust)
+{
+	return HnswShouldHaveScanPointerFlag(hasInstrument, useRust);
+}
+
+static bool
+HnswShouldUseScanInstrumentFlag(bool hasInstrument, bool useRust)
+{
+	return HnswShouldHaveScanInstrument(hasInstrument, useRust);
+}
+
+#if PG_VERSION_NUM >= 180000
+static bool
+HnswShouldUseScanInstrument(void *instrument, bool useRust)
+{
+	return HnswShouldHaveScanInstrumentPointer(instrument, useRust);
+}
+#endif
+
+static bool
+HnswShouldHaveScanInstrumentPointer(void *instrument, bool useRust)
+{
+	return HnswShouldHaveScanPointer((const void *) instrument, useRust);
+}
+
+static bool
+HnswShouldHaveMissingDiscardedHeap(bool hasDiscardedHeap, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDiscardedHeap);
+}
+
+static bool
+HnswShouldDiscardedHeapMissingFlag(bool hasDiscardedHeap, bool useRust)
+{
+	return HnswShouldHaveMissingDiscardedHeap(hasDiscardedHeap, useRust);
+}
+
+static bool
+HnswShouldDiscardedHeapMissing(pairingheap * discarded, bool useRust)
+{
+	return HnswShouldDiscardedHeapMissingFlag(HnswShouldHaveScanPointer((const void *) discarded, useRust), useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_rescan_keys);
+Datum
+vector_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_copy_rescan_keys);
+Datum
+vector_rust_hnsw_should_copy_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyRescanKeys(hasKeys != 0, keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_copyable_rescan_keys);
+Datum
+vector_hnsw_should_have_copyable_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveCopyableRescanKeys(hasKeys != 0, keyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_copyable_rescan_keys);
+Datum
+vector_rust_hnsw_should_have_copyable_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+	int32		keyCount = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveCopyableRescanKeys(hasKeys != 0, keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_rescan_keys);
+Datum
+vector_hnsw_should_have_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_rescan_keys);
+Datum
+vector_rust_hnsw_should_have_rescan_keys(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_rescan_keys_flag);
+Datum
+vector_hnsw_should_have_rescan_keys_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_rescan_keys_flag);
+Datum
+vector_rust_hnsw_should_have_rescan_keys_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeys = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveRescanKeysFlag(hasKeys != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_positive_rescan_key_count);
+Datum
+vector_hnsw_should_have_positive_rescan_key_count(PG_FUNCTION_ARGS)
+{
+	int32		keyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCount(keyCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_positive_rescan_key_count);
+Datum
+vector_rust_hnsw_should_have_positive_rescan_key_count(PG_FUNCTION_ARGS)
+{
+	int32		keyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCount(keyCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_positive_rescan_key_count_flag);
+Datum
+vector_hnsw_should_have_positive_rescan_key_count_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPositiveKeyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCountFlag(hasPositiveKeyCount != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_positive_rescan_key_count_flag);
+Datum
+vector_rust_hnsw_should_have_positive_rescan_key_count_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPositiveKeyCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePositiveRescanKeyCountFlag(hasPositiveKeyCount != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_rescan_key_array);
+Datum
+vector_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_rescan_key_array);
+Datum
+vector_rust_hnsw_should_use_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_rescan_key_array_flag);
+Datum
+vector_hnsw_should_use_provided_rescan_key_array_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_rescan_key_array_flag);
+Datum
+vector_rust_hnsw_should_use_provided_rescan_key_array_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedRescanKeyArrayFlag(hasKeyArray != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_rescan_key_array);
+Datum
+vector_hnsw_should_have_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyArray(hasKeyArray != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_rescan_key_array);
+Datum
+vector_rust_hnsw_should_have_provided_rescan_key_array(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyArray(hasKeyArray != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_rescan_key_pointer);
+Datum
+vector_hnsw_should_have_provided_rescan_key_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+	const char *mockKey = "key";
+	ScanKey		keys = hasKeyArray != 0 ? (ScanKey) mockKey : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyPointer(keys, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_rescan_key_pointer);
+Datum
+vector_rust_hnsw_should_have_provided_rescan_key_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasKeyArray = PG_GETARG_INT32(0);
+	const char *mockKey = "key";
+	ScanKey		keys = hasKeyArray != 0 ? (ScanKey) mockKey : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedRescanKeyPointer(keys, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_pointer);
+Datum
+vector_hnsw_should_have_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_pointer);
+Datum
+vector_rust_hnsw_should_have_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_pointer_flag);
+Datum
+vector_hnsw_should_have_scan_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointerFlag(hasPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_scan_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointerFlag(hasPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_pointer_value);
+Datum
+vector_hnsw_should_have_scan_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+	const char *mockPointer = "pointer";
+	const void *pointer = hasPointer != 0 ? (const void *) mockPointer : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointer(pointer, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_pointer_value);
+Datum
+vector_rust_hnsw_should_have_scan_pointer_value(PG_FUNCTION_ARGS)
+{
+	int32		hasPointer = PG_GETARG_INT32(0);
+	const char *mockPointer = "pointer";
+	const void *pointer = hasPointer != 0 ? (const void *) mockPointer : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanPointer(pointer, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_orderby_data);
+Datum
+vector_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_orderby_data);
+Datum
+vector_rust_hnsw_should_use_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_provided_orderby_data_flag);
+Datum
+vector_hnsw_should_use_provided_orderby_data_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_provided_orderby_data_flag);
+Datum
+vector_rust_hnsw_should_use_provided_orderby_data_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseProvidedOrderByDataFlag(hasOrderByData != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_orderby_data);
+Datum
+vector_hnsw_should_have_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByData(hasOrderByData != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_orderby_data);
+Datum
+vector_rust_hnsw_should_have_provided_orderby_data(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByData(hasOrderByData != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_provided_orderby_pointer);
+Datum
+vector_hnsw_should_have_provided_orderby_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+	const char *mockOrderByData = "orderby";
+	ScanKey		orderByData = hasOrderByData != 0 ? (ScanKey) mockOrderByData : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByPointer(orderByData, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_provided_orderby_pointer);
+Datum
+vector_rust_hnsw_should_have_provided_orderby_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOrderByData = PG_GETARG_INT32(0);
+	const char *mockOrderByData = "orderby";
+	ScanKey		orderByData = hasOrderByData != 0 ? (ScanKey) mockOrderByData : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveProvidedOrderByPointer(orderByData, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_entrypoint_for_scan);
+Datum
+vector_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_entrypoint_for_scan);
+Datum
+vector_rust_hnsw_should_use_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_entrypoint_for_scan_flag);
+Datum
+vector_hnsw_should_use_entrypoint_for_scan_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_entrypoint_for_scan_flag);
+Datum
+vector_rust_hnsw_should_use_entrypoint_for_scan_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseEntrypointForScanFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_entrypoint_for_scan);
+Datum
+vector_hnsw_should_have_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScan(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_entrypoint_for_scan);
+Datum
+vector_rust_hnsw_should_have_entrypoint_for_scan(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScan(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_entrypoint_for_scan_pointer);
+Datum
+vector_hnsw_should_have_entrypoint_for_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScanPointer(entryPoint, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_entrypoint_for_scan_pointer);
+Datum
+vector_rust_hnsw_should_have_entrypoint_for_scan_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+	const char *mockEntryPoint = "entrypoint";
+	HnswElement	entryPoint = hasEntryPoint != 0 ? (HnswElement) mockEntryPoint : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveEntrypointForScanPointer(entryPoint, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_entrypoint);
+Datum
+vector_hnsw_should_have_scan_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanEntrypoint(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_entrypoint);
+Datum
+vector_rust_hnsw_should_have_scan_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanEntrypoint(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_discarded_heap_missing);
+Datum
+vector_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_discarded_heap_missing);
+Datum
+vector_rust_hnsw_should_discarded_heap_missing(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_discarded_heap_missing_flag);
+Datum
+vector_hnsw_should_discarded_heap_missing_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_discarded_heap_missing_flag);
+Datum
+vector_rust_hnsw_should_discarded_heap_missing_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDiscardedHeapMissingFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_missing_discarded_heap);
+Datum
+vector_hnsw_should_have_missing_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingDiscardedHeap(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_missing_discarded_heap);
+Datum
+vector_rust_hnsw_should_have_missing_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMissingDiscardedHeap(hasDiscardedHeap != 0, true));
+}
+
+static bool
+HnswShouldHaveNullScanValue(bool orderByIsNull, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_use_null_scan_value_kernel(orderByIsNull);
+}
+
+static bool
+HnswShouldUseNullScanValue(bool orderByIsNull, bool useRust)
+{
+	return HnswShouldHaveNullScanValue(orderByIsNull, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_null_scan_value);
+Datum
+vector_hnsw_should_use_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNullScanValue(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_null_scan_value);
+Datum
+vector_rust_hnsw_should_use_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseNullScanValue(orderByIsNull != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_null_scan_value);
+Datum
+vector_hnsw_should_have_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNullScanValue(orderByIsNull != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_null_scan_value);
+Datum
+vector_rust_hnsw_should_have_null_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		orderByIsNull = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNullScanValue(orderByIsNull != 0, true));
+}
+
+static bool
+HnswShouldHaveNormalizedScanValue(bool hasNormproc, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_normalize_scan_value_kernel(hasNormproc);
+}
+
+static bool
+HnswShouldNormalizeScanValue(bool hasNormproc, bool useRust)
+{
+	return HnswShouldHaveNormalizedScanValue(hasNormproc, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_normalize_scan_value);
+Datum
+vector_hnsw_should_normalize_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeScanValue(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_normalize_scan_value);
+Datum
+vector_rust_hnsw_should_normalize_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeScanValue(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_normalized_scan_value);
+Datum
+vector_hnsw_should_have_normalized_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormalizedScanValue(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_normalized_scan_value);
+Datum
+vector_rust_hnsw_should_have_normalized_scan_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormalizedScanValue(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_normproc);
+Datum
+vector_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_normproc);
+Datum
+vector_rust_hnsw_should_use_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_normproc_flag);
+Datum
+vector_hnsw_should_use_scan_normproc_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_normproc_flag);
+Datum
+vector_rust_hnsw_should_use_scan_normproc_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanNormprocFlag(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_normproc);
+Datum
+vector_hnsw_should_have_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormproc(hasNormproc != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_normproc);
+Datum
+vector_rust_hnsw_should_have_scan_normproc(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormproc(hasNormproc != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_normproc_pointer);
+Datum
+vector_hnsw_should_have_scan_normproc_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+	const char *mockNormproc = "normproc";
+	void	   *normprocinfo = hasNormproc != 0 ? (void *) mockNormproc : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormprocPointer(normprocinfo, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_normproc_pointer);
+Datum
+vector_rust_hnsw_should_have_scan_normproc_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNormproc = PG_GETARG_INT32(0);
+	const char *mockNormproc = "normproc";
+	void	   *normprocinfo = hasNormproc != 0 ? (void *) mockNormproc : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanNormprocPointer(normprocinfo, true));
+}
+
+static bool
+HnswShouldHaveInitialScanState(bool isFirstScan, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_initialize_scan_state_kernel(isFirstScan);
+}
+
+static bool
+HnswShouldInitializeScanState(bool isFirstScan, bool useRust)
+{
+	return HnswShouldHaveInitialScanState(isFirstScan, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_scan_state);
+Datum
+vector_hnsw_should_initialize_scan_state(PG_FUNCTION_ARGS)
+{
+	int32		isFirstScan = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeScanState(isFirstScan != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_scan_state);
+Datum
+vector_rust_hnsw_should_initialize_scan_state(PG_FUNCTION_ARGS)
+{
+	int32		isFirstScan = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeScanState(isFirstScan != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_initial_scan_state);
+Datum
+vector_hnsw_should_have_initial_scan_state(PG_FUNCTION_ARGS)
+{
+	int32		isFirstScan = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInitialScanState(isFirstScan != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_initial_scan_state);
+Datum
+vector_rust_hnsw_should_have_initial_scan_state(PG_FUNCTION_ARGS)
+{
+	int32		isFirstScan = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInitialScanState(isFirstScan != 0, true));
+}
+
+static bool
+HnswShouldHaveInstrumentSearches(bool hasInstrument, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_increment_instrument_searches_kernel(hasInstrument);
+}
+
+static bool
+HnswShouldIncrementInstrumentSearches(bool hasInstrument, bool useRust)
+{
+	return HnswShouldHaveInstrumentSearches(hasInstrument, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_increment_instrument_searches);
+Datum
+vector_hnsw_should_increment_instrument_searches(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldIncrementInstrumentSearches(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_increment_instrument_searches);
+Datum
+vector_rust_hnsw_should_increment_instrument_searches(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldIncrementInstrumentSearches(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_instrument_searches);
+Datum
+vector_hnsw_should_have_instrument_searches(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInstrumentSearches(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_instrument_searches);
+Datum
+vector_rust_hnsw_should_have_instrument_searches(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInstrumentSearches(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_instrument);
+Datum
+vector_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_instrument);
+Datum
+vector_rust_hnsw_should_use_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_scan_instrument_flag);
+Datum
+vector_hnsw_should_use_scan_instrument_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_scan_instrument_flag);
+Datum
+vector_rust_hnsw_should_use_scan_instrument_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseScanInstrumentFlag(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_instrument);
+Datum
+vector_hnsw_should_have_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrument(hasInstrument != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_instrument);
+Datum
+vector_rust_hnsw_should_have_scan_instrument(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrument(hasInstrument != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_scan_instrument_pointer);
+Datum
+vector_hnsw_should_have_scan_instrument_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+	const char *mockInstrument = "instrument";
+	void	   *instrument = hasInstrument != 0 ? (void *) mockInstrument : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrumentPointer(instrument, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_scan_instrument_pointer);
+Datum
+vector_rust_hnsw_should_have_scan_instrument_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasInstrument = PG_GETARG_INT32(0);
+	const char *mockInstrument = "instrument";
+	void	   *instrument = hasInstrument != 0 ? (void *) mockInstrument : NULL;
+
+	PG_RETURN_BOOL(HnswShouldHaveScanInstrumentPointer(instrument, true));
+}
 
 /*
  * Algorithm 5 from paper
@@ -32,6 +1975,7 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	HnswElement entryPoint;
 	char	   *base = NULL;
 	HnswQuery  *q = &so->q;
+	pairingheap **discarded = NULL;
 
 	/* Get m and entry point */
 	HnswGetMetaPageInfo(index, &m, &entryPoint);
@@ -39,7 +1983,7 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	q->value = value;
 	so->m = m;
 
-	if (entryPoint == NULL)
+	if (HnswShouldReturnEmptyWithoutEntryPoint(!HnswShouldUseEntrypointForScan(entryPoint, true), true))
 		return NIL;
 
 	ep = list_make1(HnswEntryCandidate(base, entryPoint, q, index, support, false));
@@ -50,7 +1994,10 @@ GetScanItems(IndexScanDesc scan, Datum value)
 		ep = w;
 	}
 
-	return HnswSearchLayer(base, q, ep, hnsw_ef_search, 0, index, support, m, false, NULL, &so->v, hnsw_iterative_scan != HNSW_ITERATIVE_SCAN_OFF ? &so->discarded : NULL, true, &so->tuples);
+	if (HnswShouldTrackScanDiscarded(hnsw_iterative_scan, true))
+		discarded = &so->discarded;
+
+	return HnswSearchLayer(base, q, ep, hnsw_ef_search, 0, index, support, m, false, NULL, &so->v, discarded, true, &so->tuples);
 }
 
 /*
@@ -65,7 +2012,7 @@ ResumeScanItems(IndexScanDesc scan)
 	char	   *base = NULL;
 	int			batch_size = hnsw_ef_search;
 
-	if (pairingheap_is_empty(so->discarded))
+	if (HnswShouldStopResumeFromDiscarded(pairingheap_is_empty(so->discarded), true))
 		return NIL;
 
 	/* Get next batch of candidates */
@@ -73,7 +2020,7 @@ ResumeScanItems(IndexScanDesc scan)
 	{
 		HnswSearchCandidate *sc;
 
-		if (pairingheap_is_empty(so->discarded))
+		if (HnswShouldStopResumeFromDiscarded(pairingheap_is_empty(so->discarded), true))
 			break;
 
 		sc = HnswGetSearchCandidate(w_node, pairingheap_remove_first(so->discarded));
@@ -93,7 +2040,7 @@ GetScanValue(IndexScanDesc scan)
 	HnswScanOpaque so = (HnswScanOpaque) scan->opaque;
 	Datum		value;
 
-	if (scan->orderByData->sk_flags & SK_ISNULL)
+	if (HnswShouldUseNullScanValue((scan->orderByData->sk_flags & SK_ISNULL) != 0, true))
 		value = PointerGetDatum(NULL);
 	else
 	{
@@ -104,7 +2051,7 @@ GetScanValue(IndexScanDesc scan)
 		Assert(!VARATT_IS_EXTENDED(DatumGetPointer(value)));
 
 		/* Normalize if needed */
-		if (so->support.normprocinfo != NULL)
+		if (HnswShouldNormalizeScanValue(HnswShouldUseScanNormproc(so->support.normprocinfo, true), true))
 			value = HnswNormValue(so->typeInfo, so->support.collation, value);
 	}
 
@@ -165,6 +2112,8 @@ void
 hnswrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int norderbys)
 {
 	HnswScanOpaque so = (HnswScanOpaque) scan->opaque;
+	bool		hasKeys;
+	bool		hasOrderBys;
 
 	so->first = true;
 	/* v and discarded are allocated in tmpCtx */
@@ -173,11 +2122,13 @@ hnswrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int no
 	so->tuples = 0;
 	so->previousDistance = -get_float8_infinity();
 	MemoryContextReset(so->tmpCtx);
+	hasKeys = HnswShouldUseProvidedRescanKeyArray(keys, true);
+	hasOrderBys = HnswShouldUseProvidedOrderByData(orderbys, true);
 
-	if (keys && scan->numberOfKeys > 0)
+	if (HnswShouldCopyRescanKeys(hasKeys, scan->numberOfKeys, true))
 		memmove(scan->keyData, keys, scan->numberOfKeys * sizeof(ScanKeyData));
 
-	if (orderbys && scan->numberOfOrderBys > 0)
+	if (HnswShouldCopyRescanKeys(hasOrderBys, scan->numberOfOrderBys, true))
 		memmove(scan->orderByData, orderbys, scan->numberOfOrderBys * sizeof(ScanKeyData));
 }
 
@@ -196,24 +2147,28 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 	 */
 	Assert(ScanDirectionIsForward(dir));
 
-	if (so->first)
+	if (HnswShouldInitializeScanState(so->first, true))
 	{
 		Datum		value;
+		bool		hasOrderByData;
 
 		/* Count index scan for stats */
 		pgstat_count_index_scan(scan->indexRelation);
 #if PG_VERSION_NUM >= 180000
-		if (scan->instrument)
+		bool		hasInstrument = HnswShouldUseScanInstrument(scan->instrument, true);
+
+		if (HnswShouldIncrementInstrumentSearches(hasInstrument, true))
 			scan->instrument->nsearches++;
 #endif
 
 		/* Safety check */
-		if (scan->orderByData == NULL)
+		hasOrderByData = HnswShouldUseProvidedOrderByData(scan->orderByData, true);
+		if (HnswShouldRejectMissingOrderBy(!hasOrderByData, true))
 			elog(ERROR, "cannot scan hnsw index without order");
 
 		/* Requires MVCC-compliant snapshot as not able to maintain a pin */
 		/* https://www.postgresql.org/docs/current/index-locking.html */
-		if (!IsMVCCSnapshot(scan->xs_snapshot))
+		if (HnswShouldRejectNonMVCCSnapshot(IsMVCCSnapshot(scan->xs_snapshot), true))
 			elog(ERROR, "non-MVCC snapshots are not supported with hnsw");
 
 		/* Get scan value */
@@ -244,19 +2199,19 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 		HnswElement element;
 		ItemPointer heaptid;
 
-		if (list_length(so->w) == 0)
+		if (HnswShouldHandleEmptyWorkList(list_length(so->w), true))
 		{
-			if (hnsw_iterative_scan == HNSW_ITERATIVE_SCAN_OFF)
+			if (HnswShouldStopWhenIterativeScanOff(hnsw_iterative_scan, true))
 				break;
 
 			/* Empty index */
-			if (so->discarded == NULL)
+			if (HnswShouldStopWithoutDiscarded(HnswShouldDiscardedHeapMissing(so->discarded, true), true))
 				break;
 
 			/* Reached max number of tuples or memory limit */
-			if (so->tuples >= hnsw_max_scan_tuples || MemoryContextMemAllocated(so->tmpCtx, false) > so->maxMemory)
+			if (HnswShouldLimitScanByResources(so->tuples, (int64) hnsw_max_scan_tuples, (int64) MemoryContextMemAllocated(so->tmpCtx, false), (int64) so->maxMemory, true))
 			{
-				if (pairingheap_is_empty(so->discarded))
+				if (HnswShouldStopReturningRemainingDiscarded(pairingheap_is_empty(so->discarded), true))
 					break;
 
 				/* Return remaining tuples */
@@ -284,7 +2239,7 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 #endif
 			}
 
-			if (list_length(so->w) == 0)
+			if (HnswShouldHandleEmptyWorkList(list_length(so->w), true))
 				break;
 		}
 
@@ -292,12 +2247,12 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 		element = HnswPtrAccess(base, sc->element);
 
 		/* Move to next element if no valid heap TIDs */
-		if (element->heaptidsLength == 0)
+		if (HnswShouldAdvanceOnExhaustedHeapTids(element->heaptidsLength, true))
 		{
 			so->w = list_delete_last(so->w);
 
 			/* Mark memory as free for next iteration */
-			if (hnsw_iterative_scan != HNSW_ITERATIVE_SCAN_OFF)
+			if (HnswShouldReleaseIterativeScanMemory(hnsw_iterative_scan, true))
 			{
 				pfree(element);
 				pfree(sc);
@@ -308,11 +2263,11 @@ hnswgettuple(IndexScanDesc scan, ScanDirection dir)
 
 		heaptid = &element->heaptids[--element->heaptidsLength];
 
-		if (hnsw_iterative_scan == HNSW_ITERATIVE_SCAN_STRICT)
-		{
-			if (sc->distance < so->previousDistance)
-				continue;
+		if (HnswShouldSkipStrictOutOfOrder(hnsw_iterative_scan, sc->distance, so->previousDistance, true))
+			continue;
 
+		if (HnswShouldUpdatePreviousDistance(hnsw_iterative_scan, true))
+		{
 			so->previousDistance = sc->distance;
 		}
 

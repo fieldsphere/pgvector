@@ -7,13 +7,16 @@
 #include "access/relscan.h"
 #include "access/tupdesc.h"
 #include "catalog/pg_operator_d.h"
+#include "catalog/pg_type.h"
 #include "catalog/pg_type_d.h"
 #include "fmgr.h"
 #include "lib/pairingheap.h"
 #include "ivfflat.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
+#include "utils/array.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
@@ -41,6 +44,249 @@ CompareLists(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 	return 0;
 }
 
+static bool
+IvfflatChooseScanListCandidate(float8 distance, int listCount, int maxProbes, float8 maxDistance, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_choose_scan_list_candidate_kernel(distance, listCount, maxProbes, maxDistance);
+}
+
+static bool
+IvfflatShouldReuseScanSlot(int listCount, int maxProbes, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_reuse_scan_slot_kernel(listCount, maxProbes);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_scan_list_candidate);
+Datum
+vector_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	int32		listCount = PG_GETARG_INT32(1);
+	int32		maxProbes = PG_GETARG_INT32(2);
+	float8		maxDistance = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(IvfflatChooseScanListCandidate(distance, listCount, maxProbes, maxDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_choose_scan_list_candidate);
+Datum
+vector_rust_ivfflat_choose_scan_list_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	int32		listCount = PG_GETARG_INT32(1);
+	int32		maxProbes = PG_GETARG_INT32(2);
+	float8		maxDistance = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(IvfflatChooseScanListCandidate(distance, listCount, maxProbes, maxDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_reuse_scan_slot);
+Datum
+vector_ivfflat_should_reuse_scan_slot(PG_FUNCTION_ARGS)
+{
+	int32		listCount = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldReuseScanSlot(listCount, maxProbes, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_reuse_scan_slot);
+Datum
+vector_rust_ivfflat_should_reuse_scan_slot(PG_FUNCTION_ARGS)
+{
+	int32		listCount = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldReuseScanSlot(listCount, maxProbes, true));
+}
+
+static bool
+IvfflatShouldScanNextList(int listIndex, int maxProbes, int batchProbes, int probes, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_scan_next_list_kernel(listIndex, maxProbes, batchProbes, probes);
+}
+
+static bool
+IvfflatShouldLoadMoreScanItems(int listIndex, int maxProbes, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_load_more_scan_items_kernel(listIndex, maxProbes);
+}
+
+static bool
+IvfflatShouldVisitScanPage(BlockNumber page, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_follow_insert_page_link_kernel((int32) page);
+}
+
+static void
+IvfflatScanProbeLimits(int probes, int maxProbes, int lists, bool useRust, int *adjustedProbes, int *adjustedMaxProbes)
+{
+	int32		rustProbes;
+	int32		rustMaxProbes;
+
+	(void) useRust;
+	vector_rust_ivfflat_scan_probe_limits_kernel(probes, maxProbes, lists, &rustProbes, &rustMaxProbes);
+	*adjustedProbes = rustProbes;
+	*adjustedMaxProbes = rustMaxProbes;
+}
+
+static void
+IvfflatComputeScanLimits(int probes, int maxProbes, int lists, int iterativeScanMode, bool useRust, int *adjustedProbes, int *adjustedMaxProbes)
+{
+	int32		rustProbes;
+	int32		rustMaxProbes;
+
+	(void) useRust;
+	vector_rust_ivfflat_compute_scan_limits_kernel(probes, maxProbes, lists, iterativeScanMode, &rustProbes, &rustMaxProbes);
+	*adjustedProbes = rustProbes;
+	*adjustedMaxProbes = rustMaxProbes;
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_scan_next_list);
+Datum
+vector_ivfflat_should_scan_next_list(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		batchProbes = PG_GETARG_INT32(2);
+	int32		probes = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(IvfflatShouldScanNextList(listIndex, maxProbes, batchProbes, probes, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_scan_next_list);
+Datum
+vector_rust_ivfflat_should_scan_next_list(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		batchProbes = PG_GETARG_INT32(2);
+	int32		probes = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(IvfflatShouldScanNextList(listIndex, maxProbes, batchProbes, probes, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_load_more_scan_items);
+Datum
+vector_ivfflat_should_load_more_scan_items(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldLoadMoreScanItems(listIndex, maxProbes, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_load_more_scan_items);
+Datum
+vector_rust_ivfflat_should_load_more_scan_items(PG_FUNCTION_ARGS)
+{
+	int32		listIndex = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatShouldLoadMoreScanItems(listIndex, maxProbes, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_should_visit_scan_page);
+Datum
+vector_ivfflat_should_visit_scan_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitScanPage((BlockNumber) page, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_should_visit_scan_page);
+Datum
+vector_rust_ivfflat_should_visit_scan_page(PG_FUNCTION_ARGS)
+{
+	int32		page = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(IvfflatShouldVisitScanPage((BlockNumber) page, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_scan_probe_limits);
+Datum
+vector_ivfflat_scan_probe_limits(PG_FUNCTION_ARGS)
+{
+	int32		probes = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		lists = PG_GETARG_INT32(2);
+	int			adjustedProbes;
+	int			adjustedMaxProbes;
+	Datum		resultDatums[2];
+
+	IvfflatScanProbeLimits(probes, maxProbes, lists, false, &adjustedProbes, &adjustedMaxProbes);
+
+	resultDatums[0] = Int32GetDatum(adjustedProbes);
+	resultDatums[1] = Int32GetDatum(adjustedMaxProbes);
+
+	PG_RETURN_ARRAYTYPE_P(construct_array(resultDatums, 2, INT4OID, sizeof(int32), true, TYPALIGN_INT));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_scan_probe_limits);
+Datum
+vector_rust_ivfflat_scan_probe_limits(PG_FUNCTION_ARGS)
+{
+	int32		probes = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		lists = PG_GETARG_INT32(2);
+	int			adjustedProbes;
+	int			adjustedMaxProbes;
+	Datum		resultDatums[2];
+
+	IvfflatScanProbeLimits(probes, maxProbes, lists, true, &adjustedProbes, &adjustedMaxProbes);
+
+	resultDatums[0] = Int32GetDatum(adjustedProbes);
+	resultDatums[1] = Int32GetDatum(adjustedMaxProbes);
+
+	PG_RETURN_ARRAYTYPE_P(construct_array(resultDatums, 2, INT4OID, sizeof(int32), true, TYPALIGN_INT));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_compute_scan_limits);
+Datum
+vector_ivfflat_compute_scan_limits(PG_FUNCTION_ARGS)
+{
+	int32		probes = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		lists = PG_GETARG_INT32(2);
+	int32		iterativeScanMode = PG_GETARG_INT32(3);
+	int			adjustedProbes;
+	int			adjustedMaxProbes;
+	Datum		resultDatums[2];
+
+	IvfflatComputeScanLimits(probes, maxProbes, lists, iterativeScanMode, false, &adjustedProbes, &adjustedMaxProbes);
+
+	resultDatums[0] = Int32GetDatum(adjustedProbes);
+	resultDatums[1] = Int32GetDatum(adjustedMaxProbes);
+
+	PG_RETURN_ARRAYTYPE_P(construct_array(resultDatums, 2, INT4OID, sizeof(int32), true, TYPALIGN_INT));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_compute_scan_limits);
+Datum
+vector_rust_ivfflat_compute_scan_limits(PG_FUNCTION_ARGS)
+{
+	int32		probes = PG_GETARG_INT32(0);
+	int32		maxProbes = PG_GETARG_INT32(1);
+	int32		lists = PG_GETARG_INT32(2);
+	int32		iterativeScanMode = PG_GETARG_INT32(3);
+	int			adjustedProbes;
+	int			adjustedMaxProbes;
+	Datum		resultDatums[2];
+
+	IvfflatComputeScanLimits(probes, maxProbes, lists, iterativeScanMode, true, &adjustedProbes, &adjustedMaxProbes);
+
+	resultDatums[0] = Int32GetDatum(adjustedProbes);
+	resultDatums[1] = Int32GetDatum(adjustedMaxProbes);
+
+	PG_RETURN_ARRAYTYPE_P(construct_array(resultDatums, 2, INT4OID, sizeof(int32), true, TYPALIGN_INT));
+}
+
 /*
  * Get lists and sort by distance
  */
@@ -53,7 +299,7 @@ GetScanLists(IndexScanDesc scan, Datum value)
 	double		maxDistance = DBL_MAX;
 
 	/* Search all list pages */
-	while (BlockNumberIsValid(nextblkno))
+	while (IvfflatShouldVisitScanPage(nextblkno, true))
 	{
 		Buffer		cbuf;
 		Page		cpage;
@@ -73,28 +319,20 @@ GetScanLists(IndexScanDesc scan, Datum value)
 			/* Use procinfo from the index instead of scan key for performance */
 			distance = DatumGetFloat8(so->distfunc(so->procinfo, so->collation, PointerGetDatum(&list->center), value));
 
-			if (listCount < so->maxProbes)
+			if (IvfflatChooseScanListCandidate(distance, listCount, so->maxProbes, maxDistance, true))
 			{
 				IvfflatScanList *scanlist;
 
-				scanlist = &so->lists[listCount];
-				scanlist->startPage = list->startPage;
-				scanlist->distance = distance;
-				listCount++;
-
-				/* Add to heap */
-				pairingheap_add(so->listQueue, &scanlist->ph_node);
-
-				/* Calculate max distance */
-				if (listCount == so->maxProbes)
-					maxDistance = GetScanList(pairingheap_first(so->listQueue))->distance;
-			}
-			else if (distance < maxDistance)
-			{
-				IvfflatScanList *scanlist;
-
-				/* Remove */
-				scanlist = GetScanList(pairingheap_remove_first(so->listQueue));
+				if (IvfflatShouldReuseScanSlot(listCount, so->maxProbes, true))
+				{
+					/* Remove */
+					scanlist = GetScanList(pairingheap_remove_first(so->listQueue));
+				}
+				else
+				{
+					scanlist = &so->lists[listCount];
+					listCount++;
+				}
 
 				/* Reuse */
 				scanlist->startPage = list->startPage;
@@ -131,12 +369,15 @@ GetScanItems(IndexScanDesc scan, Datum value)
 	tuplesort_reset(so->sortstate);
 
 	/* Search closest probes lists */
-	while (so->listIndex < so->maxProbes && (++batchProbes) <= so->probes)
+	while (IvfflatShouldScanNextList(so->listIndex, so->maxProbes, batchProbes, so->probes, true))
 	{
-		BlockNumber searchPage = so->listPages[so->listIndex++];
+		BlockNumber searchPage;
+
+		batchProbes++;
+		searchPage = so->listPages[so->listIndex++];
 
 		/* Search all entry pages for list */
-		while (BlockNumberIsValid(searchPage))
+		while (IvfflatShouldVisitScanPage(searchPage, true))
 		{
 			Buffer		buf;
 			Page		page;
@@ -265,16 +506,7 @@ ivfflatbeginscan(Relation index, int nkeys, int norderbys)
 	/* Get lists and dimensions from metapage */
 	IvfflatGetMetaPageInfo(index, &lists, &dimensions);
 
-	if (ivfflat_iterative_scan != IVFFLAT_ITERATIVE_SCAN_OFF)
-		maxProbes = Max(ivfflat_max_probes, probes);
-	else
-		maxProbes = probes;
-
-	if (probes > lists)
-		probes = lists;
-
-	if (maxProbes > lists)
-		maxProbes = lists;
+	IvfflatComputeScanLimits(probes, ivfflat_max_probes, lists, ivfflat_iterative_scan, true, &probes, &maxProbes);
 
 	so = (IvfflatScanOpaque) palloc(sizeof(IvfflatScanOpaqueData));
 	so->typeInfo = IvfflatGetTypeInfo(index);
@@ -389,7 +621,7 @@ ivfflatgettuple(IndexScanDesc scan, ScanDirection dir)
 
 	while (!tuplesort_gettupleslot(so->sortstate, true, false, so->mslot, NULL))
 	{
-		if (so->listIndex == so->maxProbes)
+		if (!IvfflatShouldLoadMoreScanItems(so->listIndex, so->maxProbes, true))
 			return false;
 
 		IvfflatBench("GetScanItems", GetScanItems(scan, so->value));

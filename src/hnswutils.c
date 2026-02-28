@@ -10,6 +10,7 @@
 #include "lib/pairingheap.h"
 #include "nodes/pg_list.h"
 #include "port/atomics.h"
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "storage/bufmgr.h"
 #include "utils/datum.h"
@@ -106,6 +107,147 @@ hash_offset(Size offset)
 #define SH_DEFINE
 #include "lib/simplehash.h"
 
+static bool HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust);
+static bool HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust);
+static bool HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust);
+static bool HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust);
+static bool HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust);
+static bool HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust);
+static bool HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, bool useRust);
+static bool HnswShouldHaveUpdateIndexPointerFlag(bool hasUpdateIndexPointer, bool useRust);
+static bool HnswShouldHaveUpdateIndexPointer(int *updateIdx, bool useRust);
+static bool HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust);
+static bool HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust);
+static bool HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust);
+static bool HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust);
+static bool HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust);
+static bool HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust);
+static bool HnswShouldHaveElementHeapTidItemPointerFlag(bool heaptidValid, bool useRust);
+static bool HnswShouldHaveElementHeapTidItemPointer(ItemPointer heaptid, bool useRust);
+static bool HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust);
+static bool HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust);
+static bool HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust);
+static bool HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust);
+static bool HnswShouldHaveDiskNeighborIndexTidFlag(bool isValidIndexTid, bool useRust);
+static bool HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRust);
+static bool HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust);
+static bool HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust);
+static bool HnswShouldHaveConsistentNeighborTupleFlag(bool tupleConsistent, bool useRust);
+static bool HnswShouldHaveConsistentNeighborTuple(uint8 tupleVersion, uint8 elementVersion, int tupleCount, int elementLevel, int m, bool useRust);
+static bool HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust);
+static bool HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldHaveDiscardedHeapPointer(pairingheap **discarded, bool useRust);
+static bool HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust);
+static bool HnswShouldHaveTupleCounterPointerFlag(bool hasTupleCounter, bool useRust);
+static bool HnswShouldHaveTupleCounterPointer(int64 *tuples, bool useRust);
+static bool HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust);
+static bool HnswShouldHaveVisitedHashPointerFlag(bool hasVisitedHash, bool useRust);
+static bool HnswShouldHaveVisitedHashPointer(visited_hash *v, bool useRust);
+static bool HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust);
+static bool HnswShouldInitializeVisitedState(bool initVisited, bool useRust);
+static bool HnswShouldUseTidVisitedHash(bool inMemory, bool useRust);
+static bool HnswShouldHaveVisitedBasePointerFlag(bool hasBasePointer, bool useRust);
+static bool HnswShouldHaveVisitedBasePointer(const void *base, bool useRust);
+static bool HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust);
+static bool HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust);
+static bool HnswShouldHaveSearchIndexPointerFlag(bool hasIndexPointer, bool useRust);
+static bool HnswShouldHaveSearchIndexPointer(Relation index, bool useRust);
+static bool HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust);
+static bool HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust);
+static bool HnswShouldHaveQueryValuePointerFlag(bool hasQueryValue, bool useRust);
+static bool HnswShouldHaveQueryValuePointer(const void *queryValuePointer, bool useRust);
+static bool HnswShouldHaveElementDistancePointerFlag(bool hasDistancePointer, bool useRust);
+static bool HnswShouldHaveElementDistancePointer(const double *distance, bool useRust);
+static bool HnswShouldHaveElementMaxDistancePointerFlag(bool hasMaxDistancePointer, bool useRust);
+static bool HnswShouldHaveElementMaxDistancePointer(const double *maxDistance, bool useRust);
+static bool HnswShouldHaveLoadedElementPointerFlag(bool hasElement, bool useRust);
+static bool HnswShouldHaveLoadedElementPointer(HnswElement *element, bool useRust);
+static bool HnswShouldHaveSearchEntrypointPointerFlag(bool hasEntryPoint, bool useRust);
+static bool HnswShouldHaveSearchEntrypointPointer(HnswElement entryPoint, bool useRust);
+static bool HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust);
+static bool HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust);
+static bool HnswShouldIncrementEfForExistingElement(bool existing, bool useRust);
+static bool HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust);
+static bool HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust);
+static bool HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust);
+static bool HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust);
+static bool HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust);
+static bool HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust);
+static bool HnswShouldUseSkipElementForExisting(bool existing, bool useRust);
+static bool HnswShouldHaveSkipElementPointerFlag(bool hasSkipElement, bool useRust);
+static bool HnswShouldHaveSkipElementPointer(HnswElement skipElement, bool useRust);
+static bool HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust);
+static int HnswGetSkipElementBlknoForCompare(HnswElement skipElement, bool useRust);
+static int HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust);
+static bool HnswShouldHaveTypeInfoProcInfoFlag(bool hasProcInfo, bool useRust);
+static bool HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust);
+static bool HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust);
+static bool HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust);
+static bool HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust);
+static bool HnswShouldHaveSortBasePointerFlag(bool hasBasePointer, bool useRust);
+static bool HnswShouldHaveSortBasePointer(const void *base, bool useRust);
+static bool HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust);
+static bool HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust);
+static bool HnswShouldReuseAddedCandidates(int addedCount, bool useRust);
+static bool HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust);
+static bool HnswShouldAppendCloserCandidate(bool isCloser, bool useRust);
+static bool HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust);
+static bool HnswShouldHavePrunedOutputPointerFlag(bool hasPrunedOutput, bool useRust);
+static bool HnswShouldHavePrunedOutputPointer(HnswCandidate **pruned, bool useRust);
+static bool HnswShouldHavePrunedCandidatePointer(HnswCandidate *pruned, bool useRust);
+static bool HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust);
+static bool HnswShouldHaveNewCandidatePointerFlag(bool hasNewCandidatePointer, bool useRust);
+static bool HnswShouldHaveNewCandidatePointer(HnswCandidate *candidate, HnswCandidate *newCandidate, bool useRust);
+static bool HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust);
+static bool HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust);
+static bool HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust);
+static bool HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust);
+static bool HnswShouldHaveSearchElementPointerFlag(bool hasSearchElement, bool useRust);
+static bool HnswShouldHaveSearchElementPointer(HnswElement searchElement, bool useRust);
+static bool HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust);
+static bool HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust);
+static bool HnswShouldCapElementLevel(int level, int maxLevel, bool useRust);
+static bool HnswShouldUseIndexOptions(bool hasOptions, bool useRust);
+static bool HnswShouldHaveIndexOptionsFlag(bool hasOptions, bool useRust);
+static bool HnswShouldHaveIndexOptions(HnswOptions *opts, bool useRust);
+static bool HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust);
+static bool HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust);
+static bool HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust);
+static bool HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust);
+static bool HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaOutputPointerFlag(bool hasOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaOutputPointer(const void *outputPointer, bool useRust);
+static bool HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaMOutputPointer(int *m, bool useRust);
+static bool HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaEntrypointOutputPointerFlag(bool hasEntrypointOutputPointer, bool useRust);
+static bool HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust);
+static bool HnswShouldHaveMetaBlockFlag(bool hasValidBlock, bool useRust);
+static bool HnswShouldHaveMetaBlockNumber(BlockNumber blkno, bool useRust);
+static bool HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust);
+static bool HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust);
+static bool HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust);
+static bool HnswShouldHaveMetaUpdateEntrypointFlag(bool hasEntrypoint, bool useRust);
+static bool HnswShouldHaveMetaUpdateEntrypoint(HnswElement entryPoint, bool useRust);
+static bool HnswShouldForceMetaEntryUpdate(int updateEntry, bool useRust);
+static bool HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust);
+static bool HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust);
+static bool HnswShouldUseBuildBufferPath(bool building, bool useRust);
+static bool HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust);
+static bool HnswShouldHaveTypeCheckFunctionFlag(bool hasCheckValueFunction, bool useRust);
+static bool HnswShouldHaveTypeCheckFunction(void (*checkValue) (Pointer v), bool useRust);
+static bool HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust);
+static bool HnswShouldHaveNormProcInfoFlag(bool hasNormProcInfo, bool useRust);
+static bool HnswShouldHaveNormProcInfo(FmgrInfo *normprocinfo, bool useRust);
+static bool HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust);
+static bool HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust);
+static bool HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust);
+static bool HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust);
+static bool HnswShouldHaveExpectedMetaMagicFlag(bool hasExpectedMagic, bool useRust);
+static bool HnswShouldHaveExpectedMetaMagic(uint32 magicNumber, bool useRust);
+static bool HnswShouldRejectInvalidMetaMagic(bool hasExpectedMagic, bool useRust);
+
 /*
  * Get the max number of connections in an upper layer for each element in the index
  */
@@ -114,7 +256,7 @@ HnswGetM(Relation index)
 {
 	HnswOptions *opts = (HnswOptions *) index->rd_options;
 
-	if (opts)
+	if (HnswShouldUseIndexOptions(HnswShouldHaveIndexOptions(opts, true), true))
 		return opts->m;
 
 	return HNSW_DEFAULT_M;
@@ -128,7 +270,7 @@ HnswGetEfConstruction(Relation index)
 {
 	HnswOptions *opts = (HnswOptions *) index->rd_options;
 
-	if (opts)
+	if (HnswShouldUseIndexOptions(HnswShouldHaveIndexOptions(opts, true), true))
 		return opts->efConstruction;
 
 	return HNSW_DEFAULT_EF_CONSTRUCTION;
@@ -140,7 +282,7 @@ HnswGetEfConstruction(Relation index)
 FmgrInfo *
 HnswOptionalProcInfo(Relation index, uint16 procnum)
 {
-	if (!OidIsValid(index_getprocid(index, 1, procnum)))
+	if (HnswShouldReturnMissingOptionalProc(OidIsValid(index_getprocid(index, 1, procnum)), true))
 		return NULL;
 
 	return index_getprocinfo(index, 1, procnum);
@@ -232,7 +374,7 @@ HnswInitNeighbors(char *base, HnswElement element, int m, HnswAllocator * alloca
 void *
 HnswAlloc(HnswAllocator * allocator, Size size)
 {
-	if (allocator)
+	if (HnswShouldUseCustomAllocator(HnswShouldHaveCustomAllocator(allocator, true), true))
 		return (*(allocator)->alloc) (size, (allocator)->state);
 
 	return palloc(size);
@@ -249,7 +391,7 @@ HnswInitElement(char *base, ItemPointer heaptid, int m, double ml, int maxLevel,
 	int			level = (int) (-log(RandomDouble()) * ml);
 
 	/* Cap level */
-	if (level > maxLevel)
+	if (HnswShouldCapElementLevel(level, maxLevel, true))
 		level = maxLevel;
 
 	element->heaptidsLength = 0;
@@ -307,15 +449,15 @@ HnswGetMetaPageInfo(Relation index, int *m, HnswElement * entryPoint)
 	page = BufferGetPage(buf);
 	metap = HnswPageGetMeta(page);
 
-	if (unlikely(metap->magicNumber != HNSW_MAGIC_NUMBER))
+	if (unlikely(HnswShouldRejectInvalidMetaMagic(HnswShouldHaveExpectedMetaMagic(metap->magicNumber, true), true)))
 		elog(ERROR, "hnsw index is not valid");
 
-	if (m != NULL)
+	if (HnswShouldLoadMetaM(HnswShouldHaveMetaMOutputPointer(m, true), true))
 		*m = metap->m;
 
-	if (entryPoint != NULL)
+	if (HnswShouldLoadMetaEntrypoint(HnswShouldHaveMetaEntrypointOutputPointer(entryPoint, true), true))
 	{
-		if (BlockNumberIsValid(metap->entryBlkno))
+		if (HnswShouldUseMetaEntryBlock(HnswShouldHaveMetaBlockNumber(metap->entryBlkno, true), true))
 		{
 			*entryPoint = HnswInitElementFromBlock(metap->entryBlkno, metap->entryOffno);
 			(*entryPoint)->level = metap->entryLevel;
@@ -347,16 +489,17 @@ static void
 HnswUpdateMetaPageInfo(Page page, int updateEntry, HnswElement entryPoint, BlockNumber insertPage)
 {
 	HnswMetaPage metap = HnswPageGetMeta(page);
+	bool		hasMetaUpdateEntrypoint = HnswShouldHaveMetaUpdateEntrypoint(entryPoint, true);
 
-	if (updateEntry)
+	if (HnswShouldUpdateMetaEntryInfo(updateEntry, true))
 	{
-		if (entryPoint == NULL)
+		if (HnswShouldResetMetaEntrypoint(hasMetaUpdateEntrypoint, true))
 		{
 			metap->entryBlkno = InvalidBlockNumber;
 			metap->entryOffno = InvalidOffsetNumber;
 			metap->entryLevel = -1;
 		}
-		else if (entryPoint->level > metap->entryLevel || updateEntry == HNSW_UPDATE_ENTRY_ALWAYS)
+		else if (HnswShouldWriteMetaEntrypoint(hasMetaUpdateEntrypoint, entryPoint->level, metap->entryLevel, updateEntry, true))
 		{
 			metap->entryBlkno = entryPoint->blkno;
 			metap->entryOffno = entryPoint->offno;
@@ -364,7 +507,7 @@ HnswUpdateMetaPageInfo(Page page, int updateEntry, HnswElement entryPoint, Block
 		}
 	}
 
-	if (BlockNumberIsValid(insertPage))
+	if (HnswShouldWriteMetaInsertPage(HnswShouldHaveMetaBlockNumber(insertPage, true), true))
 		metap->insertPage = insertPage;
 }
 
@@ -380,7 +523,7 @@ HnswUpdateMetaPage(Relation index, int updateEntry, HnswElement entryPoint, Bloc
 
 	buf = ReadBufferExtended(index, forkNum, HNSW_METAPAGE_BLKNO, RBM_NORMAL, NULL);
 	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
-	if (building)
+	if (HnswShouldUseBuildBufferPath(building, true))
 	{
 		state = NULL;
 		page = BufferGetPage(buf);
@@ -393,7 +536,7 @@ HnswUpdateMetaPage(Relation index, int updateEntry, HnswElement entryPoint, Bloc
 
 	HnswUpdateMetaPageInfo(page, updateEntry, entryPoint, insertPage);
 
-	if (building)
+	if (HnswShouldUseBuildBufferPath(building, true))
 		MarkBufferDirty(buf);
 	else
 		GenericXLogFinish(state);
@@ -410,13 +553,13 @@ HnswFormIndexValue(Datum *out, Datum *values, bool *isnull, const HnswTypeInfo *
 	Datum		value = PointerGetDatum(PG_DETOAST_DATUM(values[0]));
 
 	/* Check value */
-	if (typeInfo->checkValue != NULL)
+	if (HnswShouldCheckTypeValue(HnswShouldHaveTypeCheckFunction(typeInfo->checkValue, true), true))
 		typeInfo->checkValue(DatumGetPointer(value));
 
 	/* Normalize if needed */
-	if (support->normprocinfo != NULL)
+	if (HnswShouldNormalizeIndexValue(HnswShouldHaveNormProcInfo(support->normprocinfo, true), true))
 	{
-		if (!HnswCheckNorm(support, value))
+		if (HnswShouldRejectInvalidNorm(HnswCheckNorm(support, value), true))
 			return false;
 
 		value = HnswNormValue(typeInfo, support->collation, value);
@@ -441,7 +584,7 @@ HnswSetElementTuple(char *base, HnswElementTuple etup, HnswElement element)
 	etup->version = element->version;
 	for (int i = 0; i < HNSW_HEAPTIDS; i++)
 	{
-		if (i < element->heaptidsLength)
+		if (HnswShouldCopyTupleSlotByIndex(i, element->heaptidsLength, true))
 			etup->heaptids[i] = element->heaptids[i];
 		else
 			ItemPointerSetInvalid(&etup->heaptids[i]);
@@ -468,7 +611,7 @@ HnswSetNeighborTuple(char *base, HnswNeighborTuple ntup, HnswElement e, int m)
 		{
 			ItemPointer indextid = &ntup->indextids[idx++];
 
-			if (i < neighbors->length)
+			if (HnswShouldCopyTupleSlotByIndex(i, neighbors->length, true))
 			{
 				HnswCandidate *hc = &neighbors->items[i];
 				HnswElement hce = HnswPtrAccess(base, hc->element);
@@ -497,19 +640,19 @@ HnswLoadElementFromTuple(HnswElement element, HnswElementTuple etup, bool loadHe
 	element->neighborOffno = ItemPointerGetOffsetNumber(&etup->neighbortid);
 	element->heaptidsLength = 0;
 
-	if (loadHeaptids)
+	if (HnswShouldLoadElementHeapTids(loadHeaptids, true))
 	{
 		for (int i = 0; i < HNSW_HEAPTIDS; i++)
 		{
 			/* Can stop at first invalid */
-			if (!ItemPointerIsValid(&etup->heaptids[i]))
+			if (HnswShouldStopLoadingElementHeapTids(HnswShouldHaveElementHeapTidItemPointer(&etup->heaptids[i], true), true))
 				break;
 
 			HnswAddHeapTid(element, &etup->heaptids[i]);
 		}
 	}
 
-	if (loadVec)
+	if (HnswShouldLoadElementVector(loadVec, true))
 	{
 		char	   *base = NULL;
 		Datum		value = datumCopy(PointerGetDatum(&etup->data), false, -1);
@@ -527,6 +670,3053 @@ HnswGetDistance(Datum a, Datum b, HnswSupport * support)
 	return DatumGetFloat8(FunctionCall2Coll(support->procinfo, support->collation, a, b));
 }
 
+static bool
+HnswShouldHaveQueryValuePointerFlag(bool hasQueryValue, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasQueryValue);
+}
+
+static bool
+HnswShouldHaveQueryValuePointer(const void *queryValuePointer, bool useRust)
+{
+	return HnswShouldHaveQueryValuePointerFlag(queryValuePointer != NULL, useRust);
+}
+
+static bool
+HnswShouldZeroDistanceForNullQueryValue(bool hasQueryValue, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasQueryValue);
+}
+
+static bool
+HnswShouldHaveElementDistancePointerFlag(bool hasDistancePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasDistancePointer);
+}
+
+static bool
+HnswShouldHaveElementDistancePointer(const double *distance, bool useRust)
+{
+	return HnswShouldHaveElementDistancePointerFlag(distance != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveElementMaxDistancePointerFlag(bool hasMaxDistancePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_ondisk_insert_page_kernel(hasMaxDistancePointer);
+}
+
+static bool
+HnswShouldHaveElementMaxDistancePointer(const double *maxDistance, bool useRust)
+{
+	return HnswShouldHaveElementMaxDistancePointerFlag(maxDistance != NULL, useRust);
+}
+
+static bool
+HnswShouldCalculateElementDistance(bool hasDistancePointer, bool useRust)
+{
+	return HnswShouldHaveElementDistancePointerFlag(hasDistancePointer, useRust);
+}
+
+static bool
+HnswShouldUpdateElementMaxDistance(bool hasDistancePointer, bool hasMaxDistancePointer, double distanceValue, double maxDistanceValue, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_element_max_distance_kernel(hasDistancePointer, hasMaxDistancePointer, distanceValue, maxDistanceValue);
+}
+
+static bool
+HnswShouldHaveDefaultDistanceValue(bool hasDistancePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasDistancePointer);
+}
+
+static bool
+HnswShouldUseDefaultDistanceValue(bool hasDistancePointer, bool useRust)
+{
+	return HnswShouldHaveDefaultDistanceValue(hasDistancePointer, useRust);
+}
+
+static bool
+HnswShouldHaveDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasMaxDistancePointer);
+}
+
+static bool
+HnswShouldUseDefaultMaxDistanceValue(bool hasMaxDistancePointer, bool useRust)
+{
+	return HnswShouldHaveDefaultMaxDistanceValue(hasMaxDistancePointer, useRust);
+}
+
+static bool
+HnswShouldHaveLoadedElementPointerFlag(bool hasElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasElement);
+}
+
+static bool
+HnswShouldHaveLoadedElementPointer(HnswElement *element, bool useRust)
+{
+	return HnswShouldHaveLoadedElementPointerFlag(*element != NULL, useRust);
+}
+
+static bool
+HnswShouldInitializeLoadedElement(bool hasElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasElement);
+}
+
+static bool
+HnswShouldLoadElementVector(bool shouldLoadVector, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadVector);
+}
+
+static bool
+HnswShouldLoadElementHeapTids(bool shouldLoadHeaptids, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(shouldLoadHeaptids);
+}
+
+static bool
+HnswShouldHaveElementHeapTidItemPointerFlag(bool heaptidValid, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidValid);
+}
+
+static bool
+HnswShouldHaveElementHeapTidItemPointer(ItemPointer heaptid, bool useRust)
+{
+	return HnswShouldHaveElementHeapTidItemPointerFlag(ItemPointerIsValid(heaptid), useRust);
+}
+
+static bool
+HnswShouldStopLoadingElementHeapTids(bool heaptidValid, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(heaptidValid);
+}
+
+static bool
+HnswShouldCountWithoutSkipElement(bool hasSkipElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
+}
+
+static bool
+HnswShouldAppendUnvisitedNeighbor(bool found, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
+}
+
+static bool
+HnswShouldAppendUnvisitedDiskNeighbor(bool found, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(found);
+}
+
+static bool
+HnswShouldHaveDiskNeighborIndexTidFlag(bool isValidIndexTid, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isValidIndexTid);
+}
+
+static bool
+HnswShouldHaveDiskNeighborIndexTid(ItemPointer indextid, bool useRust)
+{
+	return HnswShouldHaveDiskNeighborIndexTidFlag(ItemPointerIsValid(indextid), useRust);
+}
+
+static bool
+HnswShouldStopLoadingDiskNeighbor(bool isValidIndexTid, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(isValidIndexTid);
+}
+
+static bool
+HnswShouldAbortUnvisitedDiskLoad(bool neighborTidsLoaded, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(neighborTidsLoaded);
+}
+
+static bool
+HnswShouldHaveConsistentNeighborTupleFlag(bool tupleConsistent, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(tupleConsistent);
+}
+
+static bool
+HnswShouldHaveConsistentNeighborTuple(uint8 tupleVersion, uint8 elementVersion, int tupleCount, int elementLevel, int m, bool useRust)
+{
+	bool		tupleConsistent = tupleVersion == elementVersion && tupleCount == (elementLevel + 2) * m;
+
+	return HnswShouldHaveConsistentNeighborTupleFlag(tupleConsistent, useRust);
+}
+
+static bool
+HnswShouldRejectStaleNeighborTuple(bool tupleConsistent, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(tupleConsistent);
+}
+
+static bool
+HnswShouldHaveDiscardedHeapPointerFlag(bool hasDiscardedHeap, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasDiscardedHeap);
+}
+
+static bool
+HnswShouldHaveDiscardedHeapPointer(pairingheap **discarded, bool useRust)
+{
+	return HnswShouldHaveDiscardedHeapPointerFlag(discarded != NULL, useRust);
+}
+
+static bool
+HnswShouldInitializeDiscardedHeap(bool hasDiscardedHeap, bool useRust)
+{
+	return HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap, useRust);
+}
+
+static bool
+HnswShouldHaveTupleCounterPointerFlag(bool hasTupleCounter, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasTupleCounter);
+}
+
+static bool
+HnswShouldHaveTupleCounterPointer(int64 *tuples, bool useRust)
+{
+	return HnswShouldHaveTupleCounterPointerFlag(tuples != NULL, useRust);
+}
+
+static bool
+HnswShouldTrackTupleCounter(bool hasTupleCounter, bool useRust)
+{
+	return HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter, useRust);
+}
+
+static bool
+HnswShouldHaveVisitedHashPointerFlag(bool hasVisitedHash, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasVisitedHash);
+}
+
+static bool
+HnswShouldHaveVisitedHashPointer(visited_hash *v, bool useRust)
+{
+	return HnswShouldHaveVisitedHashPointerFlag(v != NULL, useRust);
+}
+
+static bool
+HnswShouldInitializeVisitedHash(bool hasVisitedHash, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasVisitedHash);
+}
+
+static bool
+HnswShouldInitializeVisitedState(bool initVisited, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(initVisited);
+}
+
+static bool
+HnswShouldHaveTidVisitedHash(bool inMemory, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
+}
+
+static bool
+HnswShouldUseTidVisitedHash(bool inMemory, bool useRust)
+{
+	return HnswShouldHaveTidVisitedHash(inMemory, useRust);
+}
+
+static bool
+HnswShouldHaveVisitedBasePointerFlag(bool hasBasePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
+}
+
+static bool
+HnswShouldHaveVisitedBasePointer(const void *base, bool useRust)
+{
+	return HnswShouldHaveVisitedBasePointerFlag(base != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveOffsetVisitedHash(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHaveVisitedBasePointerFlag(hasBasePointer, useRust);
+}
+
+static bool
+HnswShouldUseOffsetVisitedHash(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHaveOffsetVisitedHash(hasBasePointer, useRust);
+}
+
+static bool
+HnswShouldHavePointerVisitedHash(bool hasBasePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
+}
+
+static bool
+HnswShouldUsePointerVisitedHash(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHavePointerVisitedHash(hasBasePointer, useRust);
+}
+
+static bool
+HnswShouldHaveSearchIndexPointerFlag(bool hasIndexPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasIndexPointer);
+}
+
+static bool
+HnswShouldHaveSearchIndexPointer(Relation index, bool useRust)
+{
+	return HnswShouldHaveSearchIndexPointerFlag(index != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveMemoryEntryDistance(bool inMemory, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+}
+
+static bool
+HnswShouldUseMemoryEntryDistance(bool inMemory, bool useRust)
+{
+	return HnswShouldHaveMemoryEntryDistance(inMemory, useRust);
+}
+
+static bool
+HnswShouldHaveInMemorySearchPath(bool inMemory, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+}
+
+static bool
+HnswShouldUseInMemorySearchPath(bool inMemory, bool useRust)
+{
+	return HnswShouldHaveInMemorySearchPath(inMemory, useRust);
+}
+
+static bool
+HnswShouldHaveSearchEntrypointPointerFlag(bool hasEntryPoint, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntryPoint);
+}
+
+static bool
+HnswShouldHaveSearchEntrypointPointer(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveSearchEntrypointPointerFlag(entryPoint != NULL, useRust);
+}
+
+static bool
+HnswShouldReturnWithoutEntryPoint(bool hasEntryPoint, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntryPoint);
+}
+
+static bool
+HnswShouldPrecomputeHashForNeighbors(bool inMemory, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(inMemory);
+}
+
+static bool
+HnswShouldIncrementEfForExistingElement(bool existing, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
+}
+
+static bool
+HnswShouldRemoveDiskOnlyElementsBeforeSelect(bool inMemory, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(inMemory);
+}
+
+static bool
+HnswShouldClampNeighborSearchLevel(int level, int entryLevel, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_entry_point_kernel(false, level, entryLevel);
+}
+
+static bool
+HnswShouldHavePointerHashForBase(bool hasBasePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
+}
+
+static bool
+HnswShouldUsePointerHashForBase(bool hasBasePointer, bool useRust)
+{
+	return HnswShouldHavePointerHashForBase(hasBasePointer, useRust);
+}
+
+static bool
+HnswShouldKeepElementWithHeapTids(int heaptidsLength, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
+}
+
+static bool
+HnswShouldCountCandidateWithHeapTids(int heaptidsLength, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(heaptidsLength != 0);
+}
+
+static bool
+HnswShouldSkipSelfForVacuumUpdate(bool hasSkipElement, int elementBlkno, int elementOffno, int skipBlkno, int skipOffno, bool useRust)
+{
+	bool		hasElementToSkip = vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
+	bool		matchesSkipElement = vector_rust_hnsw_should_match_neighbor_connection_kernel(elementBlkno, elementOffno, skipBlkno, skipOffno);
+
+	(void) useRust;
+	return hasElementToSkip && matchesSkipElement;
+}
+
+static bool
+HnswShouldHaveSkipElementForExisting(bool existing, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(existing);
+}
+
+static bool
+HnswShouldUseSkipElementForExisting(bool existing, bool useRust)
+{
+	return HnswShouldHaveSkipElementForExisting(existing, useRust);
+}
+
+static bool
+HnswShouldHaveSkipElementPointerFlag(bool hasSkipElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSkipElement);
+}
+
+static bool
+HnswShouldHaveSkipElementPointer(HnswElement skipElement, bool useRust)
+{
+	return HnswShouldHaveSkipElementPointerFlag(skipElement != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveDefaultSkipElementTid(bool hasSkipElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSkipElement);
+}
+
+static bool
+HnswShouldUseDefaultSkipElementTid(bool hasSkipElement, bool useRust)
+{
+	return HnswShouldHaveDefaultSkipElementTid(hasSkipElement, useRust);
+}
+
+static int
+HnswGetSkipElementBlknoForCompare(HnswElement skipElement, bool useRust)
+{
+	if (HnswShouldUseDefaultSkipElementTid(HnswShouldHaveSkipElementPointer(skipElement, useRust), useRust))
+		return 0;
+
+	return skipElement->blkno;
+}
+
+static int
+HnswGetSkipElementOffnoForCompare(HnswElement skipElement, bool useRust)
+{
+	if (HnswShouldUseDefaultSkipElementTid(HnswShouldHaveSkipElementPointer(skipElement, useRust), useRust))
+		return 0;
+
+	return skipElement->offno;
+}
+
+static bool
+HnswShouldHaveTypeInfoProcInfoFlag(bool hasProcInfo, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasProcInfo);
+}
+
+static bool
+HnswShouldHaveTypeInfoProcInfo(FmgrInfo *procinfo, bool useRust)
+{
+	return HnswShouldHaveTypeInfoProcInfoFlag(procinfo != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveDefaultTypeInfo(bool hasProcInfo, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcInfo);
+}
+
+static bool
+HnswShouldUseDefaultTypeInfo(bool hasProcInfo, bool useRust)
+{
+	return HnswShouldHaveDefaultTypeInfo(hasProcInfo, useRust);
+}
+
+static bool
+HnswShouldRejectSparsevecExcessNnz(int nnz, int maxNnz, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_excess_dimensions_kernel(nnz, maxNnz);
+}
+
+static bool
+HnswShouldSortNeighborCandidates(bool sortCandidates, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(sortCandidates);
+}
+
+static bool
+HnswShouldHaveSortBasePointerFlag(bool hasBasePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
+}
+
+static bool
+HnswShouldHaveSortBasePointer(const void *base, bool useRust)
+{
+	return HnswShouldHaveSortBasePointerFlag(base != NULL, useRust);
+}
+
+static bool
+HnswShouldSortPointerCandidates(bool hasBasePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasBasePointer);
+}
+
+static bool
+HnswShouldCalculateNeighborCloser(bool mustCalculate, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(mustCalculate);
+}
+
+static bool
+HnswShouldReuseAddedCandidates(int addedCount, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(addedCount > 0);
+}
+
+static bool
+HnswShouldDefineCloserStateForBase(bool hasBasePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasBasePointer);
+}
+
+static bool
+HnswShouldAppendCloserCandidate(bool isCloser, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isCloser);
+}
+
+static bool
+HnswShouldRecheckCandidateAfterRemoval(bool removedAny, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(removedAny);
+}
+
+static bool
+HnswShouldHavePrunedOutputPointerFlag(bool hasPrunedOutput, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasPrunedOutput);
+}
+
+static bool
+HnswShouldHavePrunedOutputPointer(HnswCandidate **pruned, bool useRust)
+{
+	return HnswShouldHavePrunedOutputPointerFlag(pruned != NULL, useRust);
+}
+
+static bool
+HnswShouldHavePrunedCandidatePointer(HnswCandidate *pruned, bool useRust)
+{
+	return HnswShouldHavePrunedOutputPointerFlag(pruned != NULL, useRust);
+}
+
+static bool
+HnswShouldReturnPrunedOutput(bool hasPrunedOutput, bool useRust)
+{
+	return HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput, useRust);
+}
+
+static bool
+HnswShouldHaveNewCandidatePointerFlag(bool hasNewCandidatePointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNewCandidatePointer);
+}
+
+static bool
+HnswShouldHaveNewCandidatePointer(HnswCandidate *candidate, HnswCandidate *newCandidate, bool useRust)
+{
+	return HnswShouldHaveNewCandidatePointerFlag(candidate == newCandidate, useRust);
+}
+
+static bool
+HnswShouldProcessNewCandidateBranch(bool isNewCandidate, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(isNewCandidate);
+}
+
+static bool
+HnswShouldReplacePrunedNeighbor(bool matchesPrunedNeighbor, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(matchesPrunedNeighbor);
+}
+
+static bool
+HnswShouldAbortWithoutPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasPrunedCandidate);
+}
+
+static bool
+HnswShouldEnqueueCountedCandidate(bool countedCandidate, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(countedCandidate);
+}
+
+static bool
+HnswShouldHaveSearchElementPointerFlag(bool hasSearchElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasSearchElement);
+}
+
+static bool
+HnswShouldHaveSearchElementPointer(HnswElement searchElement, bool useRust)
+{
+	return HnswShouldHaveSearchElementPointerFlag(searchElement != NULL, useRust);
+}
+
+static bool
+HnswShouldSkipMissingSearchElement(bool hasSearchElement, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasSearchElement);
+}
+
+static bool
+HnswShouldCopyTupleSlotByIndex(int slotIndex, int slotLimit, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(slotIndex < slotLimit);
+}
+
+static bool
+HnswShouldCapElementLevel(int level, int maxLevel, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_excess_dimensions_kernel(level, maxLevel);
+}
+
+static bool
+HnswShouldUseIndexOptions(bool hasOptions, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
+}
+
+static bool
+HnswShouldHaveIndexOptionsFlag(bool hasOptions, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOptions);
+}
+
+static bool
+HnswShouldHaveIndexOptions(HnswOptions *opts, bool useRust)
+{
+	return HnswShouldHaveIndexOptionsFlag(opts != NULL, useRust);
+}
+
+static bool
+HnswShouldReturnMissingOptionalProc(bool hasProcOid, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasProcOid);
+}
+
+static bool
+HnswShouldUseCustomAllocator(bool hasAllocator, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
+}
+
+static bool
+HnswShouldHaveCustomAllocatorFlag(bool hasAllocator, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasAllocator);
+}
+
+static bool
+HnswShouldHaveCustomAllocator(HnswAllocator *allocator, bool useRust)
+{
+	return HnswShouldHaveCustomAllocatorFlag(allocator != NULL, useRust);
+}
+
+static bool
+HnswShouldLoadMetaM(bool hasMOutputPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasMOutputPointer);
+}
+
+static bool
+HnswShouldHaveMetaOutputPointerFlag(bool hasOutputPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasOutputPointer);
+}
+
+static bool
+HnswShouldHaveMetaOutputPointer(const void *outputPointer, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointerFlag(outputPointer != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveMetaMOutputPointerFlag(bool hasMOutputPointer, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointerFlag(hasMOutputPointer, useRust);
+}
+
+static bool
+HnswShouldHaveMetaMOutputPointer(int *m, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointer((const void *) m, useRust);
+}
+
+static bool
+HnswShouldLoadMetaEntrypoint(bool hasEntrypointOutputPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasEntrypointOutputPointer);
+}
+
+static bool
+HnswShouldHaveMetaEntrypointOutputPointerFlag(bool hasEntrypointOutputPointer, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointerFlag(hasEntrypointOutputPointer, useRust);
+}
+
+static bool
+HnswShouldHaveMetaEntrypointOutputPointer(HnswElement *entryPoint, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointer((const void *) entryPoint, useRust);
+}
+
+static bool
+HnswShouldHaveMetaBlockFlag(bool hasValidBlock, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasValidBlock);
+}
+
+static bool
+HnswShouldHaveMetaBlockNumber(BlockNumber blkno, bool useRust)
+{
+	return HnswShouldHaveMetaBlockFlag(BlockNumberIsValid(blkno), useRust);
+}
+
+static bool
+HnswShouldHaveMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+{
+	return HnswShouldHaveMetaBlockFlag(hasValidEntryBlock, useRust);
+}
+
+static bool
+HnswShouldUseMetaEntryBlock(bool hasValidEntryBlock, bool useRust)
+{
+	return HnswShouldHaveMetaEntryBlock(hasValidEntryBlock, useRust);
+}
+
+static bool
+HnswShouldUpdateMetaEntryInfo(int updateEntry, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry != 0);
+}
+
+static bool
+HnswShouldResetMetaEntrypoint(bool hasEntrypoint, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasEntrypoint);
+}
+
+static bool
+HnswShouldHaveMetaUpdateEntrypointFlag(bool hasEntrypoint, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointerFlag(hasEntrypoint, useRust);
+}
+
+static bool
+HnswShouldHaveMetaUpdateEntrypoint(HnswElement entryPoint, bool useRust)
+{
+	return HnswShouldHaveMetaOutputPointer((const void *) entryPoint, useRust);
+}
+
+static bool
+HnswShouldForceMetaEntryUpdate(int updateEntry, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(updateEntry == HNSW_UPDATE_ENTRY_ALWAYS);
+}
+
+static bool
+HnswShouldWriteMetaEntrypoint(bool hasEntrypoint, int entryLevel, int currentEntryLevel, int updateEntry, bool useRust)
+{
+	(void) useRust;
+
+	if (HnswShouldForceMetaEntryUpdate(updateEntry, true))
+		return true;
+
+	return vector_rust_hnsw_should_update_entry_point_kernel(!hasEntrypoint, entryLevel, currentEntryLevel);
+}
+
+static bool
+HnswShouldWriteMetaInsertPage(bool hasValidInsertPage, bool useRust)
+{
+	return HnswShouldHaveMetaBlockFlag(hasValidInsertPage, useRust);
+}
+
+static bool
+HnswShouldHaveBuildBufferPath(bool building, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(building);
+}
+
+static bool
+HnswShouldUseBuildBufferPath(bool building, bool useRust)
+{
+	return HnswShouldHaveBuildBufferPath(building, useRust);
+}
+
+static bool
+HnswShouldCheckTypeValue(bool hasCheckValueFunction, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
+}
+
+static bool
+HnswShouldHaveTypeCheckFunctionFlag(bool hasCheckValueFunction, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasCheckValueFunction);
+}
+
+static bool
+HnswShouldHaveTypeCheckFunction(void (*checkValue) (Pointer v), bool useRust)
+{
+	return HnswShouldHaveTypeCheckFunctionFlag(checkValue != NULL, useRust);
+}
+
+static bool
+HnswShouldNormalizeIndexValue(bool hasNormProcInfo, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
+}
+
+static bool
+HnswShouldHaveNormProcInfoFlag(bool hasNormProcInfo, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasNormProcInfo);
+}
+
+static bool
+HnswShouldHaveNormProcInfo(FmgrInfo *normprocinfo, bool useRust)
+{
+	return HnswShouldHaveNormProcInfoFlag(normprocinfo != NULL, useRust);
+}
+
+static bool
+HnswShouldRejectInvalidNorm(bool hasValidNorm, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasValidNorm);
+}
+
+static bool
+HnswShouldPrioritizeLowerDistance(double leftDistance, double rightDistance, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, leftDistance, rightDistance);
+}
+
+static bool
+HnswShouldPrioritizePointerTiebreak(bool leftPointerPrecedes, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftPointerPrecedes);
+}
+
+static bool
+HnswShouldPrioritizeOffsetTiebreak(bool leftOffsetPrecedes, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(leftOffsetPrecedes);
+}
+
+static bool
+HnswShouldHaveExpectedMetaMagicFlag(bool hasExpectedMagic, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasExpectedMagic);
+}
+
+static bool
+HnswShouldHaveExpectedMetaMagic(uint32 magicNumber, bool useRust)
+{
+	return HnswShouldHaveExpectedMetaMagicFlag(magicNumber == HNSW_MAGIC_NUMBER, useRust);
+}
+
+static bool
+HnswShouldRejectInvalidMetaMagic(bool hasExpectedMagic, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(hasExpectedMagic);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_zero_distance_for_null_query_value);
+Datum
+vector_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldZeroDistanceForNullQueryValue(hasQueryValue != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_zero_distance_for_null_query_value);
+Datum
+vector_rust_hnsw_should_zero_distance_for_null_query_value(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldZeroDistanceForNullQueryValue(hasQueryValue != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_query_value_pointer);
+Datum
+vector_hnsw_should_have_query_value_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_query_value_pointer);
+Datum
+vector_rust_hnsw_should_have_query_value_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_calculate_element_distance);
+Datum
+vector_hnsw_should_calculate_element_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateElementDistance(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_calculate_element_distance);
+Datum
+vector_rust_hnsw_should_calculate_element_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateElementDistance(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_distance_pointer);
+Datum
+vector_hnsw_should_have_element_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_distance_pointer);
+Datum
+vector_rust_hnsw_should_have_element_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_max_distance_pointer);
+Datum
+vector_hnsw_should_have_element_max_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_max_distance_pointer);
+Datum
+vector_rust_hnsw_should_have_element_max_distance_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_element_max_distance);
+Datum
+vector_hnsw_should_update_element_max_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(1);
+	float8		distanceValue = PG_GETARG_FLOAT8(2);
+	float8		maxDistanceValue = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(HnswShouldUpdateElementMaxDistance(hasDistancePointer != 0, hasMaxDistancePointer != 0, distanceValue, maxDistanceValue, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_element_max_distance);
+Datum
+vector_rust_hnsw_should_update_element_max_distance(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(1);
+	float8		distanceValue = PG_GETARG_FLOAT8(2);
+	float8		maxDistanceValue = PG_GETARG_FLOAT8(3);
+
+	PG_RETURN_BOOL(HnswShouldUpdateElementMaxDistance(hasDistancePointer != 0, hasMaxDistancePointer != 0, distanceValue, maxDistanceValue, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_distance_value);
+Datum
+vector_hnsw_should_use_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultDistanceValue(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_distance_value);
+Datum
+vector_rust_hnsw_should_use_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultDistanceValue(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_distance_value);
+Datum
+vector_hnsw_should_have_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultDistanceValue(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_distance_value);
+Datum
+vector_rust_hnsw_should_have_default_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultDistanceValue(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_max_distance_value);
+Datum
+vector_hnsw_should_use_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_max_distance_value);
+Datum
+vector_rust_hnsw_should_use_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_max_distance_value);
+Datum
+vector_hnsw_should_have_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultMaxDistanceValue(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_max_distance_value);
+Datum
+vector_rust_hnsw_should_have_default_max_distance_value(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultMaxDistanceValue(hasMaxDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_loaded_element);
+Datum
+vector_hnsw_should_initialize_loaded_element(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeLoadedElement(hasElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_loaded_element);
+Datum
+vector_rust_hnsw_should_initialize_loaded_element(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeLoadedElement(hasElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_loaded_element_pointer);
+Datum
+vector_hnsw_should_have_loaded_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLoadedElementPointerFlag(hasElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_loaded_element_pointer);
+Datum
+vector_rust_hnsw_should_have_loaded_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLoadedElementPointerFlag(hasElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_vector);
+Datum
+vector_hnsw_should_load_element_vector(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadVector = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementVector(shouldLoadVector != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_element_vector);
+Datum
+vector_rust_hnsw_should_load_element_vector(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadVector = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementVector(shouldLoadVector != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_heaptids);
+Datum
+vector_hnsw_should_load_element_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadHeaptids = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementHeapTids(shouldLoadHeaptids != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_element_heaptids);
+Datum
+vector_rust_hnsw_should_load_element_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		shouldLoadHeaptids = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementHeapTids(shouldLoadHeaptids != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_loading_element_heaptids);
+Datum
+vector_hnsw_should_stop_loading_element_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopLoadingElementHeapTids(heaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_loading_element_heaptids);
+Datum
+vector_rust_hnsw_should_stop_loading_element_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopLoadingElementHeapTids(heaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_heaptid_itempointer);
+Datum
+vector_hnsw_should_have_element_heaptid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_heaptid_itempointer);
+Datum
+vector_rust_hnsw_should_have_element_heaptid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_count_without_skip_element);
+Datum
+vector_hnsw_should_count_without_skip_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountWithoutSkipElement(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_count_without_skip_element);
+Datum
+vector_rust_hnsw_should_count_without_skip_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountWithoutSkipElement(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_unvisited_neighbor);
+Datum
+vector_hnsw_should_append_unvisited_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedNeighbor(found != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_unvisited_neighbor);
+Datum
+vector_rust_hnsw_should_append_unvisited_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedNeighbor(found != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_unvisited_disk_neighbor);
+Datum
+vector_hnsw_should_append_unvisited_disk_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedDiskNeighbor(found != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_unvisited_disk_neighbor);
+Datum
+vector_rust_hnsw_should_append_unvisited_disk_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		found = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendUnvisitedDiskNeighbor(found != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_loading_disk_neighbor);
+Datum
+vector_hnsw_should_stop_loading_disk_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopLoadingDiskNeighbor(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_loading_disk_neighbor);
+Datum
+vector_rust_hnsw_should_stop_loading_disk_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldStopLoadingDiskNeighbor(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_disk_neighbor_indextid_itempointer);
+Datum
+vector_hnsw_should_have_disk_neighbor_indextid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_disk_neighbor_indextid_itempointer);
+Datum
+vector_rust_hnsw_should_have_disk_neighbor_indextid_itempointer(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_unvisited_disk_load);
+Datum
+vector_hnsw_should_abort_unvisited_disk_load(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortUnvisitedDiskLoad(neighborTidsLoaded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_abort_unvisited_disk_load);
+Datum
+vector_rust_hnsw_should_abort_unvisited_disk_load(PG_FUNCTION_ARGS)
+{
+	int32		neighborTidsLoaded = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortUnvisitedDiskLoad(neighborTidsLoaded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_stale_neighbor_tuple);
+Datum
+vector_hnsw_should_reject_stale_neighbor_tuple(PG_FUNCTION_ARGS)
+{
+	int32		tupleConsistent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectStaleNeighborTuple(tupleConsistent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_consistent_neighbor_tuple);
+Datum
+vector_hnsw_should_have_consistent_neighbor_tuple(PG_FUNCTION_ARGS)
+{
+	int32		tupleVersion = PG_GETARG_INT32(0);
+	int32		elementVersion = PG_GETARG_INT32(1);
+	int32		tupleCount = PG_GETARG_INT32(2);
+	int32		elementLevel = PG_GETARG_INT32(3);
+	int32		m = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTuple((uint8) tupleVersion, (uint8) elementVersion, tupleCount, elementLevel, m, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_consistent_neighbor_tuple);
+Datum
+vector_rust_hnsw_should_have_consistent_neighbor_tuple(PG_FUNCTION_ARGS)
+{
+	int32		tupleVersion = PG_GETARG_INT32(0);
+	int32		elementVersion = PG_GETARG_INT32(1);
+	int32		tupleCount = PG_GETARG_INT32(2);
+	int32		elementLevel = PG_GETARG_INT32(3);
+	int32		m = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTuple((uint8) tupleVersion, (uint8) elementVersion, tupleCount, elementLevel, m, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_stale_neighbor_tuple);
+Datum
+vector_rust_hnsw_should_reject_stale_neighbor_tuple(PG_FUNCTION_ARGS)
+{
+	int32		tupleConsistent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectStaleNeighborTuple(tupleConsistent != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_discarded_heap);
+Datum
+vector_hnsw_should_initialize_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeDiscardedHeap(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_discarded_heap);
+Datum
+vector_rust_hnsw_should_initialize_discarded_heap(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeDiscardedHeap(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_discarded_heap_pointer);
+Datum
+vector_hnsw_should_have_discarded_heap_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_discarded_heap_pointer);
+Datum
+vector_rust_hnsw_should_have_discarded_heap_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_tuple_counter);
+Datum
+vector_hnsw_should_track_tuple_counter(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackTupleCounter(hasTupleCounter != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_tuple_counter);
+Datum
+vector_rust_hnsw_should_track_tuple_counter(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackTupleCounter(hasTupleCounter != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_tuple_counter_pointer);
+Datum
+vector_hnsw_should_have_tuple_counter_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_tuple_counter_pointer);
+Datum
+vector_rust_hnsw_should_have_tuple_counter_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_visited_hash);
+Datum
+vector_hnsw_should_initialize_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedHash(hasVisitedHash != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_visited_hash);
+Datum
+vector_rust_hnsw_should_initialize_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedHash(hasVisitedHash != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_hash_pointer);
+Datum
+vector_hnsw_should_have_visited_hash_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_hash_pointer);
+Datum
+vector_rust_hnsw_should_have_visited_hash_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_initialize_visited_state);
+Datum
+vector_hnsw_should_initialize_visited_state(PG_FUNCTION_ARGS)
+{
+	int32		initVisited = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedState(initVisited != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_initialize_visited_state);
+Datum
+vector_rust_hnsw_should_initialize_visited_state(PG_FUNCTION_ARGS)
+{
+	int32		initVisited = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldInitializeVisitedState(initVisited != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_tid_visited_hash);
+Datum
+vector_hnsw_should_use_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseTidVisitedHash(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_tid_visited_hash);
+Datum
+vector_rust_hnsw_should_use_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseTidVisitedHash(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_tid_visited_hash);
+Datum
+vector_hnsw_should_have_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTidVisitedHash(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_tid_visited_hash);
+Datum
+vector_rust_hnsw_should_have_tid_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTidVisitedHash(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_offset_visited_hash);
+Datum
+vector_hnsw_should_use_offset_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseOffsetVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_offset_visited_hash);
+Datum
+vector_rust_hnsw_should_use_offset_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseOffsetVisitedHash(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_offset_visited_hash);
+Datum
+vector_hnsw_should_have_offset_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOffsetVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_offset_visited_hash);
+Datum
+vector_rust_hnsw_should_have_offset_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveOffsetVisitedHash(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_pointer_visited_hash);
+Datum
+vector_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_pointer_visited_hash);
+Datum
+vector_rust_hnsw_should_use_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerVisitedHash(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pointer_visited_hash);
+Datum
+vector_hnsw_should_have_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerVisitedHash(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pointer_visited_hash);
+Datum
+vector_rust_hnsw_should_have_pointer_visited_hash(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerVisitedHash(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_base_pointer);
+Datum
+vector_hnsw_should_have_visited_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_base_pointer);
+Datum
+vector_rust_hnsw_should_have_visited_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_memory_entry_distance);
+Datum
+vector_hnsw_should_use_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMemoryEntryDistance(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_memory_entry_distance);
+Datum
+vector_rust_hnsw_should_use_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMemoryEntryDistance(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_memory_entry_distance);
+Datum
+vector_hnsw_should_have_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMemoryEntryDistance(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_memory_entry_distance);
+Datum
+vector_rust_hnsw_should_have_memory_entry_distance(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMemoryEntryDistance(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_in_memory_search_path);
+Datum
+vector_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_in_memory_search_path);
+Datum
+vector_rust_hnsw_should_use_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseInMemorySearchPath(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_in_memory_search_path);
+Datum
+vector_hnsw_should_have_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInMemorySearchPath(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_in_memory_search_path);
+Datum
+vector_rust_hnsw_should_have_in_memory_search_path(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveInMemorySearchPath(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_index_pointer);
+Datum
+vector_hnsw_should_have_search_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_index_pointer);
+Datum
+vector_rust_hnsw_should_have_search_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_without_entrypoint);
+Datum
+vector_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnWithoutEntryPoint(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_without_entrypoint);
+Datum
+vector_rust_hnsw_should_return_without_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnWithoutEntryPoint(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_entrypoint_pointer);
+Datum
+vector_hnsw_should_have_search_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_entrypoint_pointer);
+Datum
+vector_rust_hnsw_should_have_search_entrypoint_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_precompute_hash_for_neighbors);
+Datum
+vector_hnsw_should_precompute_hash_for_neighbors(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrecomputeHashForNeighbors(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_precompute_hash_for_neighbors);
+Datum
+vector_rust_hnsw_should_precompute_hash_for_neighbors(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrecomputeHashForNeighbors(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_increment_ef_for_existing_element);
+Datum
+vector_hnsw_should_increment_ef_for_existing_element(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldIncrementEfForExistingElement(existing != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_increment_ef_for_existing_element);
+Datum
+vector_rust_hnsw_should_increment_ef_for_existing_element(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldIncrementEfForExistingElement(existing != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_remove_disk_only_elements_before_select);
+Datum
+vector_hnsw_should_remove_disk_only_elements_before_select(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_remove_disk_only_elements_before_select);
+Datum
+vector_rust_hnsw_should_remove_disk_only_elements_before_select(PG_FUNCTION_ARGS)
+{
+	int32		inMemory = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_clamp_neighbor_search_level);
+Datum
+vector_hnsw_should_clamp_neighbor_search_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldClampNeighborSearchLevel(level, entryLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_clamp_neighbor_search_level);
+Datum
+vector_rust_hnsw_should_clamp_neighbor_search_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldClampNeighborSearchLevel(level, entryLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_pointer_hash_for_base);
+Datum
+vector_hnsw_should_use_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerHashForBase(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_pointer_hash_for_base);
+Datum
+vector_rust_hnsw_should_use_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUsePointerHashForBase(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pointer_hash_for_base);
+Datum
+vector_hnsw_should_have_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerHashForBase(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pointer_hash_for_base);
+Datum
+vector_rust_hnsw_should_have_pointer_hash_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePointerHashForBase(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_keep_element_with_heaptids);
+Datum
+vector_hnsw_should_keep_element_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldKeepElementWithHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_keep_element_with_heaptids);
+Datum
+vector_rust_hnsw_should_keep_element_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldKeepElementWithHeapTids(heaptidsLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_count_candidate_with_heaptids);
+Datum
+vector_hnsw_should_count_candidate_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountCandidateWithHeapTids(heaptidsLength, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_count_candidate_with_heaptids);
+Datum
+vector_rust_hnsw_should_count_candidate_with_heaptids(PG_FUNCTION_ARGS)
+{
+	int32		heaptidsLength = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCountCandidateWithHeapTids(heaptidsLength, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_self_for_vacuum_update);
+Datum
+vector_hnsw_should_skip_self_for_vacuum_update(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+	int32		elementBlkno = PG_GETARG_INT32(1);
+	int32		elementOffno = PG_GETARG_INT32(2);
+	int32		skipBlkno = PG_GETARG_INT32(3);
+	int32		skipOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldSkipSelfForVacuumUpdate(hasSkipElement != 0, elementBlkno, elementOffno, skipBlkno, skipOffno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_self_for_vacuum_update);
+Datum
+vector_rust_hnsw_should_skip_self_for_vacuum_update(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+	int32		elementBlkno = PG_GETARG_INT32(1);
+	int32		elementOffno = PG_GETARG_INT32(2);
+	int32		skipBlkno = PG_GETARG_INT32(3);
+	int32		skipOffno = PG_GETARG_INT32(4);
+
+	PG_RETURN_BOOL(HnswShouldSkipSelfForVacuumUpdate(hasSkipElement != 0, elementBlkno, elementOffno, skipBlkno, skipOffno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_skip_element_for_existing);
+Datum
+vector_hnsw_should_use_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseSkipElementForExisting(existing != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_skip_element_for_existing);
+Datum
+vector_rust_hnsw_should_use_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseSkipElementForExisting(existing != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_element_for_existing);
+Datum
+vector_hnsw_should_have_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementForExisting(existing != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_element_for_existing);
+Datum
+vector_rust_hnsw_should_have_skip_element_for_existing(PG_FUNCTION_ARGS)
+{
+	int32		existing = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementForExisting(existing != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_skip_element_tid);
+Datum
+vector_hnsw_should_use_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultSkipElementTid(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_skip_element_tid);
+Datum
+vector_rust_hnsw_should_use_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultSkipElementTid(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_skip_element_tid);
+Datum
+vector_hnsw_should_have_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultSkipElementTid(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_skip_element_tid);
+Datum
+vector_rust_hnsw_should_have_default_skip_element_tid(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultSkipElementTid(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_element_pointer);
+Datum
+vector_hnsw_should_have_skip_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementPointerFlag(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_element_pointer);
+Datum
+vector_rust_hnsw_should_have_skip_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementPointerFlag(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_default_type_info);
+Datum
+vector_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_default_type_info);
+Datum
+vector_rust_hnsw_should_use_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseDefaultTypeInfo(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_default_type_info);
+Datum
+vector_hnsw_should_have_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultTypeInfo(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_default_type_info);
+Datum
+vector_rust_hnsw_should_have_default_type_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDefaultTypeInfo(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_typeinfo_procinfo_pointer);
+Datum
+vector_hnsw_should_have_typeinfo_procinfo_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_typeinfo_procinfo_pointer);
+Datum
+vector_rust_hnsw_should_have_typeinfo_procinfo_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_sparsevec_excess_nnz);
+Datum
+vector_hnsw_should_reject_sparsevec_excess_nnz(PG_FUNCTION_ARGS)
+{
+	int32		nnz = PG_GETARG_INT32(0);
+	int32		maxNnz = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectSparsevecExcessNnz(nnz, maxNnz, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_sparsevec_excess_nnz);
+Datum
+vector_rust_hnsw_should_reject_sparsevec_excess_nnz(PG_FUNCTION_ARGS)
+{
+	int32		nnz = PG_GETARG_INT32(0);
+	int32		maxNnz = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectSparsevecExcessNnz(nnz, maxNnz, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_sort_neighbor_candidates);
+Datum
+vector_hnsw_should_sort_neighbor_candidates(PG_FUNCTION_ARGS)
+{
+	int32		sortCandidates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortNeighborCandidates(sortCandidates != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_sort_neighbor_candidates);
+Datum
+vector_rust_hnsw_should_sort_neighbor_candidates(PG_FUNCTION_ARGS)
+{
+	int32		sortCandidates = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortNeighborCandidates(sortCandidates != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_sort_pointer_candidates);
+Datum
+vector_hnsw_should_sort_pointer_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortPointerCandidates(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_sort_pointer_candidates);
+Datum
+vector_rust_hnsw_should_sort_pointer_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSortPointerCandidates(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_sort_base_pointer);
+Datum
+vector_hnsw_should_have_sort_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_sort_base_pointer);
+Datum
+vector_rust_hnsw_should_have_sort_base_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_calculate_neighbor_closer);
+Datum
+vector_hnsw_should_calculate_neighbor_closer(PG_FUNCTION_ARGS)
+{
+	int32		mustCalculate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateNeighborCloser(mustCalculate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_calculate_neighbor_closer);
+Datum
+vector_rust_hnsw_should_calculate_neighbor_closer(PG_FUNCTION_ARGS)
+{
+	int32		mustCalculate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCalculateNeighborCloser(mustCalculate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reuse_added_candidates);
+Datum
+vector_hnsw_should_reuse_added_candidates(PG_FUNCTION_ARGS)
+{
+	int32		addedCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReuseAddedCandidates(addedCount, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reuse_added_candidates);
+Datum
+vector_rust_hnsw_should_reuse_added_candidates(PG_FUNCTION_ARGS)
+{
+	int32		addedCount = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReuseAddedCandidates(addedCount, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_define_closer_state_for_base);
+Datum
+vector_hnsw_should_define_closer_state_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDefineCloserStateForBase(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_define_closer_state_for_base);
+Datum
+vector_rust_hnsw_should_define_closer_state_for_base(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldDefineCloserStateForBase(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_closer_candidate);
+Datum
+vector_hnsw_should_append_closer_candidate(PG_FUNCTION_ARGS)
+{
+	int32		isCloser = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendCloserCandidate(isCloser != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_closer_candidate);
+Datum
+vector_rust_hnsw_should_append_closer_candidate(PG_FUNCTION_ARGS)
+{
+	int32		isCloser = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAppendCloserCandidate(isCloser != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_recheck_candidate_after_removal);
+Datum
+vector_hnsw_should_recheck_candidate_after_removal(PG_FUNCTION_ARGS)
+{
+	int32		removedAny = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRecheckCandidateAfterRemoval(removedAny != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_recheck_candidate_after_removal);
+Datum
+vector_rust_hnsw_should_recheck_candidate_after_removal(PG_FUNCTION_ARGS)
+{
+	int32		removedAny = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRecheckCandidateAfterRemoval(removedAny != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_pruned_output);
+Datum
+vector_hnsw_should_return_pruned_output(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnPrunedOutput(hasPrunedOutput != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_pruned_output);
+Datum
+vector_rust_hnsw_should_return_pruned_output(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnPrunedOutput(hasPrunedOutput != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pruned_output_pointer);
+Datum
+vector_hnsw_should_have_pruned_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pruned_output_pointer);
+Datum
+vector_rust_hnsw_should_have_pruned_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_new_candidate_branch);
+Datum
+vector_hnsw_should_process_new_candidate_branch(PG_FUNCTION_ARGS)
+{
+	int32		isNewCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessNewCandidateBranch(isNewCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_new_candidate_branch);
+Datum
+vector_rust_hnsw_should_process_new_candidate_branch(PG_FUNCTION_ARGS)
+{
+	int32		isNewCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessNewCandidateBranch(isNewCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_new_candidate_pointer);
+Datum
+vector_hnsw_should_have_new_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_new_candidate_pointer);
+Datum
+vector_rust_hnsw_should_have_new_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_replace_pruned_neighbor);
+Datum
+vector_hnsw_should_replace_pruned_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		matchesPrunedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReplacePrunedNeighbor(matchesPrunedNeighbor != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_replace_pruned_neighbor);
+Datum
+vector_rust_hnsw_should_replace_pruned_neighbor(PG_FUNCTION_ARGS)
+{
+	int32		matchesPrunedNeighbor = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReplacePrunedNeighbor(matchesPrunedNeighbor != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_abort_without_pruned_candidate);
+Datum
+vector_hnsw_should_abort_without_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortWithoutPrunedCandidate(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_abort_without_pruned_candidate);
+Datum
+vector_rust_hnsw_should_abort_without_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldAbortWithoutPrunedCandidate(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_enqueue_counted_candidate);
+Datum
+vector_hnsw_should_enqueue_counted_candidate(PG_FUNCTION_ARGS)
+{
+	int32		countedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldEnqueueCountedCandidate(countedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_enqueue_counted_candidate);
+Datum
+vector_rust_hnsw_should_enqueue_counted_candidate(PG_FUNCTION_ARGS)
+{
+	int32		countedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldEnqueueCountedCandidate(countedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_missing_search_element);
+Datum
+vector_hnsw_should_skip_missing_search_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipMissingSearchElement(hasSearchElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_missing_search_element);
+Datum
+vector_rust_hnsw_should_skip_missing_search_element(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldSkipMissingSearchElement(hasSearchElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_element_pointer);
+Datum
+vector_hnsw_should_have_search_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_element_pointer);
+Datum
+vector_rust_hnsw_should_have_search_element_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_copy_tuple_slot_by_index);
+Datum
+vector_hnsw_should_copy_tuple_slot_by_index(PG_FUNCTION_ARGS)
+{
+	int32		slotIndex = PG_GETARG_INT32(0);
+	int32		slotLimit = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyTupleSlotByIndex(slotIndex, slotLimit, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_copy_tuple_slot_by_index);
+Datum
+vector_rust_hnsw_should_copy_tuple_slot_by_index(PG_FUNCTION_ARGS)
+{
+	int32		slotIndex = PG_GETARG_INT32(0);
+	int32		slotLimit = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCopyTupleSlotByIndex(slotIndex, slotLimit, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_cap_element_level);
+Datum
+vector_hnsw_should_cap_element_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		maxLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCapElementLevel(level, maxLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_cap_element_level);
+Datum
+vector_rust_hnsw_should_cap_element_level(PG_FUNCTION_ARGS)
+{
+	int32		level = PG_GETARG_INT32(0);
+	int32		maxLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldCapElementLevel(level, maxLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_index_options);
+Datum
+vector_hnsw_should_use_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseIndexOptions(hasOptions != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_index_options);
+Datum
+vector_rust_hnsw_should_use_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseIndexOptions(hasOptions != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_index_options);
+Datum
+vector_hnsw_should_have_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_index_options);
+Datum
+vector_rust_hnsw_should_have_index_options(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_return_missing_optional_proc);
+Datum
+vector_hnsw_should_return_missing_optional_proc(PG_FUNCTION_ARGS)
+{
+	int32		hasProcOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnMissingOptionalProc(hasProcOid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_return_missing_optional_proc);
+Datum
+vector_rust_hnsw_should_return_missing_optional_proc(PG_FUNCTION_ARGS)
+{
+	int32		hasProcOid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldReturnMissingOptionalProc(hasProcOid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_custom_allocator);
+Datum
+vector_hnsw_should_use_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseCustomAllocator(hasAllocator != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_custom_allocator);
+Datum
+vector_rust_hnsw_should_use_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseCustomAllocator(hasAllocator != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_custom_allocator);
+Datum
+vector_hnsw_should_have_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_custom_allocator);
+Datum
+vector_rust_hnsw_should_have_custom_allocator(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_meta_m);
+Datum
+vector_hnsw_should_load_meta_m(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadMetaM(hasMOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_meta_m);
+Datum
+vector_rust_hnsw_should_load_meta_m(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadMetaM(hasMOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_m_output_pointer);
+Datum
+vector_hnsw_should_have_meta_m_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_m_output_pointer);
+Datum
+vector_rust_hnsw_should_have_meta_m_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_meta_entrypoint);
+Datum
+vector_hnsw_should_load_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadMetaEntrypoint(hasEntrypointOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_meta_entrypoint);
+Datum
+vector_rust_hnsw_should_load_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldLoadMetaEntrypoint(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_entrypoint_output_pointer);
+Datum
+vector_hnsw_should_have_meta_entrypoint_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_entrypoint_output_pointer);
+Datum
+vector_rust_hnsw_should_have_meta_entrypoint_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_output_pointer);
+Datum
+vector_hnsw_should_have_meta_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_output_pointer);
+Datum
+vector_rust_hnsw_should_have_meta_output_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_meta_entry_block);
+Datum
+vector_hnsw_should_use_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMetaEntryBlock(hasValidEntryBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_meta_entry_block);
+Datum
+vector_rust_hnsw_should_use_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseMetaEntryBlock(hasValidEntryBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_entry_block);
+Datum
+vector_hnsw_should_have_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntryBlock(hasValidEntryBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_entry_block);
+Datum
+vector_rust_hnsw_should_have_meta_entry_block(PG_FUNCTION_ARGS)
+{
+	int32		hasValidEntryBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntryBlock(hasValidEntryBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_block_number);
+Datum
+vector_hnsw_should_have_meta_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockNumber((BlockNumber) blkno, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_block_number);
+Datum
+vector_rust_hnsw_should_have_meta_block_number(PG_FUNCTION_ARGS)
+{
+	int32		blkno = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockNumber((BlockNumber) blkno, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_update_meta_entry_info);
+Datum
+vector_hnsw_should_update_meta_entry_info(PG_FUNCTION_ARGS)
+{
+	int32		updateEntry = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdateMetaEntryInfo(updateEntry, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_update_meta_entry_info);
+Datum
+vector_rust_hnsw_should_update_meta_entry_info(PG_FUNCTION_ARGS)
+{
+	int32		updateEntry = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUpdateMetaEntryInfo(updateEntry, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reset_meta_entrypoint);
+Datum
+vector_hnsw_should_reset_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResetMetaEntrypoint(hasEntrypoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reset_meta_entrypoint);
+Datum
+vector_rust_hnsw_should_reset_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldResetMetaEntrypoint(hasEntrypoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_update_entrypoint);
+Datum
+vector_hnsw_should_have_meta_update_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_update_entrypoint);
+Datum
+vector_rust_hnsw_should_have_meta_update_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_meta_entrypoint);
+Datum
+vector_hnsw_should_write_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+	int32		currentEntryLevel = PG_GETARG_INT32(2);
+	int32		updateEntry = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaEntrypoint(hasEntrypoint != 0, entryLevel, currentEntryLevel, updateEntry, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_write_meta_entrypoint);
+Datum
+vector_rust_hnsw_should_write_meta_entrypoint(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+	int32		entryLevel = PG_GETARG_INT32(1);
+	int32		currentEntryLevel = PG_GETARG_INT32(2);
+	int32		updateEntry = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaEntrypoint(hasEntrypoint != 0, entryLevel, currentEntryLevel, updateEntry, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_write_meta_insert_page);
+Datum
+vector_hnsw_should_write_meta_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasValidInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaInsertPage(hasValidInsertPage != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_write_meta_insert_page);
+Datum
+vector_rust_hnsw_should_write_meta_insert_page(PG_FUNCTION_ARGS)
+{
+	int32		hasValidInsertPage = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldWriteMetaInsertPage(hasValidInsertPage != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_use_build_buffer_path);
+Datum
+vector_hnsw_should_use_build_buffer_path(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseBuildBufferPath(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_use_build_buffer_path);
+Datum
+vector_rust_hnsw_should_use_build_buffer_path(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldUseBuildBufferPath(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_build_buffer_path);
+Datum
+vector_hnsw_should_have_build_buffer_path(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildBufferPath(building != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_build_buffer_path);
+Datum
+vector_rust_hnsw_should_have_build_buffer_path(PG_FUNCTION_ARGS)
+{
+	int32		building = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveBuildBufferPath(building != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_check_type_value);
+Datum
+vector_hnsw_should_check_type_value(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCheckTypeValue(hasCheckValueFunction != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_check_type_value);
+Datum
+vector_rust_hnsw_should_check_type_value(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldCheckTypeValue(hasCheckValueFunction != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_check_function);
+Datum
+vector_hnsw_should_have_type_check_function(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeCheckFunctionFlag(hasCheckValueFunction != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_check_function);
+Datum
+vector_rust_hnsw_should_have_type_check_function(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeCheckFunctionFlag(hasCheckValueFunction != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_normalize_index_value);
+Datum
+vector_hnsw_should_normalize_index_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeIndexValue(hasNormProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_normalize_index_value);
+Datum
+vector_rust_hnsw_should_normalize_index_value(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldNormalizeIndexValue(hasNormProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_norm_procinfo);
+Datum
+vector_hnsw_should_have_norm_procinfo(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormProcInfoFlag(hasNormProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_norm_procinfo);
+Datum
+vector_rust_hnsw_should_have_norm_procinfo(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormProcInfoFlag(hasNormProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_invalid_norm);
+Datum
+vector_hnsw_should_reject_invalid_norm(PG_FUNCTION_ARGS)
+{
+	int32		hasValidNorm = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidNorm(hasValidNorm != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_invalid_norm);
+Datum
+vector_rust_hnsw_should_reject_invalid_norm(PG_FUNCTION_ARGS)
+{
+	int32		hasValidNorm = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidNorm(hasValidNorm != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prioritize_lower_distance);
+Datum
+vector_hnsw_should_prioritize_lower_distance(PG_FUNCTION_ARGS)
+{
+	float8		leftDistance = PG_GETARG_FLOAT8(0);
+	float8		rightDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeLowerDistance(leftDistance, rightDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prioritize_lower_distance);
+Datum
+vector_rust_hnsw_should_prioritize_lower_distance(PG_FUNCTION_ARGS)
+{
+	float8		leftDistance = PG_GETARG_FLOAT8(0);
+	float8		rightDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeLowerDistance(leftDistance, rightDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prioritize_pointer_tiebreak);
+Datum
+vector_hnsw_should_prioritize_pointer_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftPointerPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizePointerTiebreak(leftPointerPrecedes != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prioritize_pointer_tiebreak);
+Datum
+vector_rust_hnsw_should_prioritize_pointer_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftPointerPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizePointerTiebreak(leftPointerPrecedes != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_prioritize_offset_tiebreak);
+Datum
+vector_hnsw_should_prioritize_offset_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftOffsetPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeOffsetTiebreak(leftOffsetPrecedes != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_prioritize_offset_tiebreak);
+Datum
+vector_rust_hnsw_should_prioritize_offset_tiebreak(PG_FUNCTION_ARGS)
+{
+	int32		leftOffsetPrecedes = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldPrioritizeOffsetTiebreak(leftOffsetPrecedes != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_invalid_meta_magic);
+Datum
+vector_hnsw_should_reject_invalid_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidMetaMagic(hasExpectedMagic != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_expected_meta_magic);
+Datum
+vector_hnsw_should_have_expected_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		magicNumber = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagic((uint32) magicNumber, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_expected_meta_magic);
+Datum
+vector_rust_hnsw_should_have_expected_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		magicNumber = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagic((uint32) magicNumber, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_invalid_meta_magic);
+Datum
+vector_rust_hnsw_should_reject_invalid_meta_magic(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldRejectInvalidMetaMagic(hasExpectedMagic != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_force_meta_entry_update);
+Datum
+vector_hnsw_should_force_meta_entry_update(PG_FUNCTION_ARGS)
+{
+	int32		updateEntry = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldForceMetaEntryUpdate(updateEntry, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_force_meta_entry_update);
+Datum
+vector_rust_hnsw_should_force_meta_entry_update(PG_FUNCTION_ARGS)
+{
+	int32		updateEntry = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldForceMetaEntryUpdate(updateEntry, true));
+}
+
 /*
  * Load an element and optionally get its distance from q
  */
@@ -536,6 +3726,11 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 	Buffer		buf;
 	Page		page;
 	HnswElementTuple etup;
+	double		distanceValueForCompare = 0;
+	double		maxDistanceValueForCompare = 0;
+	bool		hasDistancePointer;
+	bool		hasMaxDistancePointer;
+	bool		hasQueryValue = false;
 
 	/* Read vector */
 	buf = ReadBuffer(index, blkno);
@@ -546,19 +3741,31 @@ HnswLoadElementImpl(BlockNumber blkno, OffsetNumber offno, double *distance, Hns
 
 	Assert(HnswIsElementTuple(etup));
 
+	hasDistancePointer = HnswShouldHaveElementDistancePointer(distance, true);
+	hasMaxDistancePointer = HnswShouldHaveElementMaxDistancePointer(maxDistance, true);
+
 	/* Calculate distance */
-	if (distance != NULL)
+	if (HnswShouldCalculateElementDistance(hasDistancePointer, true))
 	{
-		if (DatumGetPointer(q->value) == NULL)
+		hasQueryValue = HnswShouldHaveQueryValuePointer(DatumGetPointer(q->value), true);
+
+		if (HnswShouldZeroDistanceForNullQueryValue(hasQueryValue, true))
 			*distance = 0;
 		else
 			*distance = HnswGetDistance(q->value, PointerGetDatum(&etup->data), support);
 	}
 
 	/* Load element */
-	if (distance == NULL || maxDistance == NULL || *distance < *maxDistance)
+	if (!HnswShouldUseDefaultDistanceValue(hasDistancePointer, true))
+		distanceValueForCompare = *distance;
+
+	if (!HnswShouldUseDefaultMaxDistanceValue(hasMaxDistancePointer, true))
+		maxDistanceValueForCompare = *maxDistance;
+
+	if (HnswShouldUpdateElementMaxDistance(hasDistancePointer, hasMaxDistancePointer,
+										   distanceValueForCompare, maxDistanceValueForCompare, true))
 	{
-		if (*element == NULL)
+		if (HnswShouldInitializeLoadedElement(HnswShouldHaveLoadedElementPointer(element, true), true))
 			*element = HnswInitElementFromBlock(blkno, offno);
 
 		HnswLoadElementFromTuple(*element, etup, true, loadVec);
@@ -606,10 +3813,10 @@ HnswInitSearchCandidate(char *base, HnswElement element, double distance)
 HnswSearchCandidate *
 HnswEntryCandidate(char *base, HnswElement entryPoint, HnswQuery * q, Relation index, HnswSupport * support, bool loadVec)
 {
-	bool		inMemory = index == NULL;
+	bool		inMemory = !HnswShouldHaveSearchIndexPointer(index, true);
 	double		distance;
 
-	if (inMemory)
+	if (HnswShouldUseMemoryEntryDistance(inMemory, true))
 		distance = GetElementDistance(base, entryPoint, q, support);
 	else
 		HnswLoadElement(entryPoint, &distance, q, index, support, loadVec, NULL);
@@ -623,10 +3830,12 @@ HnswEntryCandidate(char *base, HnswElement entryPoint, HnswQuery * q, Relation i
 static int
 CompareNearestCandidates(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 {
-	if (HnswGetSearchCandidateConst(c_node, a)->distance < HnswGetSearchCandidateConst(c_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(c_node, a)->distance,
+										  HnswGetSearchCandidateConst(c_node, b)->distance, true))
 		return 1;
 
-	if (HnswGetSearchCandidateConst(c_node, a)->distance > HnswGetSearchCandidateConst(c_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(c_node, b)->distance,
+										  HnswGetSearchCandidateConst(c_node, a)->distance, true))
 		return -1;
 
 	return 0;
@@ -638,10 +3847,12 @@ CompareNearestCandidates(const pairingheap_node *a, const pairingheap_node *b, v
 static int
 CompareNearestDiscardedCandidates(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 {
-	if (HnswGetSearchCandidateConst(w_node, a)->distance < HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, a)->distance,
+										  HnswGetSearchCandidateConst(w_node, b)->distance, true))
 		return 1;
 
-	if (HnswGetSearchCandidateConst(w_node, a)->distance > HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, b)->distance,
+										  HnswGetSearchCandidateConst(w_node, a)->distance, true))
 		return -1;
 
 	return 0;
@@ -653,10 +3864,12 @@ CompareNearestDiscardedCandidates(const pairingheap_node *a, const pairingheap_n
 static int
 CompareFurthestCandidates(const pairingheap_node *a, const pairingheap_node *b, void *arg)
 {
-	if (HnswGetSearchCandidateConst(w_node, a)->distance < HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, a)->distance,
+										  HnswGetSearchCandidateConst(w_node, b)->distance, true))
 		return -1;
 
-	if (HnswGetSearchCandidateConst(w_node, a)->distance > HnswGetSearchCandidateConst(w_node, b)->distance)
+	if (HnswShouldPrioritizeLowerDistance(HnswGetSearchCandidateConst(w_node, b)->distance,
+										  HnswGetSearchCandidateConst(w_node, a)->distance, true))
 		return 1;
 
 	return 0;
@@ -668,11 +3881,13 @@ CompareFurthestCandidates(const pairingheap_node *a, const pairingheap_node *b, 
 static inline void
 InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 {
-	if (!inMemory)
+	bool		hasBasePointer = HnswShouldHaveVisitedBasePointer((const void *) base, true);
+
+	if (HnswShouldUseTidVisitedHash(inMemory, true))
 		v->tids = tidhash_create(CurrentMemoryContext, ef * m * 2, NULL);
-	else if (base != NULL)
+	else if (HnswShouldUseOffsetVisitedHash(hasBasePointer, true))
 		v->offsets = offsethash_create(CurrentMemoryContext, ef * m * 2, NULL);
-	else
+	else if (HnswShouldUsePointerVisitedHash(hasBasePointer, true))
 		v->pointers = pointerhash_create(CurrentMemoryContext, ef * m * 2, NULL);
 }
 
@@ -682,7 +3897,9 @@ InitVisited(char *base, visited_hash * v, bool inMemory, int ef, int m)
 static inline void
 AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMemory, bool *found)
 {
-	if (!inMemory)
+	bool		hasBasePointer = HnswShouldHaveVisitedBasePointer((const void *) base, true);
+
+	if (HnswShouldUseTidVisitedHash(inMemory, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 		ItemPointerData indextid;
@@ -690,13 +3907,13 @@ AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMem
 		ItemPointerSet(&indextid, element->blkno, element->offno);
 		tidhash_insert(v->tids, indextid, found);
 	}
-	else if (base != NULL)
+	else if (HnswShouldUseOffsetVisitedHash(hasBasePointer, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 
 		offsethash_insert_hash(v->offsets, HnswPtrOffset(elementPtr), element->hash, found);
 	}
-	else
+	else if (HnswShouldUsePointerVisitedHash(hasBasePointer, true))
 	{
 		HnswElement element = HnswPtrAccess(base, elementPtr);
 
@@ -710,7 +3927,7 @@ AddToVisited(char *base, visited_hash * v, HnswElementPtr elementPtr, bool inMem
 static inline bool
 CountElement(HnswElement skipElement, HnswElement e)
 {
-	if (skipElement == NULL)
+	if (HnswShouldCountWithoutSkipElement(HnswShouldHaveSkipElementPointer(skipElement, true), true))
 		return true;
 
 	/* Ensure does not access heaptidsLength during in-memory build */
@@ -719,7 +3936,7 @@ CountElement(HnswElement skipElement, HnswElement e)
 	/* Keep scan-build happy on Mac x86-64 */
 	Assert(e);
 
-	return e->heaptidsLength != 0;
+	return HnswShouldCountCandidateWithHeapTids(e->heaptidsLength, true);
 }
 
 /*
@@ -745,7 +3962,7 @@ HnswLoadUnvisitedFromMemory(char *base, HnswElement element, HnswUnvisited * unv
 
 		AddToVisited(base, v, hc->element, true, &found);
 
-		if (!found)
+		if (HnswShouldAppendUnvisitedNeighbor(found, true))
 			unvisited[(*unvisitedLength)++].element = HnswPtrAccess(base, hc->element);
 	}
 }
@@ -771,7 +3988,7 @@ HnswLoadNeighborTids(HnswElement element, ItemPointerData *indextids, Relation i
 	 * Ensure the neighbor tuple has not been deleted or replaced between
 	 * index scan iterations
 	 */
-	if (ntup->version != element->version || ntup->count != (element->level + 2) * m)
+	if (HnswShouldRejectStaleNeighborTuple(HnswShouldHaveConsistentNeighborTuple(ntup->version, element->version, ntup->count, element->level, m, true), true))
 	{
 		UnlockReleaseBuffer(buf);
 		return false;
@@ -795,7 +4012,7 @@ HnswLoadUnvisitedFromDisk(HnswElement element, HnswUnvisited * unvisited, int *u
 
 	*unvisitedLength = 0;
 
-	if (!HnswLoadNeighborTids(element, indextids, index, m, lm, lc))
+	if (HnswShouldAbortUnvisitedDiskLoad(HnswLoadNeighborTids(element, indextids, index, m, lm, lc), true))
 		return;
 
 	for (int i = 0; i < lm; i++)
@@ -803,12 +4020,12 @@ HnswLoadUnvisitedFromDisk(HnswElement element, HnswUnvisited * unvisited, int *u
 		ItemPointer indextid = &indextids[i];
 		bool		found;
 
-		if (!ItemPointerIsValid(indextid))
+		if (HnswShouldStopLoadingDiskNeighbor(HnswShouldHaveDiskNeighborIndexTid(indextid, true), true))
 			break;
 
 		tidhash_insert(v->tids, *indextid, &found);
 
-		if (!found)
+		if (HnswShouldAppendUnvisitedDiskNeighbor(found, true))
 			unvisited[(*unvisitedLength)++].indextid = *indextid;
 	}
 }
@@ -830,24 +4047,26 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 	int			lm = HnswGetLayerM(m, lc);
 	HnswUnvisited *unvisited = palloc(lm * sizeof(HnswUnvisited));
 	int			unvisitedLength;
-	bool		inMemory = index == NULL;
+	bool		inMemory = !HnswShouldHaveSearchIndexPointer(index, true);
+	bool		hasDiscardedHeapPointer = HnswShouldHaveDiscardedHeapPointer(discarded, true);
+	bool		hasTupleCounterPointer = HnswShouldHaveTupleCounterPointer(tuples, true);
 
-	if (v == NULL)
+	if (HnswShouldInitializeVisitedHash(HnswShouldHaveVisitedHashPointer(v, true), true))
 	{
 		v = &vh;
 		initVisited = true;
 	}
 
-	if (initVisited)
+	if (HnswShouldInitializeVisitedState(initVisited, true))
 	{
 		InitVisited(base, v, inMemory, ef, m);
 
-		if (discarded != NULL)
+		if (HnswShouldInitializeDiscardedHeap(hasDiscardedHeapPointer, true))
 			*discarded = pairingheap_allocate(CompareNearestDiscardedCandidates, NULL);
 	}
 
 	/* Create local memory for neighborhood if needed */
-	if (inMemory)
+	if (HnswShouldUseInMemorySearchPath(inMemory, true))
 	{
 		neighborhoodSize = HNSW_NEIGHBOR_ARRAY_SIZE(lm);
 		localNeighborhood = palloc(neighborhoodSize);
@@ -859,12 +4078,12 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		HnswSearchCandidate *sc = (HnswSearchCandidate *) lfirst(lc2);
 		bool		found;
 
-		if (initVisited)
+		if (HnswShouldInitializeVisitedState(initVisited, true))
 		{
 			AddToVisited(base, v, sc->element, inMemory, &found);
 
 			/* OK to count elements instead of tuples */
-			if (tuples != NULL)
+			if (HnswShouldTrackTupleCounter(hasTupleCounterPointer, true))
 				(*tuples)++;
 		}
 
@@ -876,7 +4095,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		 * would be ideal to do this for inserts as well, but this could
 		 * affect insert performance.
 		 */
-		if (CountElement(skipElement, HnswPtrAccess(base, sc->element)))
+		if (HnswShouldEnqueueCountedCandidate(CountElement(skipElement, HnswPtrAccess(base, sc->element)), true))
 			wlen++;
 	}
 
@@ -886,18 +4105,18 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 		HnswSearchCandidate *f = HnswGetSearchCandidate(w_node, pairingheap_first(W));
 		HnswElement cElement;
 
-		if (c->distance > f->distance)
+		if (HnswShouldStopSearchLayer(c->distance, f->distance, true))
 			break;
 
 		cElement = HnswPtrAccess(base, c->element);
 
-		if (inMemory)
+		if (HnswShouldUseInMemorySearchPath(inMemory, true))
 			HnswLoadUnvisitedFromMemory(base, cElement, unvisited, &unvisitedLength, v, lc, localNeighborhood, neighborhoodSize);
 		else
 			HnswLoadUnvisitedFromDisk(cElement, unvisited, &unvisitedLength, v, index, m, lm, lc);
 
 		/* OK to count elements instead of tuples */
-		if (tuples != NULL)
+		if (HnswShouldTrackTupleCounter(hasTupleCounterPointer, true))
 			(*tuples) += unvisitedLength;
 
 		for (int i = 0; i < unvisitedLength; i++)
@@ -905,11 +4124,11 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			HnswElement eElement;
 			HnswSearchCandidate *e;
 			double		eDistance;
-			bool		alwaysAdd = wlen < ef;
+			bool		alwaysAdd = HnswShouldAlwaysAddCandidate(wlen, ef, true);
 
 			f = HnswGetSearchCandidate(w_node, pairingheap_first(W));
 
-			if (inMemory)
+			if (HnswShouldUseInMemorySearchPath(inMemory, true))
 			{
 				eElement = unvisited[i].element;
 				eDistance = GetElementDistance(base, eElement, q, support);
@@ -919,18 +4138,23 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 				ItemPointer indextid = &unvisited[i].indextid;
 				BlockNumber blkno = ItemPointerGetBlockNumber(indextid);
 				OffsetNumber offno = ItemPointerGetOffsetNumber(indextid);
+				bool		trackDiscarded;
+				double	   *maxDistanceCap = NULL;
 
 				/* Avoid any allocations if not adding */
 				eElement = NULL;
-				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, alwaysAdd || discarded != NULL ? NULL : &f->distance, &eElement);
+				trackDiscarded = HnswShouldTrackDiscardedCandidates(hasDiscardedHeapPointer, true);
+				if (HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd, trackDiscarded, true))
+					maxDistanceCap = &f->distance;
+				HnswLoadElementImpl(blkno, offno, &eDistance, q, index, support, inserting, maxDistanceCap, &eElement);
 
-				if (eElement == NULL)
+				if (HnswShouldSkipMissingSearchElement(HnswShouldHaveSearchElementPointer(eElement, true), true))
 					continue;
 			}
 
-			if (!(eDistance < f->distance || alwaysAdd))
+			if (!HnswShouldAddSearchCandidate(eDistance, f->distance, alwaysAdd, true))
 			{
-				if (discarded != NULL)
+				if (HnswShouldTrackDiscardedCandidates(hasDiscardedHeapPointer, true))
 				{
 					/* Create a new candidate */
 					e = HnswInitSearchCandidate(base, eElement, eDistance);
@@ -941,7 +4165,7 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			}
 
 			/* Make robust to issues */
-			if (eElement->level < lc)
+			if (HnswShouldSkipLowerLevelCandidate(eElement->level, lc, true))
 				continue;
 
 			/* Create a new candidate */
@@ -954,16 +4178,16 @@ HnswSearchLayer(char *base, HnswQuery * q, List *ep, int ef, int lc, Relation in
 			 * It would be ideal to do this for inserts as well, but this
 			 * could affect insert performance.
 			 */
-			if (CountElement(skipElement, eElement))
+			if (HnswShouldEnqueueCountedCandidate(CountElement(skipElement, eElement), true))
 			{
 				wlen++;
 
 				/* No need to decrement wlen */
-				if (wlen > ef)
+				if (HnswShouldTrimCandidateList(wlen, ef, true))
 				{
 					HnswSearchCandidate *d = HnswGetSearchCandidate(w_node, pairingheap_remove_first(W));
 
-					if (discarded != NULL)
+					if (HnswShouldTrackDiscardedCandidates(hasDiscardedHeapPointer, true))
 						pairingheap_add(*discarded, &d->w_node);
 				}
 			}
@@ -990,16 +4214,16 @@ CompareCandidateDistances(const ListCell *a, const ListCell *b)
 	HnswCandidate *hca = lfirst(a);
 	HnswCandidate *hcb = lfirst(b);
 
-	if (hca->distance < hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hca->distance, hcb->distance, true))
 		return 1;
 
-	if (hca->distance > hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hcb->distance, hca->distance, true))
 		return -1;
 
-	if (HnswPtrPointer(hca->element) < HnswPtrPointer(hcb->element))
+	if (HnswShouldPrioritizePointerTiebreak(HnswPtrPointer(hca->element) < HnswPtrPointer(hcb->element), true))
 		return 1;
 
-	if (HnswPtrPointer(hca->element) > HnswPtrPointer(hcb->element))
+	if (HnswShouldPrioritizePointerTiebreak(HnswPtrPointer(hcb->element) < HnswPtrPointer(hca->element), true))
 		return -1;
 
 	return 0;
@@ -1014,19 +4238,1360 @@ CompareCandidateDistancesOffset(const ListCell *a, const ListCell *b)
 	HnswCandidate *hca = lfirst(a);
 	HnswCandidate *hcb = lfirst(b);
 
-	if (hca->distance < hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hca->distance, hcb->distance, true))
 		return 1;
 
-	if (hca->distance > hcb->distance)
+	if (HnswShouldPrioritizeLowerDistance(hcb->distance, hca->distance, true))
 		return -1;
 
-	if (HnswPtrOffset(hca->element) < HnswPtrOffset(hcb->element))
+	if (HnswShouldPrioritizeOffsetTiebreak(HnswPtrOffset(hca->element) < HnswPtrOffset(hcb->element), true))
 		return 1;
 
-	if (HnswPtrOffset(hca->element) > HnswPtrOffset(hcb->element))
+	if (HnswShouldPrioritizeOffsetTiebreak(HnswPtrOffset(hcb->element) < HnswPtrOffset(hca->element), true))
 		return -1;
 
 	return 0;
+}
+
+static bool
+HnswShouldHaveRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_reject_closer_neighbor_kernel(distance, candidateDistance);
+}
+
+static bool
+HnswShouldRejectCloserNeighbor(float8 distance, float8 candidateDistance, bool useRust)
+{
+	return HnswShouldHaveRejectCloserNeighbor(distance, candidateDistance, useRust);
+}
+
+static bool
+HnswShouldHaveSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_select_neighbors_early_return_kernel(candidateCount, maxNeighbors);
+}
+
+static bool
+HnswShouldSelectNeighborsEarlyReturn(int candidateCount, int maxNeighbors, bool useRust)
+{
+	return HnswShouldHaveSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, useRust);
+}
+
+static bool
+HnswShouldHaveAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_add_search_candidate_kernel(candidateDistance, frontierDistance, alwaysAdd);
+}
+
+static bool
+HnswShouldAddSearchCandidate(float8 candidateDistance, float8 frontierDistance, bool alwaysAdd, bool useRust)
+{
+	return HnswShouldHaveAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd, useRust);
+}
+
+static bool
+HnswShouldHaveStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_stop_search_layer_kernel(candidateDistance, frontierDistance);
+}
+
+static bool
+HnswShouldStopSearchLayer(float8 candidateDistance, float8 frontierDistance, bool useRust)
+{
+	return HnswShouldHaveStopSearchLayer(candidateDistance, frontierDistance, useRust);
+}
+
+static bool
+HnswShouldHaveAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_append_neighbor_without_prune_kernel(neighborsLength, maxNeighbors);
+}
+
+static bool
+HnswShouldAppendNeighborWithoutPrune(int neighborsLength, int maxNeighbors, bool useRust)
+{
+	return HnswShouldHaveAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, useRust);
+}
+
+static bool
+HnswShouldHaveSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_lower_level_candidate_kernel(candidateLevel, searchLevel);
+}
+
+static bool
+HnswShouldSkipLowerLevelCandidate(int candidateLevel, int searchLevel, bool useRust)
+{
+	return HnswShouldHaveSkipLowerLevelCandidate(candidateLevel, searchLevel, useRust);
+}
+
+static bool
+HnswShouldHaveKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_keep_pruned_connection_kernel(wdoff, wdlen, resultLength, maxNeighbors);
+}
+
+static bool
+HnswShouldKeepPrunedConnection(int wdoff, int wdlen, int resultLength, int maxNeighbors, bool useRust)
+{
+	return HnswShouldHaveKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, useRust);
+}
+
+static bool
+HnswShouldHaveSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_set_pruned_from_array_kernel(wdoff, wdlen);
+}
+
+static bool
+HnswShouldSetPrunedFromArray(int wdoff, int wdlen, bool useRust)
+{
+	return HnswShouldHaveSetPrunedFromArray(wdoff, wdlen, useRust);
+}
+
+static bool
+HnswShouldHaveTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_track_discarded_candidates_kernel(hasDiscardedHeap);
+}
+
+static bool
+HnswShouldTrackDiscardedCandidates(bool hasDiscardedHeap, bool useRust)
+{
+	return HnswShouldHaveTrackDiscardedCandidates(hasDiscardedHeap, useRust);
+}
+
+static bool
+HnswShouldLoadElementWithMaxDistanceCap(bool alwaysAdd, bool trackDiscarded, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_skip_invalid_index_value_kernel(alwaysAdd || trackDiscarded);
+}
+
+static bool
+HnswShouldHaveUpdateIndexPointerFlag(bool hasUpdateIndexPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_update_progress_after_insert_kernel(hasUpdateIndexPointer);
+}
+
+static bool
+HnswShouldHaveUpdateIndexPointer(int *updateIdx, bool useRust)
+{
+	return HnswShouldHaveUpdateIndexPointerFlag(updateIdx != NULL, useRust);
+}
+
+static bool
+HnswShouldHaveTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_track_update_index_kernel(hasUpdateIndexPointer);
+}
+
+static bool
+HnswShouldTrackUpdateIndex(bool hasUpdateIndexPointer, bool useRust)
+{
+	return HnswShouldHaveTrackUpdateIndex(hasUpdateIndexPointer, useRust);
+}
+
+static bool
+HnswShouldHaveProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_process_pruned_candidate_kernel(hasPrunedCandidate);
+}
+
+static bool
+HnswShouldProcessPrunedCandidate(bool hasPrunedCandidate, bool useRust)
+{
+	return HnswShouldHaveProcessPrunedCandidate(hasPrunedCandidate, useRust);
+}
+
+static bool
+HnswShouldHaveTrimCandidateList(int candidateCount, int ef, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_trim_candidate_list_kernel(candidateCount, ef);
+}
+
+static bool
+HnswShouldTrimCandidateList(int candidateCount, int ef, bool useRust)
+{
+	return HnswShouldHaveTrimCandidateList(candidateCount, ef, useRust);
+}
+
+static bool
+HnswShouldHaveAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_hnsw_should_always_add_candidate_kernel(candidateCount, ef);
+}
+
+static bool
+HnswShouldAlwaysAddCandidate(int candidateCount, int ef, bool useRust)
+{
+	return HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, useRust);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_reject_closer_neighbor);
+Datum
+vector_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectCloserNeighbor(distance, candidateDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_reject_closer_neighbor);
+Datum
+vector_rust_hnsw_should_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldRejectCloserNeighbor(distance, candidateDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_reject_closer_neighbor);
+Datum
+vector_hnsw_should_have_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectCloserNeighbor(distance, candidateDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_reject_closer_neighbor);
+Datum
+vector_rust_hnsw_should_have_reject_closer_neighbor(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		candidateDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveRejectCloserNeighbor(distance, candidateDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_select_neighbors_early_return);
+Datum
+vector_hnsw_should_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_select_neighbors_early_return);
+Datum
+vector_rust_hnsw_should_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_select_neighbors_early_return);
+Datum
+vector_hnsw_should_have_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_select_neighbors_early_return);
+Datum
+vector_rust_hnsw_should_have_select_neighbors_early_return(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSelectNeighborsEarlyReturn(candidateCount, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_add_search_candidate);
+Datum
+vector_hnsw_should_add_search_candidate(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+	int32		alwaysAdd = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_add_search_candidate);
+Datum
+vector_rust_hnsw_should_add_search_candidate(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+	int32		alwaysAdd = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_add_search_candidate);
+Datum
+vector_hnsw_should_have_add_search_candidate(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+	int32		alwaysAdd = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldHaveAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_add_search_candidate);
+Datum
+vector_rust_hnsw_should_have_add_search_candidate(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+	int32		alwaysAdd = PG_GETARG_INT32(2);
+
+	PG_RETURN_BOOL(HnswShouldHaveAddSearchCandidate(candidateDistance, frontierDistance, alwaysAdd != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_stop_search_layer);
+Datum
+vector_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldStopSearchLayer(candidateDistance, frontierDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_stop_search_layer);
+Datum
+vector_rust_hnsw_should_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldStopSearchLayer(candidateDistance, frontierDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_stop_search_layer);
+Datum
+vector_hnsw_should_have_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveStopSearchLayer(candidateDistance, frontierDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_stop_search_layer);
+Datum
+vector_rust_hnsw_should_have_stop_search_layer(PG_FUNCTION_ARGS)
+{
+	float8		candidateDistance = PG_GETARG_FLOAT8(0);
+	float8		frontierDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveStopSearchLayer(candidateDistance, frontierDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_append_neighbor_without_prune);
+Datum
+vector_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_append_neighbor_without_prune);
+Datum
+vector_rust_hnsw_should_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_append_neighbor_without_prune);
+Datum
+vector_hnsw_should_have_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_append_neighbor_without_prune);
+Datum
+vector_rust_hnsw_should_have_append_neighbor_without_prune(PG_FUNCTION_ARGS)
+{
+	int32		neighborsLength = PG_GETARG_INT32(0);
+	int32		maxNeighbors = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAppendNeighborWithoutPrune(neighborsLength, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_skip_lower_level_candidate);
+Datum
+vector_hnsw_should_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSkipLowerLevelCandidate(candidateLevel, searchLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_skip_lower_level_candidate);
+Datum
+vector_rust_hnsw_should_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSkipLowerLevelCandidate(candidateLevel, searchLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_lower_level_candidate);
+Datum
+vector_hnsw_should_have_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipLowerLevelCandidate(candidateLevel, searchLevel, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_lower_level_candidate);
+Datum
+vector_rust_hnsw_should_have_skip_lower_level_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateLevel = PG_GETARG_INT32(0);
+	int32		searchLevel = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipLowerLevelCandidate(candidateLevel, searchLevel, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_keep_pruned_connection);
+Datum
+vector_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_keep_pruned_connection);
+Datum
+vector_rust_hnsw_should_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_keep_pruned_connection);
+Datum
+vector_hnsw_should_have_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_keep_pruned_connection);
+Datum
+vector_rust_hnsw_should_have_keep_pruned_connection(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+	int32		resultLength = PG_GETARG_INT32(2);
+	int32		maxNeighbors = PG_GETARG_INT32(3);
+
+	PG_RETURN_BOOL(HnswShouldHaveKeepPrunedConnection(wdoff, wdlen, resultLength, maxNeighbors, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_set_pruned_from_array);
+Datum
+vector_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSetPrunedFromArray(wdoff, wdlen, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_set_pruned_from_array);
+Datum
+vector_rust_hnsw_should_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldSetPrunedFromArray(wdoff, wdlen, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_set_pruned_from_array);
+Datum
+vector_hnsw_should_have_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSetPrunedFromArray(wdoff, wdlen, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_set_pruned_from_array);
+Datum
+vector_rust_hnsw_should_have_set_pruned_from_array(PG_FUNCTION_ARGS)
+{
+	int32		wdoff = PG_GETARG_INT32(0);
+	int32		wdlen = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveSetPrunedFromArray(wdoff, wdlen, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_discarded_candidates);
+Datum
+vector_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_discarded_candidates);
+Datum
+vector_rust_hnsw_should_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_track_discarded_candidates);
+Datum
+vector_hnsw_should_have_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackDiscardedCandidates(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_track_discarded_candidates);
+Datum
+vector_rust_hnsw_should_have_track_discarded_candidates(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackDiscardedCandidates(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_load_element_with_max_distance_cap);
+Datum
+vector_hnsw_should_load_element_with_max_distance_cap(PG_FUNCTION_ARGS)
+{
+	int32		alwaysAdd = PG_GETARG_INT32(0);
+	int32		trackDiscarded = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd != 0, trackDiscarded != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_load_element_with_max_distance_cap);
+Datum
+vector_rust_hnsw_should_load_element_with_max_distance_cap(PG_FUNCTION_ARGS)
+{
+	int32		alwaysAdd = PG_GETARG_INT32(0);
+	int32		trackDiscarded = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldLoadElementWithMaxDistanceCap(alwaysAdd != 0, trackDiscarded != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_track_update_index);
+Datum
+vector_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_index_pointer);
+Datum
+vector_hnsw_should_have_update_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_index_pointer);
+Datum
+vector_rust_hnsw_should_have_update_index_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_track_update_index);
+Datum
+vector_rust_hnsw_should_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldTrackUpdateIndex(hasUpdateIndexPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_track_update_index);
+Datum
+vector_hnsw_should_have_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackUpdateIndex(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_track_update_index);
+Datum
+vector_rust_hnsw_should_have_track_update_index(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrackUpdateIndex(hasUpdateIndexPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_process_pruned_candidate);
+Datum
+vector_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessPrunedCandidate(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_process_pruned_candidate);
+Datum
+vector_rust_hnsw_should_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldProcessPrunedCandidate(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_process_pruned_candidate);
+Datum
+vector_hnsw_should_have_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProcessPrunedCandidate(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_process_pruned_candidate);
+Datum
+vector_rust_hnsw_should_have_process_pruned_candidate(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveProcessPrunedCandidate(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_trim_candidate_list);
+Datum
+vector_hnsw_should_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldTrimCandidateList(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_trim_candidate_list);
+Datum
+vector_rust_hnsw_should_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldTrimCandidateList(candidateCount, ef, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_trim_candidate_list);
+Datum
+vector_hnsw_should_have_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrimCandidateList(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_trim_candidate_list);
+Datum
+vector_rust_hnsw_should_have_trim_candidate_list(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveTrimCandidateList(candidateCount, ef, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_always_add_candidate);
+Datum
+vector_hnsw_should_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAlwaysAddCandidate(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_always_add_candidate);
+Datum
+vector_rust_hnsw_should_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldAlwaysAddCandidate(candidateCount, ef, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_always_add_candidate);
+Datum
+vector_hnsw_should_have_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_always_add_candidate);
+Datum
+vector_rust_hnsw_should_have_always_add_candidate(PG_FUNCTION_ARGS)
+{
+	int32		candidateCount = PG_GETARG_INT32(0);
+	int32		ef = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(HnswShouldHaveAlwaysAddCandidate(candidateCount, ef, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_query_value_pointer_flag);
+Datum
+vector_hnsw_should_have_query_value_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_query_value_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_query_value_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasQueryValue = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveQueryValuePointerFlag(hasQueryValue != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_distance_pointer_flag);
+Datum
+vector_hnsw_should_have_element_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_distance_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_element_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementDistancePointerFlag(hasDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_max_distance_pointer_flag);
+Datum
+vector_hnsw_should_have_element_max_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_max_distance_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_element_max_distance_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMaxDistancePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementMaxDistancePointerFlag(hasMaxDistancePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_loaded_element_pointer_flag);
+Datum
+vector_hnsw_should_have_loaded_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLoadedElementPointerFlag(hasElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_loaded_element_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_loaded_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveLoadedElementPointerFlag(hasElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_element_heaptid_itempointer_flag);
+Datum
+vector_hnsw_should_have_element_heaptid_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_element_heaptid_itempointer_flag);
+Datum
+vector_rust_hnsw_should_have_element_heaptid_itempointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		heaptidValid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveElementHeapTidItemPointerFlag(heaptidValid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_consistent_neighbor_tuple_flag);
+Datum
+vector_hnsw_should_have_consistent_neighbor_tuple_flag(PG_FUNCTION_ARGS)
+{
+	int32		tupleConsistent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTupleFlag(tupleConsistent != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_consistent_neighbor_tuple_flag);
+Datum
+vector_rust_hnsw_should_have_consistent_neighbor_tuple_flag(PG_FUNCTION_ARGS)
+{
+	int32		tupleConsistent = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveConsistentNeighborTupleFlag(tupleConsistent != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_discarded_heap_pointer_flag);
+Datum
+vector_hnsw_should_have_discarded_heap_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_discarded_heap_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_discarded_heap_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasDiscardedHeap = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiscardedHeapPointerFlag(hasDiscardedHeap != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_tuple_counter_pointer_flag);
+Datum
+vector_hnsw_should_have_tuple_counter_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_tuple_counter_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_tuple_counter_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasTupleCounter = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTupleCounterPointerFlag(hasTupleCounter != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_hash_pointer_flag);
+Datum
+vector_hnsw_should_have_visited_hash_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_hash_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_visited_hash_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasVisitedHash = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedHashPointerFlag(hasVisitedHash != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_visited_base_pointer_flag);
+Datum
+vector_hnsw_should_have_visited_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_visited_base_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_visited_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveVisitedBasePointerFlag(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_index_pointer_flag);
+Datum
+vector_hnsw_should_have_search_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_index_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_search_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchIndexPointerFlag(hasIndexPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_entrypoint_pointer_flag);
+Datum
+vector_hnsw_should_have_search_entrypoint_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_entrypoint_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_search_entrypoint_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntryPoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchEntrypointPointerFlag(hasEntryPoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_skip_element_pointer_flag);
+Datum
+vector_hnsw_should_have_skip_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementPointerFlag(hasSkipElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_skip_element_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_skip_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSkipElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSkipElementPointerFlag(hasSkipElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_sort_base_pointer_flag);
+Datum
+vector_hnsw_should_have_sort_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_sort_base_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_sort_base_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasBasePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSortBasePointerFlag(hasBasePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_search_element_pointer_flag);
+Datum
+vector_hnsw_should_have_search_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_search_element_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_search_element_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasSearchElement = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveSearchElementPointerFlag(hasSearchElement != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_custom_allocator_flag);
+Datum
+vector_hnsw_should_have_custom_allocator_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_custom_allocator_flag);
+Datum
+vector_rust_hnsw_should_have_custom_allocator_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasAllocator = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveCustomAllocatorFlag(hasAllocator != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_disk_neighbor_index_tid);
+Datum
+vector_hnsw_should_have_disk_neighbor_index_tid(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_disk_neighbor_index_tid);
+Datum
+vector_rust_hnsw_should_have_disk_neighbor_index_tid(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_disk_neighbor_index_tid_flag);
+Datum
+vector_hnsw_should_have_disk_neighbor_index_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_disk_neighbor_index_tid_flag);
+Datum
+vector_rust_hnsw_should_have_disk_neighbor_index_tid_flag(PG_FUNCTION_ARGS)
+{
+	int32		isValidIndexTid = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveDiskNeighborIndexTidFlag(isValidIndexTid != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_expected_meta_magic_flag);
+Datum
+vector_hnsw_should_have_expected_meta_magic_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagicFlag(hasExpectedMagic != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_expected_meta_magic_flag);
+Datum
+vector_rust_hnsw_should_have_expected_meta_magic_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasExpectedMagic = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveExpectedMetaMagicFlag(hasExpectedMagic != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_index_options_flag);
+Datum
+vector_hnsw_should_have_index_options_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_index_options_flag);
+Datum
+vector_rust_hnsw_should_have_index_options_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOptions = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveIndexOptionsFlag(hasOptions != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_block_flag);
+Datum
+vector_hnsw_should_have_meta_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockFlag(hasValidBlock != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_block_flag);
+Datum
+vector_rust_hnsw_should_have_meta_block_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasValidBlock = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaBlockFlag(hasValidBlock != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_entrypoint_output_pointer_flag);
+Datum
+vector_hnsw_should_have_meta_entrypoint_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_entrypoint_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_meta_entrypoint_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypointOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaEntrypointOutputPointerFlag(hasEntrypointOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_m_output_pointer_flag);
+Datum
+vector_hnsw_should_have_meta_m_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_m_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_meta_m_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasMOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaMOutputPointerFlag(hasMOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_output_pointer_flag);
+Datum
+vector_hnsw_should_have_meta_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_meta_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasOutputPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaOutputPointerFlag(hasOutputPointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_meta_update_entrypoint_flag);
+Datum
+vector_hnsw_should_have_meta_update_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_meta_update_entrypoint_flag);
+Datum
+vector_rust_hnsw_should_have_meta_update_entrypoint_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasEntrypoint = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveMetaUpdateEntrypointFlag(hasEntrypoint != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_new_candidate_pointer_flag);
+Datum
+vector_hnsw_should_have_new_candidate_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_new_candidate_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_new_candidate_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNewCandidatePointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNewCandidatePointerFlag(hasNewCandidatePointer != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_norm_proc_info_flag);
+Datum
+vector_hnsw_should_have_norm_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormProcInfoFlag(hasNormProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_norm_proc_info_flag);
+Datum
+vector_rust_hnsw_should_have_norm_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasNormProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveNormProcInfoFlag(hasNormProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pruned_candidate_pointer);
+Datum
+vector_hnsw_should_have_pruned_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedCandidate != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pruned_candidate_pointer);
+Datum
+vector_rust_hnsw_should_have_pruned_candidate_pointer(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedCandidate = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedCandidate != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_pruned_output_pointer_flag);
+Datum
+vector_hnsw_should_have_pruned_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_pruned_output_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_pruned_output_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasPrunedOutput = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHavePrunedOutputPointerFlag(hasPrunedOutput != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_check_function_flag);
+Datum
+vector_hnsw_should_have_type_check_function_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeCheckFunctionFlag(hasCheckValueFunction != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_check_function_flag);
+Datum
+vector_rust_hnsw_should_have_type_check_function_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasCheckValueFunction = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeCheckFunctionFlag(hasCheckValueFunction != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_info_proc_info);
+Datum
+vector_hnsw_should_have_type_info_proc_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_info_proc_info);
+Datum
+vector_rust_hnsw_should_have_type_info_proc_info(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_type_info_proc_info_flag);
+Datum
+vector_hnsw_should_have_type_info_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_type_info_proc_info_flag);
+Datum
+vector_rust_hnsw_should_have_type_info_proc_info_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasProcInfo = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveTypeInfoProcInfoFlag(hasProcInfo != 0, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_should_have_update_index_pointer_flag);
+Datum
+vector_hnsw_should_have_update_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hnsw_should_have_update_index_pointer_flag);
+Datum
+vector_rust_hnsw_should_have_update_index_pointer_flag(PG_FUNCTION_ARGS)
+{
+	int32		hasUpdateIndexPointer = PG_GETARG_INT32(0);
+
+	PG_RETURN_BOOL(HnswShouldHaveUpdateIndexPointerFlag(hasUpdateIndexPointer != 0, true));
 }
 
 /*
@@ -1046,7 +5611,7 @@ CheckElementCloser(char *base, HnswCandidate * e, List *r, HnswSupport * support
 		Datum		riValue = HnswGetValue(base, riElement);
 		float		distance = HnswGetDistance(eValue, riValue, support);
 
-		if (distance <= e->distance)
+		if (HnswShouldRejectCloserNeighbor(distance, e->distance, true))
 			return false;
 	}
 
@@ -1068,15 +5633,15 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	List	   *added = NIL;
 	bool		removedAny = false;
 
-	if (list_length(w) <= lm)
+	if (HnswShouldSelectNeighborsEarlyReturn(list_length(w), lm, true))
 		return w;
 
 	wd = palloc(sizeof(HnswCandidate *) * list_length(w));
 
 	/* Ensure order of candidates is deterministic for closer caching */
-	if (sortCandidates)
+	if (HnswShouldSortNeighborCandidates(sortCandidates, true))
 	{
-		if (base == NULL)
+		if (HnswShouldSortPointerCandidates(HnswShouldHaveSortBasePointer(base, true), true))
 			list_sort(w, CompareCandidateDistances);
 		else
 			list_sort(w, CompareCandidateDistancesOffset);
@@ -1090,23 +5655,23 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 		w = list_delete_last(w);
 
 		/* Use previous state of r and wd to skip work when possible */
-		if (mustCalculate)
+		if (HnswShouldCalculateNeighborCloser(mustCalculate, true))
 			e->closer = CheckElementCloser(base, e, r, support);
-		else if (list_length(added) > 0)
+		else if (HnswShouldReuseAddedCandidates(list_length(added), true))
 		{
 			/* Keep Valgrind happy for in-memory, parallel builds */
-			if (base != NULL)
+			if (HnswShouldDefineCloserStateForBase(HnswShouldHaveSortBasePointer(base, true), true))
 				VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
 			/*
 			 * If the current candidate was closer, we only need to compare it
 			 * with the other candidates that we have added.
 			 */
-			if (e->closer)
+			if (HnswShouldAppendCloserCandidate(e->closer, true))
 			{
 				e->closer = CheckElementCloser(base, e, added, support);
 
-				if (!e->closer)
+				if (!HnswShouldAppendCloserCandidate(e->closer, true))
 					removedAny = true;
 			}
 			else
@@ -1115,26 +5680,26 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 				 * If we have removed any candidates from closer, a candidate
 				 * that was not closer earlier might now be.
 				 */
-				if (removedAny)
+				if (HnswShouldRecheckCandidateAfterRemoval(removedAny, true))
 				{
 					e->closer = CheckElementCloser(base, e, r, support);
-					if (e->closer)
+					if (HnswShouldAppendCloserCandidate(e->closer, true))
 						added = lappend(added, e);
 				}
 			}
 		}
-		else if (e == newCandidate)
+		else if (HnswShouldProcessNewCandidateBranch(HnswShouldHaveNewCandidatePointer(e, newCandidate, true), true))
 		{
 			e->closer = CheckElementCloser(base, e, r, support);
-			if (e->closer)
+			if (HnswShouldAppendCloserCandidate(e->closer, true))
 				added = lappend(added, e);
 		}
 
 		/* Keep Valgrind happy for in-memory, parallel builds */
-		if (base != NULL)
+		if (HnswShouldDefineCloserStateForBase(HnswShouldHaveSortBasePointer(base, true), true))
 			VALGRIND_MAKE_MEM_DEFINED(&e->closer, 1);
 
-		if (e->closer)
+		if (HnswShouldAppendCloserCandidate(e->closer, true))
 			r = lappend(r, e);
 		else
 			wd[wdlen++] = e;
@@ -1144,13 +5709,13 @@ SelectNeighbors(char *base, List *c, int lm, HnswSupport * support, bool *closer
 	*closerSet = sortCandidates;
 
 	/* Keep pruned connections */
-	while (wdoff < wdlen && list_length(r) < lm)
+	while (HnswShouldKeepPrunedConnection(wdoff, wdlen, list_length(r), lm, true))
 		r = lappend(r, wd[wdoff++]);
 
 	/* Return pruned for update connections */
-	if (pruned != NULL)
+	if (HnswShouldReturnPrunedOutput(HnswShouldHavePrunedOutputPointer(pruned, true), true))
 	{
-		if (wdoff < wdlen)
+		if (HnswShouldSetPrunedFromArray(wdoff, wdlen, true))
 			*pruned = wd[wdoff];
 		else
 			*pruned = linitial(w);
@@ -1183,12 +5748,12 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 	HnswPtrStore(base, newHc.element, newElement);
 	newHc.distance = distance;
 
-	if (neighbors->length < lm)
+	if (HnswShouldAppendNeighborWithoutPrune(neighbors->length, lm, true))
 	{
 		neighbors->items[neighbors->length++] = newHc;
 
 		/* Track update */
-		if (updateIdx != NULL)
+		if (HnswShouldTrackUpdateIndex(HnswShouldHaveUpdateIndexPointer(updateIdx, true), true))
 			*updateIdx = -2;
 	}
 	else
@@ -1205,18 +5770,18 @@ HnswUpdateConnection(char *base, HnswNeighborArray * neighbors, HnswElement newE
 		SelectNeighbors(base, c, lm, support, &neighbors->closerSet, &newHc, &pruned, true);
 
 		/* Should not happen */
-		if (pruned == NULL)
+		if (HnswShouldAbortWithoutPrunedCandidate(HnswShouldHavePrunedCandidatePointer(pruned, true), true))
 			return;
 
 		/* Find and replace the pruned element */
 		for (int i = 0; i < neighbors->length; i++)
 		{
-			if (HnswPtrEqual(base, neighbors->items[i].element, pruned->element))
+			if (HnswShouldReplacePrunedNeighbor(HnswPtrEqual(base, neighbors->items[i].element, pruned->element), true))
 			{
 				neighbors->items[i] = newHc;
 
 				/* Track update */
-				if (updateIdx != NULL)
+				if (HnswShouldTrackUpdateIndex(HnswShouldHaveUpdateIndexPointer(updateIdx, true), true))
 					*updateIdx = i;
 
 				break;
@@ -1243,10 +5808,12 @@ RemoveElements(char *base, List *w, HnswElement skipElement)
 		HnswElement hce = HnswPtrAccess(base, hc->element);
 
 		/* Skip self for vacuuming update */
-		if (skipElement != NULL && hce->blkno == skipElement->blkno && hce->offno == skipElement->offno)
+		if (HnswShouldSkipSelfForVacuumUpdate(HnswShouldHaveSkipElementPointer(skipElement, true), hce->blkno, hce->offno,
+											  HnswGetSkipElementBlknoForCompare(skipElement, true),
+											  HnswGetSkipElementOffnoForCompare(skipElement, true), true))
 			continue;
 
-		if (hce->heaptidsLength != 0)
+		if (HnswShouldKeepElementWithHeapTids(hce->heaptidsLength, true))
 			w2 = lappend(w2, hc);
 	}
 
@@ -1260,10 +5827,12 @@ static void
 PrecomputeHash(char *base, HnswElement element)
 {
 	HnswElementPtr ptr;
+	bool		hasBasePointer;
 
 	HnswPtrStore(base, ptr, element);
+	hasBasePointer = HnswShouldHaveVisitedBasePointer((const void *) base, true);
 
-	if (base == NULL)
+	if (HnswShouldUsePointerHashForBase(hasBasePointer, true))
 		element->hash = hash_pointer((uintptr_t) HnswPtrPointer(ptr));
 	else
 		element->hash = hash_offset(HnswPtrOffset(ptr));
@@ -1280,17 +5849,20 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 	int			level = element->level;
 	int			entryLevel;
 	HnswQuery	q;
-	HnswElement skipElement = existing ? element : NULL;
-	bool		inMemory = index == NULL;
+	HnswElement skipElement = NULL;
+	bool		inMemory = !HnswShouldHaveSearchIndexPointer(index, true);
+
+	if (HnswShouldUseSkipElementForExisting(existing, true))
+		skipElement = element;
 
 	q.value = HnswGetValue(base, element);
 
 	/* Precompute hash */
-	if (inMemory)
+	if (HnswShouldPrecomputeHashForNeighbors(inMemory, true))
 		PrecomputeHash(base, element);
 
 	/* No neighbors if no entry point */
-	if (entryPoint == NULL)
+	if (HnswShouldReturnWithoutEntryPoint(HnswShouldHaveSearchEntrypointPointer(entryPoint, true), true))
 		return;
 
 	/* Get entry point and level */
@@ -1304,11 +5876,11 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 		ep = w;
 	}
 
-	if (level > entryLevel)
+	if (HnswShouldClampNeighborSearchLevel(level, entryLevel, true))
 		level = entryLevel;
 
 	/* Add one for existing element */
-	if (existing)
+	if (HnswShouldIncrementEfForExistingElement(existing, true))
 		efConstruction++;
 
 	/* 2nd phase */
@@ -1335,7 +5907,7 @@ HnswFindElementNeighbors(char *base, HnswElement element, HnswElement entryPoint
 
 		/* Elements being deleted or skipped can help with search */
 		/* but should be removed before selecting neighbors */
-		if (!inMemory)
+		if (HnswShouldRemoveDiskOnlyElementsBeforeSelect(inMemory, true))
 			lw = RemoveElements(base, lw, skipElement);
 
 		/*
@@ -1360,7 +5932,7 @@ SparsevecCheckValue(Pointer v)
 {
 	SparseVector *vec = (SparseVector *) v;
 
-	if (vec->nnz > HNSW_MAX_NNZ)
+	if (HnswShouldRejectSparsevecExcessNnz(vec->nnz, HNSW_MAX_NNZ, true))
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("sparsevec cannot have more than %d non-zero elements for hnsw index", HNSW_MAX_NNZ)));
@@ -1374,7 +5946,7 @@ HnswGetTypeInfo(Relation index)
 {
 	FmgrInfo   *procinfo = HnswOptionalProcInfo(index, HNSW_TYPE_INFO_PROC);
 
-	if (procinfo == NULL)
+	if (HnswShouldUseDefaultTypeInfo(HnswShouldHaveTypeInfoProcInfo(procinfo, true), true))
 	{
 		static const HnswTypeInfo typeInfo = {
 			.maxDimensions = HNSW_MAX_DIM,

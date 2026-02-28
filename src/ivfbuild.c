@@ -21,6 +21,7 @@
 #include "miscadmin.h"
 #include "nodes/execnodes.h"
 #include "optimizer/optimizer.h"
+#include "rust_ffi.h"
 #include "storage/bufmgr.h"
 #include "tcop/tcopprot.h"
 #include "utils/memutils.h"
@@ -150,6 +151,60 @@ SampleRows(IvfflatBuildState * buildstate)
 /*
  * Add tuple to sort
  */
+static bool
+IvfflatChooseBuildCenterCandidate(float8 distance, float8 minDistance, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_choose_build_center_candidate_kernel(distance, minDistance);
+}
+
+static bool
+IvfflatBuildShouldAppendPage(int freeSpace, Size itemSize, bool useRust)
+{
+	(void) useRust;
+	return vector_rust_ivfflat_should_append_page_kernel(freeSpace, (int32) itemSize);
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_choose_build_center_candidate);
+Datum
+vector_ivfflat_choose_build_center_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		minDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(IvfflatChooseBuildCenterCandidate(distance, minDistance, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_choose_build_center_candidate);
+Datum
+vector_rust_ivfflat_choose_build_center_candidate(PG_FUNCTION_ARGS)
+{
+	float8		distance = PG_GETARG_FLOAT8(0);
+	float8		minDistance = PG_GETARG_FLOAT8(1);
+
+	PG_RETURN_BOOL(IvfflatChooseBuildCenterCandidate(distance, minDistance, true));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_ivfflat_build_should_append_page);
+Datum
+vector_ivfflat_build_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatBuildShouldAppendPage(freeSpace, itemSize, false));
+}
+
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_ivfflat_build_should_append_page);
+Datum
+vector_rust_ivfflat_build_should_append_page(PG_FUNCTION_ARGS)
+{
+	int32		freeSpace = PG_GETARG_INT32(0);
+	int32		itemSize = PG_GETARG_INT32(1);
+
+	PG_RETURN_BOOL(IvfflatBuildShouldAppendPage(freeSpace, itemSize, true));
+}
+
 static void
 AddTupleToSort(ItemPointer tid, Datum *values, IvfflatBuildState * buildstate)
 {
@@ -176,7 +231,7 @@ AddTupleToSort(ItemPointer tid, Datum *values, IvfflatBuildState * buildstate)
 	{
 		distance = DatumGetFloat8(FunctionCall2Coll(buildstate->procinfo, buildstate->collation, value, PointerGetDatum(VectorArrayGet(centers, i))));
 
-		if (distance < minDistance)
+		if (IvfflatChooseBuildCenterCandidate(distance, minDistance, true))
 		{
 			minDistance = distance;
 			closestCenter = i;
@@ -299,7 +354,7 @@ InsertTuples(Relation index, IvfflatBuildState * buildstate, ForkNumber forkNum)
 			/* Check for free space */
 			Size		itemsz = MAXALIGN(IndexTupleSize(itup));
 
-			if (PageGetFreeSpace(page) < itemsz)
+			if (IvfflatBuildShouldAppendPage(PageGetFreeSpace(page), itemsz, true))
 				IvfflatAppendPage(index, &buf, &page, &state, forkNum);
 
 			/* Add the item */

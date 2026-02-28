@@ -4,6 +4,8 @@ EXTVERSION = 0.8.1
 DATA_built = sql\$(EXTENSION)--$(EXTVERSION).sql
 OBJS = src\bitutils.obj src\bitvec.obj src\halfutils.obj src\halfvec.obj src\hnsw.obj src\hnswbuild.obj src\hnswinsert.obj src\hnswscan.obj src\hnswutils.obj src\hnswvacuum.obj src\ivfbuild.obj src\ivfflat.obj src\ivfinsert.obj src\ivfkmeans.obj src\ivfscan.obj src\ivfutils.obj src\ivfvacuum.obj src\sparsevec.obj src\vector.obj
 HEADERS = src\halfvec.h src\sparsevec.h src\vector.h
+RUST_LIB = rust\target\release\vector_rust.lib
+RUST_SRCS = rust\Cargo.toml rust\src\lib.rs rust\src\ffi.rs
 
 REGRESS = bit btree cast copy halfvec hnsw_bit hnsw_halfvec hnsw_sparsevec hnsw_vector ivfflat_bit ivfflat_halfvec ivfflat_vector sparsevec vector_type
 REGRESS_OPTS = --inputdir=test --load-extension=$(EXTENSION)
@@ -40,14 +42,17 @@ CFLAGS = $(CFLAGS) $(PG_CFLAGS)
 
 SHLIB = $(EXTENSION).dll
 
-LIBS = "$(LIBDIR)\postgres.lib"
+LIBS = "$(LIBDIR)\postgres.lib" "$(RUST_LIB)"
 
 all: $(SHLIB) $(DATA_built)
 
 .c.obj:
 	$(CC) $(CFLAGS) /c $< /Fo$@
 
-$(SHLIB): $(OBJS)
+$(RUST_LIB): $(RUST_SRCS)
+	cargo build --manifest-path rust/Cargo.toml --release
+
+$(SHLIB): $(OBJS) $(RUST_LIB)
 	$(CC) $(CFLAGS) $(OBJS) $(LIBS) /link /DLL /OUT:$(SHLIB)
 
 sql\$(EXTENSION)--$(EXTVERSION).sql: sql\$(EXTENSION).sql
@@ -74,4 +79,5 @@ clean:
 	del /f $(SHLIB) $(EXTENSION).lib $(EXTENSION).exp
 	del /f $(DATA_built)
 	del /f $(OBJS)
+	if exist rust\target rmdir /s /q rust\target
 	del /f /s /q results regression.diffs regression.out tmp_check tmp_check_iso log output_iso

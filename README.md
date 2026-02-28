@@ -19,6 +19,9 @@ Plus [ACID](https://en.wikipedia.org/wiki/ACID) compliance, point-in-time recove
 
 Compile and install the extension (supports Postgres 13+)
 
+Rust is required for the build. Install a stable toolchain with
+[rustup](https://rustup.rs/) before running `make`.
+
 ```sh
 cd /tmp
 git clone --branch v0.8.1 https://github.com/pgvector/pgvector.git
@@ -1303,6 +1306,7 @@ To get started with development:
 ```sh
 git clone https://github.com/pgvector/pgvector.git
 cd pgvector
+rustup toolchain install stable
 make
 make install
 ```

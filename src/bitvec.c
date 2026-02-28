@@ -3,6 +3,7 @@
 #include "bitutils.h"
 #include "bitvec.h"
 #include "fmgr.h"
+#include "rust_ffi.h"
 #include "utils/varbit.h"
 #include "vector.h"
 
@@ -67,4 +68,54 @@ jaccard_distance(PG_FUNCTION_ARGS)
 	CheckDims(a, b);
 
 	PG_RETURN_FLOAT8(BitJaccardDistance(VARBITBYTES(a), VARBITS(a), VARBITS(b), 0, 0, 0));
+}
+
+/*
+ * Get the Hamming distance between two bit vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_hamming_distance);
+Datum
+vector_rust_hamming_distance(PG_FUNCTION_ARGS)
+{
+	VarBit	   *a = PG_GETARG_VARBIT_P(0);
+	VarBit	   *b = PG_GETARG_VARBIT_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_bit_hamming_distance(VARBITBYTES(a), VARBITS(a), VARBITS(b), 0));
+}
+
+/*
+ * Get the Jaccard distance between two bit vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_jaccard_distance);
+Datum
+vector_rust_jaccard_distance(PG_FUNCTION_ARGS)
+{
+	VarBit	   *a = PG_GETARG_VARBIT_P(0);
+	VarBit	   *b = PG_GETARG_VARBIT_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8(vector_rust_bit_jaccard_distance(VARBITBYTES(a), VARBITS(a), VARBITS(b), 0, 0, 0));
+}
+
+/*
+ * Rust parity wrapper symbol for bit Hamming distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_bit_hamming_distance_pg);
+Datum
+vector_rust_bit_hamming_distance_pg(PG_FUNCTION_ARGS)
+{
+	return vector_rust_hamming_distance(fcinfo);
+}
+
+/*
+ * Rust parity wrapper symbol for bit Jaccard distance
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_bit_jaccard_distance_pg);
+Datum
+vector_rust_bit_jaccard_distance_pg(PG_FUNCTION_ARGS)
+{
+	return vector_rust_jaccard_distance(fcinfo);
 }

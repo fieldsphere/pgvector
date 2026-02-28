@@ -11,6 +11,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 #include "port.h"				/* for strtof() */
+#include "rust_ffi.h"
 #include "sparsevec.h"
 #include "utils/array.h"
 #include "utils/float.h"
@@ -29,6 +30,14 @@
 
 #define STATE_DIMS(x) (ARR_DIMS(x)[0] - 1)
 #define CreateStateDatums(dim) palloc(sizeof(Datum) * (dim + 1))
+
+uint16		vector_c_float4_to_half_bits(float4 value);
+
+uint16
+vector_c_float4_to_half_bits(float4 value)
+{
+	return Float4ToHalf(value);
+}
 
 /*
  * Get a half from a message buffer
@@ -511,19 +520,33 @@ halfvec_to_float4(PG_FUNCTION_ARGS)
 {
 	HalfVector *vec = PG_GETARG_HALFVEC_P(0);
 	Datum	   *datums;
+	float	   *values;
 	ArrayType  *result;
 
 	datums = (Datum *) palloc(sizeof(Datum) * vec->dim);
+	values = (float *) palloc(sizeof(float) * vec->dim);
 
+	vector_rust_halfvec_to_vector(vec->dim, vec->x, values);
 	for (int i = 0; i < vec->dim; i++)
-		datums[i] = Float4GetDatum(HalfToFloat4(vec->x[i]));
+		datums[i] = Float4GetDatum(values[i]);
 
 	/* Use TYPALIGN_INT for float4 */
 	result = construct_array(datums, vec->dim, FLOAT4OID, sizeof(float4), true, TYPALIGN_INT);
 
+	pfree(values);
 	pfree(datums);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec to float4[]
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_to_float4);
+Datum
+vector_rust_halfvec_to_float4(PG_FUNCTION_ARGS)
+{
+	return halfvec_to_float4(fcinfo);
 }
 
 /*
@@ -541,11 +564,19 @@ vector_to_halfvec(PG_FUNCTION_ARGS)
 	CheckExpectedDim(typmod, vec->dim);
 
 	result = InitHalfVector(vec->dim);
-
-	for (int i = 0; i < vec->dim; i++)
-		result->x[i] = Float4ToHalf(vec->x[i]);
+	vector_rust_vector_to_halfvec_kernel(vec->dim, vec->x, result->x);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: vector to halfvec cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_vector_to_halfvec);
+Datum
+vector_rust_vector_to_halfvec(PG_FUNCTION_ARGS)
+{
+	return vector_to_halfvec(fcinfo);
 }
 
 /*
@@ -680,6 +711,75 @@ halfvec_l1_distance(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Get the L2 distance between half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l2_distance);
+Datum
+vector_rust_halfvec_l2_distance(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8(sqrt((double) vector_rust_half_l2_squared_distance(a->dim, a->x, b->x)));
+}
+
+/*
+ * Get the inner product of two half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_inner_product);
+Datum
+vector_rust_halfvec_inner_product(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_half_inner_product(a->dim, a->x, b->x));
+}
+
+/*
+ * Get the cosine distance between two half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_cosine_distance);
+Datum
+vector_rust_halfvec_cosine_distance(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+	double		similarity;
+
+	CheckDims(a, b);
+
+	similarity = vector_rust_half_cosine_similarity(a->dim, a->x, b->x);
+
+	/* Keep in range */
+	if (similarity > 1)
+		similarity = 1;
+	else if (similarity < -1)
+		similarity = -1;
+
+	PG_RETURN_FLOAT8(1 - similarity);
+}
+
+/*
+ * Get the L1 distance between two half vectors via Rust kernel
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l1_distance);
+Datum
+vector_rust_halfvec_l1_distance(PG_FUNCTION_ARGS)
+{
+	HalfVector *a = PG_GETARG_HALFVEC_P(0);
+	HalfVector *b = PG_GETARG_HALFVEC_P(1);
+
+	CheckDims(a, b);
+
+	PG_RETURN_FLOAT8((double) vector_rust_half_l1_distance(a->dim, a->x, b->x));
+}
+
+/*
  * Get the dimensions of a half vector
  */
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(halfvec_vector_dims);
@@ -699,18 +799,18 @@ Datum
 halfvec_l2_norm(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
-	half	   *ax = a->x;
-	double		norm = 0.0;
 
-	/* Auto-vectorized */
-	for (int i = 0; i < a->dim; i++)
-	{
-		double		axi = (double) HalfToFloat4(ax[i]);
+	PG_RETURN_FLOAT8(vector_rust_halfvec_l2_norm_kernel(a->dim, a->x));
+}
 
-		norm += axi * axi;
-	}
-
-	PG_RETURN_FLOAT8(sqrt(norm));
+/*
+ * Rust parity wrapper: halfvec L2 norm
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l2_norm);
+Datum
+vector_rust_halfvec_l2_norm(PG_FUNCTION_ARGS)
+{
+	return halfvec_l2_norm(fcinfo);
 }
 
 /*
@@ -721,35 +821,37 @@ Datum
 halfvec_l2_normalize(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
-	half	   *ax = a->x;
-	double		norm = 0;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_l2_normalize_kernel(a->dim, a->x, rust_result);
 	for (int i = 0; i < a->dim; i++)
-		norm += (double) HalfToFloat4(ax[i]) * (double) HalfToFloat4(ax[i]);
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
-	norm = sqrt(norm);
-
-	/* Return zero vector for zero norm */
-	if (norm > 0)
+	/* Check for overflow */
+	for (int i = 0; i < a->dim; i++)
 	{
-		for (int i = 0; i < a->dim; i++)
-			rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) / norm);
-
-		/* Check for overflow */
-		for (int i = 0; i < a->dim; i++)
-		{
-			if (HalfIsInf(rx[i]))
-				float_overflow_error();
-		}
+		if (HalfIsInf(rx[i]))
+			float_overflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec L2 normalize
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_l2_normalize);
+Datum
+vector_rust_halfvec_l2_normalize(PG_FUNCTION_ARGS)
+{
+	return halfvec_l2_normalize(fcinfo);
 }
 
 /*
@@ -761,25 +863,19 @@ halfvec_add(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
-	half	   *ax = a->x;
-	half	   *bx = b->x;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	CheckDims(a, b);
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_add_kernel(a->dim, a->x, b->x, rust_result);
 	for (int i = 0, imax = a->dim; i < imax; i++)
-	{
-#ifdef FLT16_SUPPORT
-		rx[i] = ax[i] + bx[i];
-#else
-		rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) + HalfToFloat4(bx[i]));
-#endif
-	}
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -788,7 +884,18 @@ halfvec_add(PG_FUNCTION_ARGS)
 			float_overflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: add half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_add);
+Datum
+vector_rust_halfvec_add(PG_FUNCTION_ARGS)
+{
+	return halfvec_add(fcinfo);
 }
 
 /*
@@ -800,25 +907,19 @@ halfvec_sub(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
-	half	   *ax = a->x;
-	half	   *bx = b->x;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	CheckDims(a, b);
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_sub_kernel(a->dim, a->x, b->x, rust_result);
 	for (int i = 0, imax = a->dim; i < imax; i++)
-	{
-#ifdef FLT16_SUPPORT
-		rx[i] = ax[i] - bx[i];
-#else
-		rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) - HalfToFloat4(bx[i]));
-#endif
-	}
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
 	/* Check for overflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -827,7 +928,18 @@ halfvec_sub(PG_FUNCTION_ARGS)
 			float_overflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: subtract half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_sub);
+Datum
+vector_rust_halfvec_sub(PG_FUNCTION_ARGS)
+{
+	return halfvec_sub(fcinfo);
 }
 
 /*
@@ -843,21 +955,17 @@ halfvec_mul(PG_FUNCTION_ARGS)
 	half	   *bx = b->x;
 	HalfVector *result;
 	half	   *rx;
+	float	   *rust_result;
 
 	CheckDims(a, b);
 
 	result = InitHalfVector(a->dim);
 	rx = result->x;
+	rust_result = palloc(sizeof(float) * a->dim);
 
-	/* Auto-vectorized */
+	vector_rust_halfvec_mul_kernel(a->dim, ax, bx, rust_result);
 	for (int i = 0, imax = a->dim; i < imax; i++)
-	{
-#ifdef FLT16_SUPPORT
-		rx[i] = ax[i] * bx[i];
-#else
-		rx[i] = Float4ToHalfUnchecked(HalfToFloat4(ax[i]) * HalfToFloat4(bx[i]));
-#endif
-	}
+		rx[i] = Float4ToHalfUnchecked(rust_result[i]);
 
 	/* Check for overflow and underflow */
 	for (int i = 0, imax = a->dim; i < imax; i++)
@@ -869,7 +977,18 @@ halfvec_mul(PG_FUNCTION_ARGS)
 			float_underflow_error();
 	}
 
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: multiply half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_mul);
+Datum
+vector_rust_halfvec_mul(PG_FUNCTION_ARGS)
+{
+	return halfvec_mul(fcinfo);
 }
 
 /*
@@ -882,18 +1001,29 @@ halfvec_concat(PG_FUNCTION_ARGS)
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
 	HalfVector *b = PG_GETARG_HALFVEC_P(1);
 	HalfVector *result;
+	float	   *rust_result;
 	int			dim = a->dim + b->dim;
 
 	CheckDim(dim);
 	result = InitHalfVector(dim);
+	rust_result = palloc(sizeof(float) * dim);
 
-	for (int i = 0; i < a->dim; i++)
-		result->x[i] = a->x[i];
+	vector_rust_halfvec_concat_kernel(a->dim, a->x, b->dim, b->x, rust_result);
+	for (int i = 0; i < dim; i++)
+		result->x[i] = Float4ToHalfUnchecked(rust_result[i]);
 
-	for (int i = 0; i < b->dim; i++)
-		result->x[i + a->dim] = b->x[i];
-
+	pfree(rust_result);
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: concatenate half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_concat);
+Datum
+vector_rust_halfvec_concat(PG_FUNCTION_ARGS)
+{
+	return halfvec_concat(fcinfo);
 }
 
 /*
@@ -904,27 +1034,22 @@ Datum
 halfvec_binary_quantize(PG_FUNCTION_ARGS)
 {
 	HalfVector *a = PG_GETARG_HALFVEC_P(0);
-	half	   *ax = a->x;
 	VarBit	   *result = InitBitVector(a->dim);
 	unsigned char *rx = VARBITS(result);
-	int			i = 0;
-	int			count = (a->dim / 8) * 8;
 
-	/* Auto-vectorized on aarch64 */
-	for (; i < count; i += 8)
-	{
-		unsigned char result_byte = 0;
-
-		for (int j = 0; j < 8; j++)
-			result_byte |= (HalfToFloat4(ax[i + j]) > 0) << (7 - j);
-
-		rx[i / 8] = result_byte;
-	}
-
-	for (; i < a->dim; i++)
-		rx[i / 8] |= (HalfToFloat4(ax[i]) > 0) << (7 - (i % 8));
+	vector_rust_halfvec_binary_quantize_kernel(a->dim, a->x, rx);
 
 	PG_RETURN_VARBIT_P(result);
+}
+
+/*
+ * Rust parity wrapper: quantize a half vector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_binary_quantize);
+Datum
+vector_rust_halfvec_binary_quantize(PG_FUNCTION_ARGS)
+{
+	return halfvec_binary_quantize(fcinfo);
 }
 
 /*
@@ -968,10 +1093,19 @@ halfvec_subvector(PG_FUNCTION_ARGS)
 	CheckDim(dim);
 	result = InitHalfVector(dim);
 
-	for (int i = 0; i < dim; i++)
-		result->x[i] = ax[start - 1 + i];
+	vector_rust_halfvec_subvector_kernel(dim, ax, start - 1, result->x);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: get halfvec subvector
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_subvector);
+Datum
+vector_rust_halfvec_subvector(PG_FUNCTION_ARGS)
+{
+	return halfvec_subvector(fcinfo);
 }
 
 /*
@@ -980,25 +1114,7 @@ halfvec_subvector(PG_FUNCTION_ARGS)
 static int
 halfvec_cmp_internal(HalfVector * a, HalfVector * b)
 {
-	int			dim = Min(a->dim, b->dim);
-
-	/* Check values before dimensions to be consistent with Postgres arrays */
-	for (int i = 0; i < dim; i++)
-	{
-		if (HalfToFloat4(a->x[i]) < HalfToFloat4(b->x[i]))
-			return -1;
-
-		if (HalfToFloat4(a->x[i]) > HalfToFloat4(b->x[i]))
-			return 1;
-	}
-
-	if (a->dim < b->dim)
-		return -1;
-
-	if (a->dim > b->dim)
-		return 1;
-
-	return 0;
+	return vector_rust_halfvec_cmp_kernel(a->dim, a->x, b->dim, b->x);
 }
 
 /*
@@ -1093,6 +1209,16 @@ halfvec_cmp(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Rust parity wrapper: compare half vectors
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_cmp);
+Datum
+vector_rust_halfvec_cmp(PG_FUNCTION_ARGS)
+{
+	return halfvec_cmp(fcinfo);
+}
+
+/*
  * Accumulate half vectors
  */
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(halfvec_accum);
@@ -1106,7 +1232,7 @@ halfvec_accum(PG_FUNCTION_ARGS)
 	bool		newarr;
 	float8		n;
 	Datum	   *statedatums;
-	half	   *x = newval->x;
+	float8	   *sums;
 	ArrayType  *result;
 
 	/* Check array before using */
@@ -1123,24 +1249,20 @@ halfvec_accum(PG_FUNCTION_ARGS)
 
 	statedatums = CreateStateDatums(dim);
 	statedatums[0] = Float8GetDatum(n);
+	sums = palloc(sizeof(float8) * dim);
 
 	if (newarr)
-	{
-		for (int i = 0; i < dim; i++)
-			statedatums[i + 1] = Float8GetDatum((double) HalfToFloat4(x[i]));
-	}
+		vector_rust_halfvec_accum_init_kernel(dim, newval->x, sums);
 	else
+		vector_rust_halfvec_accum_add_kernel(dim, statevalues + 1, newval->x, sums);
+
+	for (int i = 0; i < dim; i++)
 	{
-		for (int i = 0; i < dim; i++)
-		{
-			double		v = statevalues[i + 1] + (double) HalfToFloat4(x[i]);
+		/* Check for overflow */
+		if (isinf(sums[i]))
+			float_overflow_error();
 
-			/* Check for overflow */
-			if (isinf(v))
-				float_overflow_error();
-
-			statedatums[i + 1] = Float8GetDatum(v);
-		}
+		statedatums[i + 1] = Float8GetDatum(sums[i]);
 	}
 
 	/* Use float8 array like float4_accum */
@@ -1148,9 +1270,20 @@ halfvec_accum(PG_FUNCTION_ARGS)
 							 FLOAT8OID,
 							 sizeof(float8), FLOAT8PASSBYVAL, TYPALIGN_DOUBLE);
 
+	pfree(sums);
 	pfree(statedatums);
 
 	PG_RETURN_ARRAYTYPE_P(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec aggregate transition
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_accum);
+Datum
+vector_rust_halfvec_accum(PG_FUNCTION_ARGS)
+{
+	return halfvec_accum(fcinfo);
 }
 
 /*
@@ -1165,6 +1298,7 @@ halfvec_avg(PG_FUNCTION_ARGS)
 	float8		n;
 	uint16		dim;
 	HalfVector *result;
+	float	   *avg_values;
 
 	/* Check array before using */
 	statevalues = CheckStateArray(statearray, "halfvec_avg");
@@ -1178,13 +1312,26 @@ halfvec_avg(PG_FUNCTION_ARGS)
 	dim = STATE_DIMS(statearray);
 	CheckDim(dim);
 	result = InitHalfVector(dim);
+	avg_values = palloc(sizeof(float) * dim);
+	vector_rust_vector_avg(dim, statevalues + 1, n, avg_values);
 	for (int i = 0; i < dim; i++)
 	{
-		result->x[i] = Float4ToHalf(statevalues[i + 1] / n);
+		result->x[i] = Float4ToHalf(avg_values[i]);
 		CheckElement(result->x[i]);
 	}
+	pfree(avg_values);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: halfvec aggregate final
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_halfvec_avg);
+Datum
+vector_rust_halfvec_avg(PG_FUNCTION_ARGS)
+{
+	return halfvec_avg(fcinfo);
 }
 
 /*
@@ -1204,8 +1351,17 @@ sparsevec_to_halfvec(PG_FUNCTION_ARGS)
 	CheckExpectedDim(typmod, dim);
 
 	result = InitHalfVector(dim);
-	for (int i = 0; i < svec->nnz; i++)
-		result->x[svec->indices[i]] = Float4ToHalf(values[i]);
+	vector_rust_sparse_to_halfvec_kernel(svec->nnz, svec->indices, values, result->x);
 
 	PG_RETURN_POINTER(result);
+}
+
+/*
+ * Rust parity wrapper: sparsevec to halfvec cast
+ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_rust_sparsevec_to_halfvec);
+Datum
+vector_rust_sparsevec_to_halfvec(PG_FUNCTION_ARGS)
+{
+	return sparsevec_to_halfvec(fcinfo);
 }

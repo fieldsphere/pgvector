@@ -3,6 +3,7 @@
 #include "bitutils.h"
 #include "halfvec.h"			/* for USE_DISPATCH and USE_TARGET_CLONES */
 #include "port/pg_bitutils.h"
+#include "rust_ffi.h"
 
 #if defined(USE_DISPATCH)
 #define BIT_DISPATCH
@@ -209,8 +210,8 @@ BitvecInit(void)
 	 * Could skip pointer when single function, but no difference in
 	 * performance
 	 */
-	BitHammingDistance = BitHammingDistanceDefault;
-	BitJaccardDistance = BitJaccardDistanceDefault;
+	BitHammingDistance = vector_rust_bit_hamming_distance;
+	BitJaccardDistance = vector_rust_bit_jaccard_distance;
 
 #ifdef BIT_DISPATCH
 	if (SupportsAvx512Popcount())

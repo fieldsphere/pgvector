@@ -24,6 +24,7 @@ jobs:
             os: ubuntu-22.04
     steps:
       - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
       - uses: ankane/setup-postgres@v1
         with:
           postgres-version: ${{ matrix.postgres }}
@@ -54,6 +55,7 @@ jobs:
             os: macos-15-intel
     steps:
       - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
       - uses: ankane/setup-postgres@v1
         with:
           postgres-version: ${{ matrix.postgres }}
@@ -93,6 +95,7 @@ jobs:
             os: windows-2022
     steps:
       - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
       - uses: ankane/setup-postgres@v1
         with:
           postgres-version: ${{ matrix.postgres }}
@@ -113,7 +116,7 @@ jobs:
       image: debian:12
       options: --platform linux/386
     steps:
-      - run: apt-get update && apt-get install -y build-essential git libipc-run-perl postgresql-15 postgresql-server-dev-15 sudo
+      - run: apt-get update && apt-get install -y build-essential cargo git libipc-run-perl postgresql-15 postgresql-server-dev-15 rustc sudo
       - run: service postgresql start
       - run: |
           git clone https://github.com/${{ github.repository }}.git pgvector
@@ -134,6 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
       - uses: ankane/setup-postgres-valgrind@v1
         with:
           postgres-version: 18

@@ -1,0 +1,21 @@
+CREATE FUNCTION rust_bit_hamming_distance(bit, bit) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_bit_hamming_distance_pg'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+CREATE FUNCTION rust_bit_jaccard_distance(bit, bit) RETURNS float8
+	AS '$libdir/vector', 'vector_rust_bit_jaccard_distance_pg'
+	LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+SELECT
+	hamming_distance(b1, b2) = rust_bit_hamming_distance(b1, b2),
+	jaccard_distance(b1, b2) = rust_bit_jaccard_distance(b1, b2)
+FROM (VALUES
+	(B'10101010'::bit(8), B'11110000'::bit(8)),
+	(B'00000000'::bit(8), B'00000000'::bit(8)),
+	(B'11111111'::bit(8), B'10101010'::bit(8))
+) AS t(b1, b2);
+ ?column? | ?column? 
+----------+----------
+ t        | t
+ t        | t
+ t        | t
+(3 rows)
+
