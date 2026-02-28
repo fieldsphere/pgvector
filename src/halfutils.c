@@ -307,11 +307,6 @@ HalfvecInit(void)
 	 * Could skip pointer when single function, but no difference in
 	 * performance
 	 */
-	HalfvecL2SquaredDistance = HalfvecL2SquaredDistanceDefault;
-	HalfvecInnerProduct = HalfvecInnerProductDefault;
-	HalfvecCosineSimilarity = HalfvecCosineSimilarityDefault;
-	HalfvecL1Distance = HalfvecL1DistanceDefault;
-
 	HalfvecL2SquaredDistance = HalfvecL2SquaredDistanceRust;
 	HalfvecInnerProduct = HalfvecInnerProductRust;
 	HalfvecCosineSimilarity = HalfvecCosineSimilarityRust;

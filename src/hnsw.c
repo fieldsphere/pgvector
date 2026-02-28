@@ -218,7 +218,7 @@ static bool
 HnswShouldCapRatioAtOne(double ratio, bool useRust)
 {
 	(void) useRust;
-	return vector_rust_hnsw_should_update_element_max_distance_kernel(true, true, 1, ratio);
+	return ratio > 1.0;
 }
 
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(vector_hnsw_clamp_ratio);
